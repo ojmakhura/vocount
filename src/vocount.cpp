@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
 	vector<vector<KeyPoint> > keypoints;
 	Mat keyPointImage;
 	vector<Mat> descriptors;
-	vector<MatND> base_hist;
+	vector<Mat> base_hist;
 	Ptr<Feature2D> detector;
 	Ptr<GraphSegmentation> graphSegmenter = createGraphSegmentation();
 	Ptr<Tracker> tracker = Tracker::create("BOOSTING");
@@ -243,6 +243,13 @@ int main(int argc, char** argv) {
     	Mat lap;
         cap >> frame;
     	frame.copyTo(image);
+        graphSegmenter->processImage(frame, gs);
+        //printf("Rows before: %d\n", descriptors.rows);
+		map<uint, vector<Point> > points;
+        Mat output_image = getSegmentImage(gs, points);
+        display("output_image", output_image);
+
+        printf("Points has size %d\n ", points.size());
     	Mat desc;
     	vector<KeyPoint> kp;
         //pyrMeanShiftFiltering(frame, frame, 10, 30, 1);
@@ -299,7 +306,7 @@ int main(int argc, char** argv) {
 			const float* ranges[] = { h_ranges, s_ranges };
 
 			int channels[] = { 0, 1 };
-			MatND hist;
+			Mat hist;
 			calcHist( &hsv, 1, channels, Mat(), hist, 2, histSize, ranges, true, false );
 			normalize( hist, hist, 0, 1, NORM_MINMAX, -1, Mat() );
 			base_hist.push_back(hist);
@@ -322,13 +329,6 @@ int main(int argc, char** argv) {
             drawKeypoints( frame, kp, keyPointImage, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
 
             if(!desc.empty()){
-                graphSegmenter->processImage(frame, gs);
-                //printf("Rows before: %d\n", descriptors.rows);
-        		map<uint, vector<Point> > points;
-                Mat output_image = getSegmentImage(gs, points);
-                display("output_image", output_image);
-
-                printf("Points has size %d\n ", points.size());
 
                 // Create clustering dataset
                 for(uint n = 0; n < descriptors.size(); ++n){
