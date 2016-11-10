@@ -205,6 +205,26 @@ UndirectedGraph constructMST(Mat& src) {
 	//cout << "Done" << endl;
 }
 
+Mat getHist(Mat m){
+	Mat hsv;
+	cvtColor(m, hsv, CV_BGR2HSV);
+	int h_bins = 50;
+	int s_bins = 60;
+	int histSize[] = { h_bins, s_bins };
+
+	float h_ranges[] = { 0, 180 };
+	float s_ranges[] = { 0, 256 };
+
+	const float* ranges[] = { h_ranges, s_ranges };
+
+	int channels[] = { 0, 1 };
+	Mat hist;
+	calcHist(&hsv, 1, channels, Mat(), hist, 2, histSize, ranges, true, false);
+	normalize(hist, hist, 0, 1, NORM_MINMAX, -1, Mat());
+
+	return hist;
+}
+
 int main(int argc, char** argv) {
 	int count = 0;
 	//dummy_tester();
@@ -293,22 +313,8 @@ int main(int argc, char** argv) {
 
 			// Calculate histograms for each tracked position and store them for later
 			Mat m = frame(roi);
-			Mat hsv;
-			cvtColor( m, hsv, CV_BGR2HSV );
-			int h_bins = 50;
-			int s_bins = 60;
-			int histSize[] = { h_bins, s_bins };
 
-			float h_ranges[] = { 0, 180 };
-			float s_ranges[] = { 0, 256 };
-
-			const float* ranges[] = { h_ranges, s_ranges };
-
-			int channels[] = { 0, 1 };
-			Mat hist;
-			calcHist( &hsv, 1, channels, Mat(), hist, 2, histSize, ranges, true, false );
-			normalize( hist, hist, 0, 1, NORM_MINMAX, -1, Mat() );
-			base_hist.push_back(hist);
+			base_hist.push_back(getHist(m));
 		}
 
         //printf("Rows after: %d\n", descriptors.rows);
@@ -326,20 +332,32 @@ int main(int argc, char** argv) {
             //display("myflow", flow);
 
             drawKeypoints( frame, kp, keyPointImage, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
+            //TODO: extras
 
-            if(!desc.empty()){
+            //display("frame", frame;
+        }
+        display("frame", frame);
+
+        if(waitKey(2000)>=0)
+            break;
+        std::swap(prevgray, gray);
+        std::swap(_prev, frame);
+        ++count;
+    }
+
+	return 0;
+}
+
+void extras(){
+
+	/*
+	 if(!desc.empty()){
 
                 // Create clustering dataset
                 for(uint n = 0; n < descriptors.size(); ++n){
                 	desc.push_back(descriptors[n]);
                 }
 
-                /*desc.push_back(descriptors[0]);
-                cout << desc.rows;
-                desc.push_back(descriptors[1]);
-                cout << ", " << desc.rows;
-                desc.push_back(descriptors[2]);
-                cout << ", " << desc.rows << endl;*/
 
 				map<int, vector<Point> > mappedPoints;
 
@@ -376,9 +394,9 @@ int main(int argc, char** argv) {
 					putText(keyPointImage, name.c_str(), Point(rr.x - 4, rr.y - 4), CV_FONT_HERSHEY_PLAIN, 1, value);
 				}
 
-				/*******************************************************************
+				*******************************************************************
 				 * Approximation of the number of similar objects
-				 *******************************************************************/
+				 *******************************************************************
 
 				map<int, vector<int> > roiClusters;
 
@@ -407,16 +425,6 @@ int main(int argc, char** argv) {
 				display("keypoints frame", keyPointImage);
 				//display("frame", frame);
             }
-            //display("frame", frame;
-        }
-        display("frame", frame);
+	 */
 
-        if(waitKey(2000)>=0)
-            break;
-        std::swap(prevgray, gray);
-        std::swap(_prev, frame);
-        ++count;
-    }
-
-	return 0;
 }
