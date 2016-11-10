@@ -14,7 +14,6 @@
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/ximgproc/segmentation.hpp>
 #include <ctime>
-#include <tbb/tbb.h>
 #include <fstream>
 #include <string>
 #include "box_extractor.hpp"

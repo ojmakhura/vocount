@@ -6,7 +6,6 @@
  */
 
 #include "distance.hpp"
-#include <tbb/tbb.h>
 #include <omp.h>
 
 using namespace std;

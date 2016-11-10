@@ -15,9 +15,7 @@
 #include <list>
 #include <set>
 #include<string>
-#include <tbb/tbb.h>
 
-using namespace tbb;
 using namespace clustering;
 using namespace clustering::distance;
 namespace clustering {
