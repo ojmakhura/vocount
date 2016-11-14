@@ -24,6 +24,8 @@ using namespace cv::xfeatures2d;
 using namespace cv::ximgproc::segmentation;
 using namespace hdbscan;
 
+#define SAMPLE_SIZE	5
+
 vector<vector<Point> > contours;
 vector<Vec4i> hierarchy;
 Mat _prev, prevgray, fdiff, 	// previous two frames
@@ -205,8 +207,9 @@ UndirectedGraph constructMST(Mat& src) {
 	//cout << "Done" << endl;
 }
 
-Mat getHist(Mat m){
+Mat getHist(Mat frame, Rect roi){
 	Mat hsv;
+	Mat m = frame(roi);
 	cvtColor(m, hsv, CV_BGR2HSV);
 	int h_bins = 50;
 	int s_bins = 60;
@@ -232,7 +235,8 @@ int main(int argc, char** argv) {
 	vector<vector<KeyPoint> > keypoints;
 	Mat keyPointImage;
 	vector<Mat> descriptors;
-	vector<Mat> base_hist;
+	vector<Mat> base_hist, segment_hist;
+	vector<float> base_height, segment_height, base_width, segment_width;
 	Ptr<Feature2D> detector;
 	Ptr<GraphSegmentation> graphSegmenter = createGraphSegmentation();
 	Ptr<Tracker> tracker = Tracker::create("BOOSTING");
@@ -256,10 +260,17 @@ int main(int argc, char** argv) {
     Rect2d roi;
     Mat gs;
     int frameCount = 0;
+    vector<vector<float> > sample_dataset(SAMPLE_SIZE+2);
 
     for(;;)
     {
     	Mat lap;
+    	vector<Mat> segment_hist;
+    	vector<float> segment_height, segment_width;
+    	// Dataset made up of the segment histogram comparison with the {SAMPLE_SIZE}
+    	// sample histograms and the with and height of the bounding boxes (hence the + 2)
+    	vector<vector<float> > dataset(SAMPLE_SIZE+2);
+
         cap >> frame;
     	frame.copyTo(image);
         graphSegmenter->processImage(frame, gs);
@@ -287,14 +298,14 @@ int main(int argc, char** argv) {
 
 			roiExtracted = true;
 
-        } else if(descriptors.size() < 5){
+        } else if(descriptors.size() < SAMPLE_SIZE){
         	tracker->update(frame, roi);
         	Scalar value = Scalar( rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255) );
         	rectangle(frame, roi, value, 2, 8, 0);
         }
 
 		// add query descriptors and keypoints to the query vectors
-		if (descriptors.size() < 5) {
+		if (base_hist.size() < SAMPLE_SIZE) {
 		    vector<Point2f> roiPts;
 		    Mat roiDesc;
 	        // Get all keypoints inside the roi
@@ -312,16 +323,44 @@ int main(int argc, char** argv) {
 			descriptors.push_back(roiDesc);
 
 			// Calculate histograms for each tracked position and store them for later
-			Mat m = frame(roi);
+			Mat h = getHist(frame, roi);
+			base_hist.push_back(h);
 
-			base_hist.push_back(getHist(m));
+			base_height.push_back(roi.height);
+			base_width.push_back(roi.width);
+
+			// The first 5 entries of the histogram dataset are made up of
+			//
+		} else {
+			// Create datapoints from the samples and
+			if(sample_dataset[0].size() == 0){ // only do this if it hasn't been done before
+				for(uint i = 0; i < SAMPLE_SIZE; ++i){
+					for(uint j = 0; j < SAMPLE_SIZE; ++j){
+						double compare = compareHist(base_hist[i], base_hist[j], CV_COMP_CORREL);
+						sample_dataset[i][j] = compare;
+
+						dataset[i].push_back(compare);
+					}
+					sample_dataset[SAMPLE_SIZE].push_back(base_height[i]);
+					dataset[SAMPLE_SIZE].push_back(base_height[i]);
+
+					sample_dataset[SAMPLE_SIZE+1].push_back(base_width[i]);
+					dataset[SAMPLE_SIZE+1].push_back(base_width[i]);
+				}
+			} else {
+				// Just copy the data already in the sample_dataset
+				// TODO: Do thi as the end of composing the dataset. For ease of indexing the results.
+				for (uint i = 0; i < SAMPLE_SIZE; ++i) {
+					dataset[i].insert(dataset[i].begin(), sample_dataset[i].begin(), sample_dataset[i].end());
+				}
+			}
 		}
 
         //printf("Rows after: %d\n", descriptors.rows);
         image = frame.clone();
         cvtColor(image, gray, COLOR_BGR2GRAY);
 
-        if( !prevgray.empty() && descriptors.size() == 5)
+        if( !prevgray.empty() && base_hist.size() == SAMPLE_SIZE)
         {
 			absdiff(frame, _prev, fdiff);
 
@@ -332,9 +371,25 @@ int main(int argc, char** argv) {
             //display("myflow", flow);
 
             drawKeypoints( frame, kp, keyPointImage, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-            //TODO: extras
 
+            // TODO: calculate histograms and size of segments and use them to create the dataset
+            for (std::map<uint,vector<Point> >::iterator it=points.begin(); it!=points.end(); ++it){
+            	vector<Point> ps = it->second;
+            	roi = boundingRect(ps);
+
+            	Mat m = frame(roi);
+            	Mat h = getHist(frame, roi);
+
+            	for(uint i = 0; i < SAMPLE_SIZE; ++i){
+            		double compare = compareHist(h, base_hist[i], CV_COMP_CORREL);
+            		dataset[i].push_back(compare);
+            	}
+
+            	dataset[SAMPLE_SIZE].push_back(roi.height);
+            	dataset[SAMPLE_SIZE].push_back(roi.width);
+            }
             //display("frame", frame;
+            // TODO: Run HDBSCAN on the dataset
         }
         display("frame", frame);
 
