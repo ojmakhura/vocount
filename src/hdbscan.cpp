@@ -1226,7 +1226,7 @@ void HDBSCAN::computeHierarchyAndClusterTree(bool compactHierarchy,
 	delete affectedVertices;
 }
 
-void HDBSCAN::run(bool calcDistances) {
+void HDBSCAN::run() {
 	int start = clock();
 	/*if (calcDistances) {
 		calculateCoreDistances(dataSet, rows, cols);

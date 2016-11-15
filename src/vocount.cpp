@@ -228,6 +228,27 @@ Mat getHist(Mat frame, Rect roi){
 	return hist;
 }
 
+map<uint, vector<int> > runScan(vector<vector<float> > dataset, vector<int>& labels, set<int>& lset){
+	map<uint, vector<int> > mapped;
+	HDBSCAN scan(dataset, _EUCLIDEAN, 2, 2);
+	scan.run();
+	labels.insert(labels.end(), scan.getClusterLabels().begin(), scan.getClusterLabels().end());
+	lset.insert(labels.begin(), labels.end());
+
+	for (set<int>::iterator it = lset.begin(); it != lset.end(); ++it) {
+		vector<int> pts;
+		for (uint i = 0; i < labels.size(); ++i) {
+			if (*it == labels[i]) {
+				pts.push_back(i);
+			}
+		}
+		pair<uint, vector<int> > pr(*it, pts);
+		mapped.insert(pr);
+	}
+
+	return mapped;
+}
+
 int main(int argc, char** argv) {
 	int count = 0;
 	//dummy_tester();
@@ -240,6 +261,7 @@ int main(int argc, char** argv) {
 	Ptr<Feature2D> detector;
 	Ptr<GraphSegmentation> graphSegmenter = createGraphSegmentation();
 	Ptr<Tracker> tracker = Tracker::create("BOOSTING");
+	int compare_method = CV_COMP_CORREL;
 
 	if (tracker == NULL) {
 		cout << "***Error in the instantiation of the tracker...***\n";
@@ -279,7 +301,7 @@ int main(int argc, char** argv) {
         Mat output_image = getSegmentImage(gs, points);
         display("output_image", output_image);
 
-        printf("Points has size %d\n ", points.size());
+        //printf("Points has size %d\n ", points.size());
     	Mat desc;
     	vector<KeyPoint> kp;
         //pyrMeanShiftFiltering(frame, frame, 10, 30, 1);
@@ -336,22 +358,12 @@ int main(int argc, char** argv) {
 			if(sample_dataset[0].size() == 0){ // only do this if it hasn't been done before
 				for(uint i = 0; i < SAMPLE_SIZE; ++i){
 					for(uint j = 0; j < SAMPLE_SIZE; ++j){
-						double compare = compareHist(base_hist[i], base_hist[j], CV_COMP_CORREL);
-						sample_dataset[i][j] = compare;
+						double compare = compareHist(base_hist[i], base_hist[j], compare_method);
+						sample_dataset[i].push_back(compare);
 
-						dataset[i].push_back(compare);
 					}
 					sample_dataset[SAMPLE_SIZE].push_back(base_height[i]);
-					dataset[SAMPLE_SIZE].push_back(base_height[i]);
-
 					sample_dataset[SAMPLE_SIZE+1].push_back(base_width[i]);
-					dataset[SAMPLE_SIZE+1].push_back(base_width[i]);
-				}
-			} else {
-				// Just copy the data already in the sample_dataset
-				// TODO: Do thi as the end of composing the dataset. For ease of indexing the results.
-				for (uint i = 0; i < SAMPLE_SIZE; ++i) {
-					dataset[i].insert(dataset[i].begin(), sample_dataset[i].begin(), sample_dataset[i].end());
 				}
 			}
 		}
@@ -367,29 +379,56 @@ int main(int argc, char** argv) {
             //algorithm->calc(gray, prevgray, uflow);
             cvtColor(prevgray, cflow, COLOR_GRAY2BGR);
             normalize(cflow, cflow, 0, 255, NORM_MINMAX);
+            vector<uint> keys;
             //uflow.copyTo(flow);
             //display("myflow", flow);
 
             drawKeypoints( frame, kp, keyPointImage, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
 
-            // TODO: calculate histograms and size of segments and use them to create the dataset
             for (std::map<uint,vector<Point> >::iterator it=points.begin(); it!=points.end(); ++it){
             	vector<Point> ps = it->second;
+            	keys.push_back(it->first);
             	roi = boundingRect(ps);
 
             	Mat m = frame(roi);
             	Mat h = getHist(frame, roi);
 
             	for(uint i = 0; i < SAMPLE_SIZE; ++i){
-            		double compare = compareHist(h, base_hist[i], CV_COMP_CORREL);
+            		double compare = compareHist(h, base_hist[i], compare_method);
             		dataset[i].push_back(compare);
             	}
 
             	dataset[SAMPLE_SIZE].push_back(roi.height);
-            	dataset[SAMPLE_SIZE].push_back(roi.width);
+            	dataset[SAMPLE_SIZE+1].push_back(roi.width);
             }
-            //display("frame", frame;
-            // TODO: Run HDBSCAN on the dataset
+
+			for (uint i = 0; i < SAMPLE_SIZE+2; ++i) {
+				dataset[i].insert(dataset[i].end(), sample_dataset[i].begin(),
+						sample_dataset[i].end());
+			}
+
+			vector<int> labels;
+			set<int> lset;
+			map<uint, vector<int> > mapped = runScan(dataset, labels, lset);
+
+			printf("Found %d types of objects\n", lset.size());
+
+			/**
+			 * Find similar object to the samples
+			 */
+			for(uint i = points.size(); i < points.size()+SAMPLE_SIZE; ++i){
+				vector<int> cluster = mapped[labels[i]]; // get objects of the same cluster as one of the samples
+				printf("Sample %d is in cluster %d that has %d objects\n", i, labels[i], cluster.size());
+				Scalar cl = color_mapping(labels[i]);
+
+				for(uint j = 0; j < cluster.size(); ++j){ // get the label indices
+					int idx = cluster[j]; // to be used to find keys to the points map
+					vector<Point> pts = points[idx];
+					roi = boundingRect(pts);
+					rectangle(frame, roi, cl, 2, 8, 0);
+				}
+			}
+
         }
         display("frame", frame);
 

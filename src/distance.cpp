@@ -53,7 +53,6 @@ void DistanceCalculator::cvComputeEuclidean(vector<vector<Point> > contours, Mat
 		rows += contours[i].size();
 	}
 
-	printf("found %d points\n", rows);
 	this->cols = frame.channels() + 4;
 	//this->distance = (float *) malloc(rows * rows * sizeof(float));
 	this->coreDistances =  (float *) malloc(rows * sizeof(float));
@@ -76,7 +75,6 @@ void DistanceCalculator::cvComputeEuclidean(vector<Point> contour, vector<Mat>& 
 	rows = contour.size();
 	cols = 2 + dataset.size();
 
-	printf("found %d points\n", rows);
 	int sub = (rows * rows -rows)/2;
 	//this->cols = frame.channels() + 4;
 	//this->distance = (float *) malloc(rows * rows * sizeof(float));
@@ -101,7 +99,6 @@ void DistanceCalculator::computeDistance(vector<vector<float> > dataset, int num
 	CV_Assert(dataset.size() > 0);
 	this->rows = dataset[0].size();
 	int sub = (rows * rows - rows) / 2;
-	printf("found %d points and sub %d\n", rows, sub);
 	// dataset only contains the data matrices
 	//
 	this->cols = dataset.size();
@@ -127,7 +124,6 @@ void DistanceCalculator::cvComputeDistance(vector<Mat>& dataset, int minPoints, 
 
 	this->rows = dataset[0].rows * dataset[0].cols;
 	int sub = (rows * rows -rows)/2;
-	printf("found %d points and sub %d\n", rows, sub);
 	// dataset only contains the data matrices
 	//
 	this->cols = dataset.size() + 2;
@@ -156,7 +152,6 @@ void DistanceCalculator::cvComputeDistance(Mat& dataset, int minPoints){
 
 	this->rows = dataset.rows;
 	int sub = (rows * rows -rows)/2;
-	printf("found %d points and sub %d\n", rows, sub);
 	// dataset only contains the data matrices
 	//
 	this->cols =  dataset.cols;
@@ -185,7 +180,6 @@ void DistanceCalculator::computeDistance(vector<Point2f> dataset, int rows, int 
 	this->rows = rows;
 	this->cols = cols;
 	int sub = (rows * rows -rows)/2;
-	printf("rows is %d sub is %d\n", rows, sub);
 	//printf("requested memory = %d bytes\n", rows * rows * sizeof(float));
 	this->distance = new float[sub]; //(float *) malloc(sub * sizeof(float));
 	//this->sortedDistance = (float *) malloc(rows * rows * sizeof(float));
@@ -212,7 +206,6 @@ void DistanceCalculator::computeDistance(float* dataset, int rows, int cols, int
 	this->rows = rows;
 	this->cols = cols;
 	int sub = (rows * rows -rows)/2;
-	printf("rows is %d sub is %d\n", rows, sub);
 	this->distance = new float[sub];
 	this->coreDistances = new float[rows];
 
@@ -390,7 +383,6 @@ void DistanceCalculator::do_euclidean(Mat& dataset, int numNeighbors){
 }
 
 void DistanceCalculator::cvEuclidean(vector<vector<Point> > contours, Mat flow, Mat frame, int numNeighbors){
-	printf("DistanceCalculator::cvEuclidean(vector<vector<Point> > contours, Mat flow, Mat frame, int numNeighbors)\n");
 	uint roffset, offset2, offset1;
 	float sum;
 

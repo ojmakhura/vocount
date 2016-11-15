@@ -97,7 +97,7 @@ public:
 	/**
 	 *
 	 */
-	void run(bool useDataset);
+	void run();
 	void cvRun(bool useDataset);
 
 	/**
