@@ -318,21 +318,6 @@ void DistanceCalculator::do_euclidean(Mat& dataset, int numNeighbors){
 			uint roffset, offset2, offset1;
 			sum = 0;
 			int r2, c2;
-			/*if(points.size() > 0){
-				vector<float> v2 = points[2];
-				vector<float> v1 = points[i];
-
-				for(uint k = 0; k < v2.size(); ++k){
-					float num1 = v1[k];
-					float num2 = v2[k];
-					diff = num1 - num2;
-
-					//printf("inner peace %d: (%f - %f) \n", k, num1, num2);
-
-					sum += (diff * diff);
-				}
-			}*/
-
 			for (uint k = 0; ((k < cols) && (i != j)); k++) {
 				float num1 = p1[k];
 				float num2 = p2[k];

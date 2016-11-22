@@ -24,7 +24,7 @@ using namespace cv::xfeatures2d;
 using namespace cv::ximgproc::segmentation;
 using namespace hdbscan;
 
-#define SAMPLE_SIZE	5
+#define SAMPLE_SIZE	2
 
 vector<vector<Point> > contours;
 vector<Vec4i> hierarchy;
@@ -249,83 +249,9 @@ map<uint, vector<int> > runScan(vector<vector<float> > dataset, vector<int>& lab
 	return mapped;
 }
 
-int main(int argc, char** argv) {
-	int count = 0;
-	//dummy_tester();
-	ocl::setUseOpenCL(true);
-	vector<vector<KeyPoint> > keypoints;
-	Mat keyPointImage;
-	vector<Mat> descriptors;
-	vector<Mat> base_hist, segment_hist;
-	vector<float> base_height, segment_height, base_width, segment_width;
-	Ptr<Feature2D> detector;
-	Ptr<GraphSegmentation> graphSegmenter = createGraphSegmentation();
-	Ptr<Tracker> tracker = Tracker::create("BOOSTING");
-	int compare_method = CV_COMP_CORREL;
-
-	if (tracker == NULL) {
-		cout << "***Error in the instantiation of the tracker...***\n";
-		return -1;
-	}
-
-    detector = SURF::create(100);
-
-    VideoCapture cap(argv[1]);
-    if( !cap.isOpened() ){
-        printf("Could not open stream\n");
-    	return -1;
-    }
-    Ptr<DenseOpticalFlow> algorithm;
-    algorithm = optflow::createOptFlow_Farneback();
-    BoxExtractor box;
-    bool roiExtracted = false;
-    Rect2d roi;
-    Mat gs;
-    int frameCount = 0;
-    vector<vector<float> > sample_dataset(SAMPLE_SIZE+2);
-
-    for(;;)
-    {
-    	Mat lap;
-    	vector<Mat> segment_hist;
-    	vector<float> segment_height, segment_width;
-    	// Dataset made up of the segment histogram comparison with the {SAMPLE_SIZE}
-    	// sample histograms and the with and height of the bounding boxes (hence the + 2)
-    	vector<vector<float> > dataset(SAMPLE_SIZE+2);
-
-        cap >> frame;
-    	frame.copyTo(image);
-        graphSegmenter->processImage(frame, gs);
-        //printf("Rows before: %d\n", descriptors.rows);
-		map<uint, vector<Point> > points;
-        Mat output_image = getSegmentImage(gs, points);
-        display("output_image", output_image);
-
-        //printf("Points has size %d\n ", points.size());
-    	Mat desc;
-    	vector<KeyPoint> kp;
-        //pyrMeanShiftFiltering(frame, frame, 10, 30, 1);
-        detector->detectAndCompute(frame, Mat(), kp, desc);
-        uint ogsize = desc.rows;
-
-        if(!roiExtracted && descriptors.size() < 1){
-        	roi = box.extract("track", frame);
-
-	        //initializes the tracker
-	        if( !tracker->init( frame, roi ) )
-	        {
-	          cout << "***Could not initialize tracker...***\n";
-	          return -1;
-	        }
-
-			roiExtracted = true;
-
-        } else if(descriptors.size() < SAMPLE_SIZE){
-        	tracker->update(frame, roi);
-        	Scalar value = Scalar( rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255) );
-        	rectangle(frame, roi, value, 2, 8, 0);
-        }
-
+void other(){
+/*
+ *
 		// add query descriptors and keypoints to the query vectors
 		if (base_hist.size() < SAMPLE_SIZE) {
 		    vector<Point2f> roiPts;
@@ -367,69 +293,247 @@ int main(int argc, char** argv) {
 				}
 			}
 		}
+    if( !prevgray.empty() && base_hist.size() == SAMPLE_SIZE)
+    {
+		absdiff(frame, _prev, fdiff);
 
+        //algorithm->calc(gray, prevgray, uflow);
+        cvtColor(prevgray, cflow, COLOR_GRAY2BGR);
+        normalize(cflow, cflow, 0, 255, NORM_MINMAX);
+        vector<uint> keys;
+        //uflow.copyTo(flow);
+        //display("myflow", flow);
+
+        drawKeypoints( frame, kp, keyPointImage, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
+
+        for (std::map<uint,vector<Point> >::iterator it=points.begin(); it!=points.end(); ++it){
+        	vector<Point> ps = it->second;
+        	keys.push_back(it->first);
+        	roi = boundingRect(ps);
+
+        	Mat m = frame(roi);
+        	Mat h = getHist(frame, roi);
+
+        	for(uint i = 0; i < SAMPLE_SIZE; ++i){
+        		double compare = compareHist(h, base_hist[i], compare_method);
+        		dataset[i].push_back(compare);
+        	}
+
+        	dataset[SAMPLE_SIZE].push_back(roi.height);
+        	dataset[SAMPLE_SIZE+1].push_back(roi.width);
+        }
+
+		for (uint i = 0; i < SAMPLE_SIZE+2; ++i) {
+			dataset[i].insert(dataset[i].end(), sample_dataset[i].begin(),
+					sample_dataset[i].end());
+		}
+
+		vector<int> labels;
+		set<int> lset;
+		map<uint, vector<int> > mapped = runScan(dataset, labels, lset);
+
+		printf("Found %d types of objects\n", lset.size());
+*/
+		/**
+		 * Find similar object to the samples
+		 */
+		/*for(uint i = points.size(); i < points.size()+SAMPLE_SIZE; ++i){
+			vector<int> cluster = mapped[labels[i]]; // get objects of the same cluster as one of the samples
+			printf("Sample %d is in cluster %d that has %d objects\n", i, labels[i], cluster.size());
+			Scalar cl = color_mapping(labels[i]);
+
+			for(uint j = 0; j < cluster.size(); ++j){ // get the label indices
+				int idx = cluster[j]; // to be used to find keys to the points map
+				vector<Point> pts = points[idx];
+				roi = boundingRect(pts);
+				rectangle(frame, roi, cl, 2, 8, 0);
+			}
+		}
+
+    }*/
+}
+
+int main(int argc, char** argv) {
+	int count = 0;
+	//dummy_tester();
+	ocl::setUseOpenCL(true);
+	vector<vector<KeyPoint> > keypoints;
+	Mat keyPointImage;
+	vector<Mat> descriptors;
+	vector<Mat> base_hist, segment_hist;
+	vector<float> base_height, segment_height, base_width, segment_width;
+	Ptr<Feature2D> detector;
+	Ptr<GraphSegmentation> graphSegmenter = createGraphSegmentation();
+	Ptr<Tracker> tracker = Tracker::create("BOOSTING");
+	int compare_method = CV_COMP_CORREL;
+
+	if (tracker == NULL) {
+		cout << "***Error in the instantiation of the tracker...***\n";
+		return -1;
+	}
+
+    detector = SURF::create(100);
+
+    VideoCapture cap(argv[1]);
+    if( !cap.isOpened() ){
+        printf("Could not open stream\n");
+    	return -1;
+    }
+    Ptr<DenseOpticalFlow> algorithm;
+    algorithm = optflow::createOptFlow_Farneback();
+    BoxExtractor box;
+    bool roiExtracted = false;
+    Rect2d roi;
+    Mat gs;
+    int frameCount = 0;
+    vector<vector<float> > sample_dataset(SAMPLE_SIZE+2);
+
+    for(;;)
+    {
+    	Mat lap;
+    	//vector<Mat> segment_hist;
+    	vector<float> segment_height, segment_width;
+    	// Dataset made up of the segment histogram comparison with the {SAMPLE_SIZE}
+    	// sample histograms and the with and height of the bounding boxes (hence the + 2)
+    	//vector<vector<float> > dataset(SAMPLE_SIZE+2);
+
+        cap >> frame;
+    	frame.copyTo(image);
+        graphSegmenter->processImage(frame, gs);
+        //printf("Rows before: %d\n", descriptors.rows);
+		map<uint, vector<Point> > points;
+        Mat output_image = getSegmentImage(gs, points);
+        display("output_image", output_image);
+
+        //printf("Points has size %d\n ", points.size());
+    	Mat desc;
+    	vector<KeyPoint> kp;
+        //pyrMeanShiftFiltering(frame, frame, 10, 30, 1);
+        detector->detectAndCompute(frame, Mat(), kp, desc);
+        uint ogsize = desc.rows;
+
+        if(!roiExtracted && descriptors.size() < 1){
+        	roi = box.extract("track", frame);
+
+	        //initializes the tracker
+	        if( !tracker->init( frame, roi ) )
+	        {
+	          cout << "***Could not initialize tracker...***\n";
+	          return -1;
+	        }
+
+			roiExtracted = true;
+
+        } else if(descriptors.size() < SAMPLE_SIZE){
+        	tracker->update(frame, roi);
+        	Scalar value = Scalar( rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255) );
+        	rectangle(frame, roi, value, 2, 8, 0);
+		    vector<Point2f> roiPts;
+		    Mat roiDesc;
+	        // Get all keypoints inside the roi
+			for(uint i = 0; i < kp.size(); ++i){
+				Point p;
+				p.x = kp[i].pt.x;
+				p.y = kp[i].pt.y;
+
+				if(roi.contains(kp[i].pt)){
+					roiPts.push_back(kp[i].pt);
+					roiDesc.push_back(desc.row(i));
+				}
+			}
+			keypoints.push_back(kp);
+			descriptors.push_back(roiDesc);
+        }
+
+		if (!desc.empty()) {
+
+			// Create clustering dataset
+			for (uint n = 0; n < descriptors.size(); ++n) {
+				desc.push_back(descriptors[n]);
+			}
+
+			map<int, vector<Point> > mappedPoints;
+
+			HDBSCAN scan(desc, _EUCLIDEAN, 3, 3);
+			//printf("scan creation done\n");
+			scan.run();
+			//printf("scan cluster done\n");
+			vector<int> labels = scan.getClusterLabels();
+			map<int, float> stabilities = scan.getClusterStabilities();
+			set<int> lset;
+			vector<float> sstabilities(lset.size());
+			lset.insert(labels.begin(), labels.end());
+			//int i = 0;
+			for (set<int>::iterator it = lset.begin(); it != lset.end(); ++it) {
+				vector<Point> pts;
+				for (uint i = 0; i < labels.size(); ++i) {
+					if (*it == labels[i]) {
+						Point p;
+						p.x = (int) kp[i].pt.x;
+						p.y = (int) kp[i].pt.y;
+
+						pts.push_back(p);
+					}
+				}
+				//printf("%d has %d\n\t\n\n\n", *it, pts.size());
+				//foruint i = 0; i < pts.size())
+				pair<uint, vector<Point> > pr(*it, pts);
+				mappedPoints.insert(pr);
+				//++i;
+				Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
+						rng.uniform(0, 255));
+				Rect rr = boundingRect(pts);
+				//rectangle(keyPointImage, rr, value, 2, 8, 0);
+				string name = to_string(*it);
+				putText(keyPointImage, name.c_str(), Point(rr.x - 4, rr.y - 4),
+						CV_FONT_HERSHEY_PLAIN, 1, value);
+			}
+
+			/********************************************************************
+			 * Approximation of the number of similar objects
+			 *******************************************************************/
+
+			map<int, vector<int> >
+			roiClusters;
+
+			//int i = 0;
+			int add_size = 0;
+			for (set<int>::iterator it = lset.begin(); it != lset.end(); ++it) {
+				vector<int> pts;
+				for (uint i = ogsize; i < labels.size(); ++i) {
+					if (*it == labels[i] && *it != 0) {
+						pts.push_back(i);
+					}
+				}
+
+				if (!pts.empty()) {
+					float n = (float) mappedPoints[*it].size() / pts.size();
+					printf(
+							"stability: %f --> %d has %d and total is %d :: Approx Num of objects: %f\n\n",
+							stabilities[*it], *it, pts.size(),
+							mappedPoints[*it].size(), n);
+					pair<uint, vector<int> > pr(*it, pts);
+					roiClusters.insert(pr);
+				}
+			}
+			cout
+					<< "--------------------------------------------------------------------------------------------"
+					<< endl;
+			cout
+					<< "---------------------------------------Statistics-------------------------------------------"
+					<< endl;
+			cout
+					<< "--------------------------------------------------------------------------------------------"
+					<< endl;
+			//printf("lset size = %d, stabilities size = %d\n", lset.size(), stabilities.size());
+
+			display("keypoints frame", keyPointImage);
+			//display("frame", frame);
+		}
         //printf("Rows after: %d\n", descriptors.rows);
         image = frame.clone();
         cvtColor(image, gray, COLOR_BGR2GRAY);
 
-        if( !prevgray.empty() && base_hist.size() == SAMPLE_SIZE)
-        {
-			absdiff(frame, _prev, fdiff);
-
-            //algorithm->calc(gray, prevgray, uflow);
-            cvtColor(prevgray, cflow, COLOR_GRAY2BGR);
-            normalize(cflow, cflow, 0, 255, NORM_MINMAX);
-            vector<uint> keys;
-            //uflow.copyTo(flow);
-            //display("myflow", flow);
-
-            drawKeypoints( frame, kp, keyPointImage, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-
-            for (std::map<uint,vector<Point> >::iterator it=points.begin(); it!=points.end(); ++it){
-            	vector<Point> ps = it->second;
-            	keys.push_back(it->first);
-            	roi = boundingRect(ps);
-
-            	Mat m = frame(roi);
-            	Mat h = getHist(frame, roi);
-
-            	for(uint i = 0; i < SAMPLE_SIZE; ++i){
-            		double compare = compareHist(h, base_hist[i], compare_method);
-            		dataset[i].push_back(compare);
-            	}
-
-            	dataset[SAMPLE_SIZE].push_back(roi.height);
-            	dataset[SAMPLE_SIZE+1].push_back(roi.width);
-            }
-
-			for (uint i = 0; i < SAMPLE_SIZE+2; ++i) {
-				dataset[i].insert(dataset[i].end(), sample_dataset[i].begin(),
-						sample_dataset[i].end());
-			}
-
-			vector<int> labels;
-			set<int> lset;
-			map<uint, vector<int> > mapped = runScan(dataset, labels, lset);
-
-			printf("Found %d types of objects\n", lset.size());
-
-			/**
-			 * Find similar object to the samples
-			 */
-			for(uint i = points.size(); i < points.size()+SAMPLE_SIZE; ++i){
-				vector<int> cluster = mapped[labels[i]]; // get objects of the same cluster as one of the samples
-				printf("Sample %d is in cluster %d that has %d objects\n", i, labels[i], cluster.size());
-				Scalar cl = color_mapping(labels[i]);
-
-				for(uint j = 0; j < cluster.size(); ++j){ // get the label indices
-					int idx = cluster[j]; // to be used to find keys to the points map
-					vector<Point> pts = points[idx];
-					roi = boundingRect(pts);
-					rectangle(frame, roi, cl, 2, 8, 0);
-				}
-			}
-
-        }
         display("frame", frame);
 
         if(waitKey(2000)>=0)
