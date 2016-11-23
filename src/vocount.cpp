@@ -24,7 +24,7 @@ using namespace cv::xfeatures2d;
 using namespace cv::ximgproc::segmentation;
 using namespace hdbscan;
 
-#define SAMPLE_SIZE	2
+#define SAMPLE_SIZE 5
 
 vector<vector<Point> > contours;
 vector<Vec4i> hierarchy;
@@ -454,15 +454,17 @@ int main(int argc, char** argv) {
 
 			map<int, vector<Point> > mappedPoints;
 
-			HDBSCAN scan(desc, _EUCLIDEAN, 3, 3);
+			HDBSCAN scan(desc, _EUCLIDEAN, 4, 4);
 			//printf("scan creation done\n");
 			scan.run();
 			//printf("scan cluster done\n");
 			vector<int> labels = scan.getClusterLabels();
 			map<int, float> stabilities = scan.getClusterStabilities();
-			set<int> lset;
+			set<int> lset, tempSet;
 			vector<float> sstabilities(lset.size());
 			lset.insert(labels.begin(), labels.end());
+			// temp set is the set of clusters for the sample data
+			tempSet.insert(labels.begin()+ogsize, labels.end());
 			//int i = 0;
 			for (set<int>::iterator it = lset.begin(); it != lset.end(); ++it) {
 				vector<Point> pts;
@@ -493,9 +495,9 @@ int main(int argc, char** argv) {
 			 * Approximation of the number of similar objects
 			 *******************************************************************/
 
-			map<int, vector<int> >
-			roiClusters;
-
+			map<int, vector<int> > roiClusters;
+			uint largest = 0;
+			float lsize = 0;
 			//int i = 0;
 			int add_size = 0;
 			for (set<int>::iterator it = lset.begin(); it != lset.end(); ++it) {
@@ -508,20 +510,45 @@ int main(int argc, char** argv) {
 
 				if (!pts.empty()) {
 					float n = (float) mappedPoints[*it].size() / pts.size();
-					printf(
-							"stability: %f --> %d has %d and total is %d :: Approx Num of objects: %f\n\n",
-							stabilities[*it], *it, pts.size(),
-							mappedPoints[*it].size(), n);
+					printf("stability: %f --> %d has %d and total is %d :: Approx Num of objects: %f\n\n", stabilities[*it], *it, pts.size(), mappedPoints[*it].size(), n);
 					pair<uint, vector<int> > pr(*it, pts);
 					roiClusters.insert(pr);
+
+					if(n > lsize && *it != 1){
+						largest = *it;
+						lsize = n;
+					}
 				}
 			}
+
+			cout << "Cluster " << largest << " is the largest" << endl;
+
+			/**
+			 * Draw only the keypoints in the same cluster as the sample descriptors
+			 */
+			vector<KeyPoint> matchedKeyPoints;
+			//for(set<int>::iterator it = tempSet.begin(); it != tempSet.end(); ++it){
+				//vector<int> clusters = roiClusters[*it];
+
+				for(uint i = 0; i < ogsize; ++i){
+					if(largest == labels[i] && labels[i] != 1){
+						matchedKeyPoints.push_back(kp[i]);
+					}
+				}
+
+			//}
+			Mat img_keypoints;
+			drawKeypoints( frame, matchedKeyPoints, img_keypoints, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+			drawKeypoints( frame, kp, frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+			display("img_keypoints", img_keypoints);
+
 			cout
 					<< "--------------------------------------------------------------------------------------------"
 					<< endl;
 			cout
 					<< "---------------------------------------Statistics-------------------------------------------"
 					<< endl;
+			cout << "Number of matchedKeyPoints is " << matchedKeyPoints.size() << " out of " << ogsize << endl;
 			cout
 					<< "--------------------------------------------------------------------------------------------"
 					<< endl;
