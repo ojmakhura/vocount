@@ -24,8 +24,6 @@ using namespace cv::xfeatures2d;
 using namespace cv::ximgproc::segmentation;
 using namespace hdbscan;
 
-#define SAMPLE_SIZE 5
-
 vector<vector<Point> > contours;
 vector<Vec4i> hierarchy;
 Mat _prev, prevgray, fdiff, 	// previous two frames
@@ -39,6 +37,8 @@ Mat _prev, prevgray, fdiff, 	// previous two frames
 		 candidates,// candidates computed from the contours
 		 iEdge;		// edges for the current image
 RNG rng(12345);
+
+int SAMPLE_SIZE = 1;
 
 void display(char const* screen, const InputArray& m) {
 	if (!m.empty()) {
@@ -353,6 +353,16 @@ void other(){
     }*/
 }
 
+
+void printImage(string folder, int idx, string name, Mat img) {
+	//string folder = "/home/ojmakh/programming/phd/data/";
+	stringstream sstm;
+
+	sstm << folder << "/" << idx << " " << name << ".jpg";
+	//cout << "printing " << sstm.str() << endl;
+	imwrite(sstm.str(), img);
+}
+
 int main(int argc, char** argv) {
 	int count = 0;
 	//dummy_tester();
@@ -365,6 +375,8 @@ int main(int argc, char** argv) {
 	Ptr<Feature2D> detector;
 	Ptr<GraphSegmentation> graphSegmenter = createGraphSegmentation();
 	Ptr<Tracker> tracker = Tracker::create("BOOSTING");
+	string destFolder;
+
 	int compare_method = CV_COMP_CORREL;
 
 	if (tracker == NULL) {
@@ -379,6 +391,15 @@ int main(int argc, char** argv) {
         printf("Could not open stream\n");
     	return -1;
     }
+
+    if(argc == 3){
+    	SAMPLE_SIZE = atoi(argv[2]);
+    }
+
+    if(argc == 4){
+    	destFolder = argv[3];
+    }
+
     Ptr<DenseOpticalFlow> algorithm;
     algorithm = optflow::createOptFlow_Farneback();
     BoxExtractor box;
