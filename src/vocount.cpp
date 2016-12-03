@@ -354,13 +354,23 @@ void other(){
 }
 
 
-void printImage(string folder, int idx, string name, Mat img) {
+void printImage(String folder, int idx, String name, Mat img) {
 	//string folder = "/home/ojmakh/programming/phd/data/";
 	stringstream sstm;
 
-	sstm << folder << "/" << idx << " " << name << ".jpg";
+	sstm << folder.c_str() << "/" << idx << " " << name.c_str() << ".jpg";
 	//cout << "printing " << sstm.str() << endl;
 	imwrite(sstm.str(), img);
+}
+
+static void help(){
+	printf( "This is a programming for estimating the number of objects in the video.\n"
+	        "Usage: vocount\n"
+	        "     -v=<video>         	   # Video file to read\n"
+	        "     --video=<video>          # video file to read\n"
+	        "     [--dir=<output dir>]     # the directly where to write to frame images\n"
+			"     [-n=<sample size>]       # the number of frames to use for sample size"
+	        "\n" );
 }
 
 int main(int argc, char** argv) {
@@ -375,9 +385,37 @@ int main(int argc, char** argv) {
 	Ptr<Feature2D> detector;
 	Ptr<GraphSegmentation> graphSegmenter = createGraphSegmentation();
 	Ptr<Tracker> tracker = Tracker::create("BOOSTING");
-	string destFolder;
+	String destFolder;
+	bool print = false;
+	VideoCapture cap;
 
 	int compare_method = CV_COMP_CORREL;
+
+	cv::CommandLineParser parser(argc, argv, "{help ||}{dir|.|}{n|1|}"
+			"{v||}{video||}");
+
+	if(parser.has("help")){
+		help();
+		return 0;
+	}
+
+	if (parser.has("n")) {
+		String s = parser.get<String>("n");
+		SAMPLE_SIZE = atoi(s.c_str());
+	}
+
+	if (parser.has("dir")) {
+		destFolder = parser.get<String>("dir");
+		print = true;
+	}
+
+	if(parser.has("v")){
+		cap.open(parser.get<String>("v"));
+	}
+
+	if(parser.has("video")){
+		cap.open(parser.get<String>("video"));
+	}
 
 	if (tracker == NULL) {
 		cout << "***Error in the instantiation of the tracker...***\n";
@@ -386,18 +424,10 @@ int main(int argc, char** argv) {
 
     detector = SURF::create(100);
 
-    VideoCapture cap(argv[1]);
+
     if( !cap.isOpened() ){
         printf("Could not open stream\n");
     	return -1;
-    }
-
-    if(argc == 3){
-    	SAMPLE_SIZE = atoi(argv[2]);
-    }
-
-    if(argc == 4){
-    	destFolder = argv[3];
     }
 
     Ptr<DenseOpticalFlow> algorithm;
@@ -560,7 +590,7 @@ int main(int argc, char** argv) {
 			//}
 			Mat img_keypoints;
 			drawKeypoints( frame, matchedKeyPoints, img_keypoints, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
-			drawKeypoints( frame, kp, frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+			//drawKeypoints( frame, kp, frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 			display("img_keypoints", img_keypoints);
 
 			cout
@@ -577,6 +607,12 @@ int main(int argc, char** argv) {
 
 			display("keypoints frame", keyPointImage);
 			//display("frame", frame);
+
+	        if(print){
+	        	printImage(destFolder, count, "frame", frame);
+	        	printImage(destFolder, count, "img_keypoints", img_keypoints);
+	        	printImage(destFolder, count, "output_image", output_image);
+	        }
 		}
         //printf("Rows after: %d\n", descriptors.rows);
         image = frame.clone();
@@ -584,7 +620,7 @@ int main(int argc, char** argv) {
 
         display("frame", frame);
 
-        if(waitKey(2000)>=0)
+        if(waitKey(20)>=0)
             break;
         std::swap(prevgray, gray);
         std::swap(_prev, frame);
