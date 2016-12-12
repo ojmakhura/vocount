@@ -36,7 +36,7 @@
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.cross.c.linker.1520898059" name="Cross GCC Linker" superClass="cdt.managedbuild.tool.gnu.cross.c.linker"/>
 							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.292055820" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker">
-								<option id="gnu.cpp.link.option.flags.255530100" name="Linker flags" superClass="gnu.cpp.link.option.flags" value="`pkg-config --libs opencv-3.1.0` -fopenmp" valueType="string"/>
+								<option id="gnu.cpp.link.option.flags.255530100" name="Linker flags" superClass="gnu.cpp.link.option.flags" useByScannerDiscovery="false" value="`pkg-config --libs opencv-3.1.0` -fopenmp" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1588328801" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>

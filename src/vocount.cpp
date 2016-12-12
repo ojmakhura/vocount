@@ -363,18 +363,64 @@ void printImage(String folder, int idx, String name, Mat img) {
 	imwrite(sstm.str(), img);
 }
 
+/**
+ * Find the possible segment of interest
+ * This function works by looking at the segments on both
+ * sides of the roi rectangle. If the same segment is on
+ * both sides, then it is added to the list of segments to
+ * ignore.
+ */
+set<float> getIgnoreSegments(Rect roi, Mat segments){
+	set<float> span;
+
+	for(int i = roi.x; i < roi.width; ++i){
+		Point p1(roi.x, roi.y-1);
+		Point p2(roi.x, roi.y+1);
+
+		if(segments.at<float>(p1) == segments.at<float>(p2)){
+			span.insert(segments.at<float>(p2));
+		}
+
+		int end = roi.y + roi.height;
+		p1.y = end + 1;
+		p2.y = end - 1;
+
+		if(segments.at<float>(p1) == segments.at<float>(p2)){
+			span.insert(segments.at<float>(p2));
+		}
+	}
+
+	for(int j = roi.y; j < roi.height; ++j){
+		Point p1(roi.x - 1, roi.y);
+		Point p2(roi.x + 1, roi.y);
+
+		if(segments.at<float>(p1) == segments.at<float>(p2)){
+			span.insert(segments.at<float>(p2));
+		}
+
+		int end = roi.x + roi.width;
+		p1.x = end + 1;
+		p2.x = end - 1;
+
+		if(segments.at<float>(p1) == segments.at<float>(p2)){
+			span.insert(segments.at<float>(p2));
+		}
+
+	}
+
+	return span;
+}
+
 static void help(){
 	printf( "This is a programming for estimating the number of objects in the video.\n"
 	        "Usage: vocount\n"
-	        "     -v=<video>         	   # Video file to read\n"
-	        "     --video=<video>          # video file to read\n"
+	        "     -[v][-video]=<video>         	   # Video file to read\n"
 	        "     [--dir=<output dir>]     # the directly where to write to frame images\n"
 			"     [-n=<sample size>]       # the number of frames to use for sample size"
 	        "\n" );
 }
 
 int main(int argc, char** argv) {
-	int count = 0;
 	//dummy_tester();
 	ocl::setUseOpenCL(true);
 	vector<vector<KeyPoint> > keypoints;
@@ -391,7 +437,7 @@ int main(int argc, char** argv) {
 
 	int compare_method = CV_COMP_CORREL;
 
-	cv::CommandLineParser parser(argc, argv, "{help ||}{dir|.|}{n|1|}"
+	cv::CommandLineParser parser(argc, argv, "{help ||}{dir||}{n|1|}"
 			"{v||}{video||}");
 
 	if(parser.has("help")){
@@ -407,14 +453,17 @@ int main(int argc, char** argv) {
 	if (parser.has("dir")) {
 		destFolder = parser.get<String>("dir");
 		print = true;
+		printf("Will print to %s\n", destFolder.c_str());
 	}
 
-	if(parser.has("v")){
-		cap.open(parser.get<String>("v"));
-	}
+	if(parser.has("v") || parser.has("video")){
 
-	if(parser.has("video")){
-		cap.open(parser.get<String>("video"));
+		String video = parser.has("v") ? parser.get<String>("v") : parser.get<String>("video");
+		cap.open(video);
+	} else {
+		printf("You did not provide the video stream to open.");
+		help();
+		return -1;
 	}
 
 	if (tracker == NULL) {
@@ -423,7 +472,6 @@ int main(int argc, char** argv) {
 	}
 
     detector = SURF::create(100);
-
 
     if( !cap.isOpened() ){
         printf("Could not open stream\n");
@@ -481,13 +529,19 @@ int main(int argc, char** argv) {
         	rectangle(frame, roi, value, 2, 8, 0);
 		    vector<Point2f> roiPts;
 		    Mat roiDesc;
+		    set<float> ignore = getIgnoreSegments(roi, gs);
 	        // Get all keypoints inside the roi
 			for(uint i = 0; i < kp.size(); ++i){
 				Point p;
 				p.x = kp[i].pt.x;
 				p.y = kp[i].pt.y;
 
-				if(roi.contains(kp[i].pt)){
+				float seg = gs.at<float>(p); // get the segmentation id at point p
+
+				// find if the segment id is listed in the ignore list
+				set<float>::iterator it = std::find(ignore.begin(), ignore.end(), seg);
+
+				if(roi.contains(kp[i].pt) && it != ignore.end()){
 					roiPts.push_back(kp[i].pt);
 					roiDesc.push_back(desc.row(i));
 				}
@@ -609,9 +663,10 @@ int main(int argc, char** argv) {
 			//display("frame", frame);
 
 	        if(print){
-	        	printImage(destFolder, count, "frame", frame);
-	        	printImage(destFolder, count, "img_keypoints", img_keypoints);
-	        	printImage(destFolder, count, "output_image", output_image);
+	        	printImage(destFolder, frameCount, "frame", frame);
+	        	printImage(destFolder, frameCount, "img_keypoints", img_keypoints);
+	        	//printImage(destFolder, frameCount, "keyPointImage", keyPointImage);
+	        	printImage(destFolder, frameCount, "output_image", output_image);
 	        }
 		}
         //printf("Rows after: %d\n", descriptors.rows);
@@ -624,7 +679,7 @@ int main(int argc, char** argv) {
             break;
         std::swap(prevgray, gray);
         std::swap(_prev, frame);
-        ++count;
+        ++frameCount;
     }
 
 	return 0;
