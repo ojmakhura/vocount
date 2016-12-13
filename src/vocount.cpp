@@ -411,6 +411,12 @@ set<float> getIgnoreSegments(Rect roi, Mat segments){
 	return span;
 }
 
+void getSignificantSegments(vector<KeyPoint> kp, set<int> clusters){
+
+
+
+}
+
 static void help(){
 	printf( "This is a programming for estimating the number of objects in the video.\n"
 	        "Usage: vocount\n"
@@ -600,6 +606,7 @@ int main(int argc, char** argv) {
 			 * Approximation of the number of similar objects
 			 *******************************************************************/
 
+
 			map<int, vector<int> > roiClusters;
 			uint largest = 0;
 			float lsize = 0;
@@ -627,6 +634,30 @@ int main(int argc, char** argv) {
 			}
 
 			cout << "Cluster " << largest << " is the largest" << endl;
+
+			set<float> clusterSegments;
+			for(uint x = 0; x < ogsize; ++x){
+				// keypoint at location i
+				Point p;
+				p.x = kp[x].pt.x;
+				p.y = kp[x].pt.y;
+
+				// label for the keypoint
+				int label = labels[x];
+
+				// the segment this keypoint is in
+				float segment = gs.at<float>(p);
+
+				// find if the label is one of the query segment clusters
+				vector<int>::iterator f = find(labels.begin()+ogsize, labels.end(), label);
+
+				if(f != labels.end()){
+					clusterSegments.insert(segment);
+					printf("(%d, %d) label %d and segment %f\n", (int)p.x, (int)p.y, label, segment);
+				}
+			}
+
+			printf("\n\n\n clusterSegments.size() : %d\n\n\n: ", clusterSegments.size());
 
 			/**
 			 * Draw only the keypoints in the same cluster as the sample descriptors
