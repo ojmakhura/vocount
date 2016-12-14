@@ -634,8 +634,8 @@ int main(int argc, char** argv) {
 			}
 
 			cout << "Cluster " << largest << " is the largest" << endl;
-
-			set<float> clusterSegments;
+			//cout << gs << endl;
+			set<int> clusterSegments;
 			for(uint x = 0; x < ogsize; ++x){
 				// keypoint at location i
 				Point p;
@@ -646,18 +646,21 @@ int main(int argc, char** argv) {
 				int label = labels[x];
 
 				// the segment this keypoint is in
-				float segment = gs.at<float>(p);
+				float segment = gs.at<int>(p);
 
 				// find if the label is one of the query segment clusters
 				vector<int>::iterator f = find(labels.begin()+ogsize, labels.end(), label);
 
-				if(f != labels.end()){
+				if(f != labels.end() && label != 0){
 					clusterSegments.insert(segment);
-					printf("(%d, %d) label %d and segment %f\n", (int)p.x, (int)p.y, label, segment);
+					//printf("(%d, %d) label %d and segment %f\n", (int)p.x, (int)p.y, label, segment);
 				}
 			}
 
 			printf("\n\n\n clusterSegments.size() : %d\n\n\n: ", clusterSegments.size());
+			double min, max;
+			minMaxLoc(gs, &min, &max);
+			printf("Max segment is %f\n", max);
 
 			/**
 			 * Draw only the keypoints in the same cluster as the sample descriptors
