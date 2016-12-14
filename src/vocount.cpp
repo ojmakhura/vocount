@@ -547,13 +547,14 @@ int main(int argc, char** argv) {
 				// find if the segment id is listed in the ignore list
 				set<float>::iterator it = std::find(ignore.begin(), ignore.end(), seg);
 
-				if(roi.contains(kp[i].pt) && it != ignore.end()){
+				if(roi.contains(kp[i].pt) ){//&& it != ignore.end()){
 					roiPts.push_back(kp[i].pt);
 					roiDesc.push_back(desc.row(i));
 				}
 			}
 			keypoints.push_back(kp);
 			descriptors.push_back(roiDesc);
+			printf("found %d object keypoints\n", roiDesc.rows);
         }
 
 		if (!desc.empty()) {
@@ -612,6 +613,7 @@ int main(int argc, char** argv) {
 			float lsize = 0;
 			//int i = 0;
 			int add_size = 0;
+
 			for (set<int>::iterator it = lset.begin(); it != lset.end(); ++it) {
 				vector<int> pts;
 				for (uint i = ogsize; i < labels.size(); ++i) {
@@ -645,13 +647,12 @@ int main(int argc, char** argv) {
 				// label for the keypoint
 				int label = labels[x];
 
-				// the segment this keypoint is in
-				float segment = gs.at<int>(p);
-
 				// find if the label is one of the query segment clusters
-				vector<int>::iterator f = find(labels.begin()+ogsize, labels.end(), label);
+				set<int>::iterator f = find(tempSet.begin(), tempSet.end(), label);
 
-				if(f != labels.end() && label != 0){
+				if(f != tempSet.end() && label != 0){
+					// the segment this keypoint is in
+					float segment = gs.at<int>(p);
 					clusterSegments.insert(segment);
 					//printf("(%d, %d) label %d and segment %f\n", (int)p.x, (int)p.y, label, segment);
 				}
