@@ -426,6 +426,44 @@ static void help(){
 	        "\n" );
 }
 
+void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out) {
+	CV_Assert(gray.channels() == 1);
+	if (!flow.empty()) {
+
+		if(out.empty()){
+			out = Mat(flow.rows, flow.cols, flow.type());
+		}
+
+		Mat flow_split[2];
+		Mat magnitude, angle;
+		Mat hsv_split[3], hsv;
+		split(flow, flow_split);
+		cartToPolar(flow_split[0], flow_split[1], magnitude, angle, true);
+		normalize(magnitude, magnitude, 0, 255, NORM_MINMAX);
+		normalize(angle, angle, 0, 255, NORM_MINMAX);
+
+		hsv_split[0] = angle; // already in degrees - no normalization needed
+		Mat x;
+		if(gray.empty()){
+			x = Mat::ones(angle.size(), angle.type());
+		} else{
+			gray.convertTo(x, angle.type());
+		}
+		hsv_split[1] = x.clone();
+		hsv_split[2] = magnitude;
+		merge(hsv_split, 3, hsv);
+		cvtColor(hsv, out, COLOR_HSV2BGR);
+		normalize(out, out, 0, 255, NORM_MINMAX); // Normalise the matrix in the 0 - 255 range
+
+		Mat n;
+		out.convertTo(n, CV_8UC3); // Convert to 3 channel uchar matrix
+		n.copyTo(out);
+
+		// Normalise the flow within the range 0 ... 1
+		normalize(flow, flow, 0, 1, NORM_MINMAX);
+	}
+}
+
 int main(int argc, char** argv) {
 	//dummy_tester();
 	ocl::setUseOpenCL(true);
@@ -504,7 +542,38 @@ int main(int argc, char** argv) {
 
         cap >> frame;
     	frame.copyTo(image);
-        graphSegmenter->processImage(frame, gs);
+    	cvtColor(frame, gray, COLOR_BGR2GRAY);
+    	vector<Mat> dataset;
+    	split(frame, dataset);
+		vector<Mat> d1;
+
+		d1.push_back(dataset[0]);
+		d1.push_back(dataset[1]);
+		d1.push_back(dataset[2]);
+
+    	if(!prevgray.empty() && !gray.empty()){
+    		algorithm->calc(prevgray, gray, flow);
+    		Mat iFlow, f;
+    		mergeFlowAndImage(flow, f, iFlow);
+    		dataset.clear();
+    		pyrMeanShiftFiltering(iFlow, iFlow, 10, 30, 1);
+    		display("iFlow", iFlow);
+    		split(iFlow, dataset);
+    		d1.push_back(dataset[0]);
+    		d1.push_back(dataset[2]);
+
+    	}
+    	Mat mm;
+        merge(d1, mm);
+        graphSegmenter->processImage(mm, gs);
+        if(!flow.empty()){
+
+    		Mat nm;
+    		mergeFlowAndImage(flow, gray, nm);
+    		display("nm", nm);
+        }
+
+
         //printf("Rows before: %d\n", descriptors.rows);
 		map<uint, vector<Point> > points;
         Mat output_image = getSegmentImage(gs, points);
@@ -700,7 +769,6 @@ int main(int argc, char** argv) {
 	        if(print){
 	        	printImage(destFolder, frameCount, "frame", frame);
 	        	printImage(destFolder, frameCount, "img_keypoints", img_keypoints);
-	        	//printImage(destFolder, frameCount, "keyPointImage", keyPointImage);
 	        	printImage(destFolder, frameCount, "output_image", output_image);
 	        }
 		}
