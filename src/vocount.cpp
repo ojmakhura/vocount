@@ -777,8 +777,8 @@ int main(int argc, char** argv) {
         cvtColor(image, gray, COLOR_BGR2GRAY);
 
         display("frame", frame);
-
-        if(waitKey(20)>=0)
+        char c = (char)waitKey(20);
+        if(c == 'q')
             break;
         std::swap(prevgray, gray);
         std::swap(_prev, frame);
