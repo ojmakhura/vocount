@@ -370,43 +370,66 @@ void printImage(String folder, int idx, String name, Mat img) {
  * both sides, then it is added to the list of segments to
  * ignore.
  */
-set<float> getIgnoreSegments(Rect roi, Mat segments){
-	set<float> span;
+set<int32_t> getIgnoreSegments(Rect roi, Mat segments){
+	set<int32_t> span;
+	int32_t t = 3;
+	cout << roi << endl;
+	printf("roi.height = %d : roi.width = %d\n", roi.height, roi.width);
+	printf("roi.x = %d : roi.y = %d\n", roi.x, roi.y);
 
-	for(int i = roi.x; i < roi.width; ++i){
-		Point p1(roi.x, roi.y-1);
-		Point p2(roi.x, roi.y+1);
+	for(int i = roi.x; i < roi.x+roi.width; ++i){
+		Point p1(roi.x, roi.y-t);
+		Point p2(roi.x, roi.y+t);
 
-		if(segments.at<float>(p1) == segments.at<float>(p2)){
-			span.insert(segments.at<float>(p2));
+		int32_t i1 = segments.at<int32_t>(p1);
+		int32_t i2 = segments.at<int32_t>(p2);
+
+		if(i1 == i2){
+			span.insert(i1);
 		}
+
+		///printf("(p1.x, p1.y) = (%d, %d) ::::::: (p2.x, p2.y) = (%d, %d)\n", p1.x, p2.y, i1, i2);
 
 		int end = roi.y + roi.height;
-		p1.y = end + 1;
-		p2.y = end - 1;
+		p1.y = end + t;
+		p2.y = end - t;
 
-		if(segments.at<float>(p1) == segments.at<float>(p2)){
-			span.insert(segments.at<float>(p2));
+		i1 = segments.at<int32_t>(p1);
+		i2 = segments.at<int32_t>(p2);
+
+		if(i1 == i2){
+			span.insert(i1);
 		}
+		///printf("(p1.x, p1.y) = (%d, %d) ::::::: (p2.x, p2.y) = (%d, %d)\n", p1.x, p2.y, i1, i2);
 	}
 
-	for(int j = roi.y; j < roi.height; ++j){
-		Point p1(roi.x - 1, roi.y);
-		Point p2(roi.x + 1, roi.y);
+	for(int j = roi.y; j < roi.y + roi.height; ++j){
+		Point p1(roi.x - t, roi.y);
+		Point p2(roi.x + t, roi.y);
 
-		if(segments.at<float>(p1) == segments.at<float>(p2)){
-			span.insert(segments.at<float>(p2));
+		int32_t i1 = segments.at<int32_t>(p1);
+		int32_t i2 = segments.at<int32_t>(p2);
+
+		if(i1 == i2){
+			span.insert(i1);
 		}
+		///printf("(p1.x, p1.y) = (%d, %d) ::::::: (p2.x, p2.y) = (%d, %d)\n", p1.x, p2.y, i1, i2);
 
 		int end = roi.x + roi.width;
-		p1.x = end + 1;
-		p2.x = end - 1;
+		p1.x = end + t;
+		p2.x = end - t;
 
-		if(segments.at<float>(p1) == segments.at<float>(p2)){
-			span.insert(segments.at<float>(p2));
+		i1 = segments.at<int32_t>(p1);
+		i2 = segments.at<int32_t>(p2);
+
+		if(i1 == i2){
+			span.insert(i1);
 		}
+		///printf("(p1.x, p1.y) = (%d, %d) ::::::: (p2.x, p2.y) = (%d, %d)\n", p1.x, p2.y, i1, i2);
 
 	}
+
+	//printf("span has %d\n", span.size());
 
 	return span;
 }
@@ -587,7 +610,10 @@ int main(int argc, char** argv) {
         uint ogsize = desc.rows;
 
         if(!roiExtracted && descriptors.size() < 1){
-        	roi = box.extract("track", frame);
+        	Mat f2 = frame.clone();
+        	drawKeypoints( frame, kp, f2, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+        	display("f2", f2);
+        	roi = box.extract("track", output_image);
 
 	        //initializes the tracker
 	        if( !tracker->init( frame, roi ) )
@@ -602,28 +628,43 @@ int main(int argc, char** argv) {
         	tracker->update(frame, roi);
         	Scalar value = Scalar( rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255) );
         	rectangle(frame, roi, value, 2, 8, 0);
-		    vector<Point2f> roiPts;
+		    vector<KeyPoint> roiPts, xp;
 		    Mat roiDesc;
-		    set<float> ignore = getIgnoreSegments(roi, gs);
+		    set<int32_t> ignore = getIgnoreSegments(roi, gs);
+
+
+		    /*for(set<int32_t>::iterator it = ignore.begin(); it != ignore.end(); ++it){
+		    	printf("Segment : %d\n\n", *it);
+		    }*/
+
 	        // Get all keypoints inside the roi
 			for(uint i = 0; i < kp.size(); ++i){
 				Point p;
 				p.x = kp[i].pt.x;
 				p.y = kp[i].pt.y;
 
-				float seg = gs.at<float>(p); // get the segmentation id at point p
+				int32_t seg = gs.at<int32_t>(p); // get the segmentation id at point p
 
 				// find if the segment id is listed in the ignore list
-				set<float>::iterator it = std::find(ignore.begin(), ignore.end(), seg);
+				set<int32_t>::iterator it = std::find(ignore.begin(), ignore.end(), seg);
 
-				if(roi.contains(kp[i].pt) ){//&& it != ignore.end()){
-					roiPts.push_back(kp[i].pt);
-					roiDesc.push_back(desc.row(i));
+				if(roi.contains(kp[i].pt) ){//&&
+					//printf("Segment is %d \n\n", seg);
+					if(it == ignore.end()){
+						roiPts.push_back(kp[i]);
+						roiDesc.push_back(desc.row(i));
+					}
+
+					xp.push_back(kp[i]);
 				}
+
 			}
-			keypoints.push_back(kp);
+			keypoints.push_back(roiPts);
 			descriptors.push_back(roiDesc);
-			printf("found %d object keypoints\n", roiDesc.rows);
+			//printf("found %d object keypoints\n", roiDesc.rows);
+
+			//printf("roiPts.size(): %d ----- xp.size(): %d\n", roiPts.size(), xp.size());
+			//return 0;
         }
 
 		if (!desc.empty()) {
