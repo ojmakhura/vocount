@@ -429,7 +429,7 @@ set<int32_t> getIgnoreSegments(Rect roi, Mat segments){
 
 	}
 
-	//printf("span has %d\n", span.size());
+	printf("span has %d\n", span.size());
 
 	return span;
 }
@@ -493,6 +493,8 @@ void printStats(String folder, map<int32_t, vector<int32_t> > stats){
 	String name = "/stats.csv";
 	f += name;
 	myfile.open(f.c_str());
+
+	myfile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Estimation, Actual\n";
 
 	for(map<int32_t, vector<int32_t> >::iterator it = stats.begin(); it != stats.end(); ++it){
 		vector<int32_t> vv = it->second;
@@ -611,7 +613,11 @@ int main(int argc, char** argv) {
 				split(iFlow, dataset);
 				d1.push_back(dataset[0]);
 				d1.push_back(dataset[2]);
+				//cout << "Getting d1 with flow" << endl;
 
+			} else{
+				prevgray = gray.clone();
+				continue;
 			}
 			Mat mm;
 			merge(d1, mm);
@@ -621,7 +627,7 @@ int main(int argc, char** argv) {
 
 				Mat nm;
 				mergeFlowAndImage(flow, gray, nm);
-				display("nm", nm);
+				//display("nm", nm);
 			}
 
 			//printf("Rows before: %d\n", descriptors.rows);
@@ -640,8 +646,8 @@ int main(int argc, char** argv) {
 				Mat f2 = frame.clone();
 				drawKeypoints(frame, kp, f2, Scalar::all(-1),
 						DrawMatchesFlags::DEFAULT);
-				display("f2", f2);
-				roi = box.extract("track", output_image);
+				//display("f2", f2);
+				roi = box.extract("Select ROI", output_image);
 
 				//initializes the tracker
 				if (!tracker->init(frame, roi)) {
@@ -750,8 +756,10 @@ int main(int argc, char** argv) {
 
 				map<int, vector<int> > roiClusters;
 				vector<Mat> img_keypoints;
+				vector<KeyPoint> allkps;
 				uint largest = 0;
 				float lsize = 0;
+				int32_t selectedFeatures = 0;
 				//int i = 0;
 				int add_size = 0;
 				float total = 0;
@@ -778,6 +786,7 @@ int main(int argc, char** argv) {
 								mappedPoints[*it].size(), n);
 						pair<uint, vector<int> > pr(*it, pts);
 						roiClusters.insert(pr);
+						selectedFeatures += mappedPoints[*it].size();
 
 						if (n > lsize) {
 							largest = *it;
@@ -787,8 +796,13 @@ int main(int argc, char** argv) {
 						drawKeypoints(frame, mappedPoints[*it], kimg,
 								Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 						img_keypoints.push_back(kimg);
+						allkps.insert(allkps.end(), mappedPoints[*it].begin(), mappedPoints[*it].end());
 					}
 				}
+
+				Mat img_allkps;
+				drawKeypoints(frame, allkps, img_allkps, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+
 				if(selectedSampleSize > 0){
 					//printf("selectedSampleSize = %d\n", selectedSampleSize);
 					estimation = (int32_t)total/selectedSampleSize;
@@ -827,7 +841,7 @@ int main(int argc, char** argv) {
 				/**
 				 * Draw only the keypoints in the same cluster as the sample descriptors
 				 */
-				vector<KeyPoint> matchedKeyPoints;
+				/*vector<KeyPoint> matchedKeyPoints;
 				//for(set<int>::iterator it = tempSet.begin(); it != tempSet.end(); ++it){
 				//vector<int> clusters = roiClusters[*it];
 
@@ -835,7 +849,7 @@ int main(int argc, char** argv) {
 					if (largest == labels[i] && labels[i] != 1) {
 						matchedKeyPoints.push_back(kp[i]);
 					}
-				}
+				}*/
 
 				//}
 				//Mat img_keypoints;
@@ -850,7 +864,7 @@ int main(int argc, char** argv) {
 						<< "---------------------------------------Statistics-------------------------------------------"
 						<< endl;
 				cout << "Number of matchedKeyPoints is "
-						<< matchedKeyPoints.size() << " out of " << ogsize
+						<< selectedFeatures << " out of " << ogsize
 						<< endl;
 				cout
 						<< "--------------------------------------------------------------------------------------------"
@@ -863,8 +877,7 @@ int main(int argc, char** argv) {
 				if (print && selectedSampleSize > 0) {
 					printImage(destFolder, frameCount, "frame", frame);
 
-					printImage(destFolder, frameCount, "output_image",
-							output_image);
+					printImage(destFolder, frameCount, "output_image", output_image);
 
 					for (uint i = 0; i < img_keypoints.size(); ++i) {
 						string s = to_string(i);
@@ -874,11 +887,14 @@ int main(int argc, char** argv) {
 								img_keypoints[i]);
 					}
 
+					printImage(destFolder, frameCount, "img_allkps", img_allkps);
+
 					odata.push_back(descriptors[0].rows);
 					odata.push_back(selectedSampleSize);
 					odata.push_back(ogsize);
-					odata.push_back(matchedKeyPoints.size());
-					odata.push_back(estimation);
+					odata.push_back(selectedFeatures);
+					odata.push_back(img_keypoints.size());
+					odata.push_back(total);
 					odata.push_back(0);
 					pair<int32_t, vector<int32_t> > pp(frameCount, odata);
 					stats.insert(pp);
