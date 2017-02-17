@@ -591,6 +591,7 @@ int main(int argc, char** argv) {
 		bool read = cap.read(frame);
 
 		if (read) {
+			display("frame", frame);
 			vector<int32_t> odata;
 			frame.copyTo(image);
 			cvtColor(frame, gray, COLOR_BGR2GRAY);
@@ -644,10 +645,15 @@ int main(int argc, char** argv) {
 
 			if (!roiExtracted && descriptors.size() < 1) {
 				Mat f2 = frame.clone();
-				drawKeypoints(frame, kp, f2, Scalar::all(-1),
+				drawKeypoints(output_image, kp, f2, Scalar::all(-1),
 						DrawMatchesFlags::DEFAULT);
+				Mat x1;
+				drawKeypoints(frame, kp, x1, Scalar::all(-1),
+										DrawMatchesFlags::DEFAULT);
+
+				display("x1", x1);
 				//display("f2", f2);
-				roi = box.extract("Select ROI", output_image);
+				roi = box.extract("Select ROI", f2);
 
 				//initializes the tracker
 				if (!tracker->init(frame, roi)) {
@@ -907,7 +913,6 @@ int main(int argc, char** argv) {
 			image = frame.clone();
 			cvtColor(image, gray, COLOR_BGR2GRAY);
 
-			display("frame", frame);
 			char c = (char) waitKey(20);
 			if (c == 'q')
 				break;
