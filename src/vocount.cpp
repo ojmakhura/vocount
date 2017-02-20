@@ -494,13 +494,37 @@ void printStats(String folder, map<int32_t, vector<int32_t> > stats){
 	f += name;
 	myfile.open(f.c_str());
 
-	myfile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Estimation, Actual\n";
+	myfile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Actual\n";
 
 	for(map<int32_t, vector<int32_t> >::iterator it = stats.begin(); it != stats.end(); ++it){
 		vector<int32_t> vv = it->second;
 		myfile << it->first << ",";
 
 		for(uint i = 0; i < vv.size(); ++i){
+			myfile << vv[i] << ",";
+		}
+		myfile << "\n";
+	}
+
+	myfile.close();
+
+}
+
+void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstimates){
+	ofstream myfile;
+	String f = folder;
+	String name = "/ClusterEstimates.csv";
+	f += name;
+	myfile.open(f.c_str());
+
+	myfile << "Frame #,Cluster Sum, Cluster Avg.\n";
+
+	for(map<int32_t, vector<int32_t> >::iterator it = cEstimates.begin(); it != cEstimates.end(); ++it){
+		vector<int32_t> vv = it->second;
+		size_t sz = vv.size();
+		myfile << it->first << "," << vv[sz-1] << "," << vv[sz-2] << ",";
+
+		for(uint i = 0; i < vv.size()-2; ++i){
 			myfile << vv[i] << ",";
 		}
 		myfile << "\n";
@@ -577,6 +601,7 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     vector<vector<float> > sample_dataset(SAMPLE_SIZE+2);
     map<int32_t, vector<int32_t> > stats;
+    map<int32_t, vector<int32_t> > clusterEstimates;
 
     for(;;)
     {
@@ -593,6 +618,7 @@ int main(int argc, char** argv) {
 		if (read) {
 			display("frame", frame);
 			vector<int32_t> odata;
+
 			frame.copyTo(image);
 			cvtColor(frame, gray, COLOR_BGR2GRAY);
 			vector<Mat> dataset;
@@ -653,7 +679,7 @@ int main(int argc, char** argv) {
 
 				display("x1", x1);
 				//display("f2", f2);
-				roi = box.extract("Select ROI", f2);
+				roi = box.extract("Select ROI", output_image);
 
 				//initializes the tracker
 				if (!tracker->init(frame, roi)) {
@@ -762,6 +788,7 @@ int main(int argc, char** argv) {
 
 				map<int, vector<int> > roiClusters;
 				vector<Mat> img_keypoints;
+				vector<int32_t> cest;
 				vector<KeyPoint> allkps;
 				uint largest = 0;
 				float lsize = 0;
@@ -784,15 +811,16 @@ int main(int argc, char** argv) {
 					}
 
 					if (!pts.empty()) {
-						float n = (float) mappedPoints[*it].size() / pts.size();
+						int32_t n = mappedPoints[*it].size() / pts.size();
 						total += n;
 						printf(
-								"stability: %f --> %d has %d and total is %d :: Approx Num of objects: %f\n\n",
+								"stability: %f --> %d has %d and total is %d :: Approx Num of objects: %d\n\n",
 								stabilities[*it], *it, pts.size(),
 								mappedPoints[*it].size(), n);
 						pair<uint, vector<int> > pr(*it, pts);
 						roiClusters.insert(pr);
 						selectedFeatures += mappedPoints[*it].size();
+						cest.push_back(n);
 
 						if (n > lsize) {
 							largest = *it;
@@ -901,9 +929,15 @@ int main(int argc, char** argv) {
 					odata.push_back(selectedFeatures);
 					odata.push_back(img_keypoints.size());
 					odata.push_back(total);
+					int32_t avg = total/img_keypoints.size();
+					odata.push_back(avg);
 					odata.push_back(0);
 					pair<int32_t, vector<int32_t> > pp(frameCount, odata);
 					stats.insert(pp);
+					cest.push_back(avg);
+					cest.push_back(total);
+					pair<int32_t, vector<int32_t> > cpp(frameCount, cest);
+					clusterEstimates.insert(cpp);
 				}
 			}
 
@@ -926,6 +960,7 @@ int main(int argc, char** argv) {
 
     if(print){
     	printStats(destFolder, stats);
+    	printClusterEstimates(destFolder, clusterEstimates);
     }
 
 	return 0;
