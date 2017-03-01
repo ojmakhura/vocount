@@ -434,6 +434,17 @@ set<int32_t> getIgnoreSegments(Rect roi, Mat segments){
 	return span;
 }
 
+Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour){
+	Mat x = in.clone();
+
+	for(vector<KeyPoint>::iterator it = points.begin(); it != points.end(); ++it){
+		circle(x, Point(it->pt.x, it->pt.y), 4, colour, CV_FILLED, 8, 0);
+	}
+
+
+	return x;
+}
+
 void getSignificantSegments(vector<KeyPoint> kp, set<int> clusters){
 
 
@@ -509,6 +520,110 @@ void printStats(String folder, map<int32_t, vector<int32_t> > stats){
 	myfile.close();
 
 }
+
+Mat plotClusters2(Mat descriptors, const set<int>& selected, const vector<int>& labels){
+    Mat plot, conv;
+    vector<float> dist, redc;
+    normalize(descriptors, descriptors, 0, 255, NORM_MINMAX);
+    descriptors.convertTo(conv, CV_32SC1);
+
+
+    for(int i  = 0; i < conv.rows; ++i){
+        float x = 0;
+        for(int j = 0; j < conv.cols; ++j){
+            int32_t f = conv.at<int32_t>(i, j);
+            x += f*f;
+        }
+        x = (float)sqrt(x);
+
+        dist.push_back(x);
+    }
+
+    vector<float>::iterator min_dist = std::min_element(begin(dist), end(dist));
+    vector<float>::iterator max_dist = std::max_element(begin(dist), end(dist));
+
+    plot = Mat(descriptors.rows, (*max_dist)+20, CV_8UC3, Scalar(255, 255, 255));
+
+    for(uint i = 0; i < dist.size(); ++i){
+        float x = dist[i];
+        //float mag = sqrt(x*x + y*y);
+
+        x = (((float)x - *min_dist)/(*max_dist - *min_dist))*512;
+
+        //printf("x:(%f, %f) and y: (%f, %f) :::::: (%f, %f) mapped to (%f, %f)\n", *min_x, *max_x, *min_y, *max_y, dx[i], dy[i], x, y);
+
+        int label = labels[i];
+        set<int>::iterator it = std::find(selected.begin(), selected.end(), label);
+
+        if(it != selected.end()){ // the label is one of the selected, draw it red
+            circle( plot, Point( (int)i, (int)x ), 2, Scalar( 0, 0, 255 ), CV_FILLED);
+
+        } else{ // draw a green dot
+            circle( plot, Point( (int)i, (int)x ), 2, Scalar( 0, 255, 0 ), CV_FILLED);
+        }
+    }
+
+    display("plot", plot);
+
+    return plot;
+}
+
+Mat plotClusters(Mat descriptors, const set<int>& selected, const vector<int>& labels){
+    Mat plot, conv;
+    vector<float> dx, dy;
+    normalize(descriptors, descriptors, 0, 255, NORM_MINMAX);
+    descriptors.convertTo(conv, CV_32SC1);
+
+    plot = Mat(512, 512, CV_8UC3, Scalar(255, 255, 255));
+    for(int i  = 0; i < conv.rows; ++i){
+        float x = 0, y = 0;
+        for(int j = 0; j < conv.cols; ++j){
+            int32_t f = conv.at<int32_t>(i, j);
+            if(j%2 == 0){
+                x += f*f;
+            } else{
+                y += f*f;
+            }
+        }
+        x = (float)sqrt(x/32);
+        y = (float)sqrt(y/32);
+
+        dx.push_back(x);
+        dy.push_back(y);
+    }
+
+    vector<float>::iterator min_x = std::min_element(begin(dx), end(dx));
+    vector<float>::iterator min_y = std::min_element(begin(dy), end(dy));
+
+    vector<float>::iterator max_x = std::max_element(begin(dx), end(dx));
+    vector<float>::iterator max_y = std::max_element(begin(dy), end(dy));
+
+    for(uint i = 0; i < dx.size(); ++i){
+        float x = dx[i];
+        float y = dy[i];
+        //float mag = sqrt(x*x + y*y);
+
+        x = (((float)x - *min_x)/(*max_x - *min_x))*512;
+        y = (((float)y - *min_y)/(*max_y - *min_y))*512;
+
+        printf("x:(%f, %f) and y: (%f, %f) :::::: (%f, %f) mapped to (%f, %f)\n", *min_x, *max_x, *min_y, *max_y, dx[i], dy[i], x, y);
+
+        int label = labels[i];
+        set<int>::iterator it = std::find(selected.begin(), selected.end(), label);
+
+        if(it != selected.end()){ // the label is one of the selected, draw it red
+            circle( plot, Point( (int)x, (int)y ), 2, Scalar( 0, 0, 255 ), CV_FILLED);
+
+        } else{ // draw a green dot
+            circle( plot, Point( (int)x, (int)y ), 2, Scalar( 0, 255, 0 ), CV_FILLED);
+        }
+    }
+
+    display("plot", plot);
+
+    return plot;
+}
+
 
 void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstimates){
 	ofstream myfile;
@@ -663,10 +778,11 @@ int main(int argc, char** argv) {
 			display("output_image", output_image);
 
 			//printf("Points has size %d\n ", points.size());
-			Mat desc;
+			Mat desc, fdesc;
 			vector<KeyPoint> kp;
 			//pyrMeanShiftFiltering(frame, frame, 10, 30, 1);
 			detector->detectAndCompute(frame, Mat(), kp, desc);
+			fdesc = desc.clone();
 			uint ogsize = desc.rows;
 
 			if (!roiExtracted && descriptors.size() < 1) {
@@ -826,16 +942,17 @@ int main(int argc, char** argv) {
 							largest = *it;
 							lsize = n;
 						}
-						Mat kimg;
-						drawKeypoints(frame, mappedPoints[*it], kimg,
-								Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+						Mat kimg = drawKeyPoints(frame, mappedPoints[*it], Scalar(0, 0, 255));;
+						///drawKeypoints(frame, mappedPoints[*it], kimg,
+								//Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+
 						img_keypoints.push_back(kimg);
 						allkps.insert(allkps.end(), mappedPoints[*it].begin(), mappedPoints[*it].end());
 					}
 				}
-
-				Mat img_allkps;
-				drawKeypoints(frame, allkps, img_allkps, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+				Mat img_allkps = drawKeyPoints(frame, allkps, Scalar(0, 0, 255));
+				//Mat img_allkps ;
+				//drawKeypoints(frame, allkps, img_allkps, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 
 				if(selectedSampleSize > 0){
 					//printf("selectedSampleSize = %d\n", selectedSampleSize);
@@ -872,24 +989,6 @@ int main(int argc, char** argv) {
 				minMaxLoc(gs, &min, &max);
 				printf("Max segment is %f\n", max);
 
-				/**
-				 * Draw only the keypoints in the same cluster as the sample descriptors
-				 */
-				/*vector<KeyPoint> matchedKeyPoints;
-				//for(set<int>::iterator it = tempSet.begin(); it != tempSet.end(); ++it){
-				//vector<int> clusters = roiClusters[*it];
-
-				for (uint i = 0; i < ogsize; ++i) {
-					if (largest == labels[i] && labels[i] != 1) {
-						matchedKeyPoints.push_back(kp[i]);
-					}
-				}*/
-
-				//}
-				//Mat img_keypoints;
-
-				//drawKeypoints( frame, kp, frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
-				//display("img_keypoints", img_keypoints);
 
 				cout
 						<< "--------------------------------------------------------------------------------------------"
@@ -904,7 +1003,7 @@ int main(int argc, char** argv) {
 						<< "--------------------------------------------------------------------------------------------"
 						<< endl;
 				//printf("lset size = %d, stabilities size = %d\n", lset.size(), stabilities.size());
-
+				//plotClusters2(fdesc, clusterSegments, labels);
 				display("keypoints frame", keyPointImage);
 				//display("frame", frame);
 
@@ -966,83 +1065,4 @@ int main(int argc, char** argv) {
 	return 0;
 }
 
-void extras(){
 
-	/*
-	 if(!desc.empty()){
-
-                // Create clustering dataset
-                for(uint n = 0; n < descriptors.size(); ++n){
-                	desc.push_back(descriptors[n]);
-                }
-
-
-				map<int, vector<Point> > mappedPoints;
-
-				HDBSCAN scan(desc, _EUCLIDEAN, 3, 3);
-				//printf("scan creation done\n");
-				scan.run(true);
-				//printf("scan cluster done\n");
-				vector<int> labels = scan.getClusterLabels();
-				map<int, float> stabilities = scan.getClusterStabilities();
-				set<int> lset;
-				vector<float> sstabilities(lset.size());
-				lset.insert(labels.begin(), labels.end());
-				//int i = 0;
-				for(set<int>::iterator it = lset.begin(); it != lset.end(); ++it){
-					vector<Point> pts;
-					for(uint i = 0; i < labels.size(); ++i){
-						if(*it == labels[i]){
-							Point p;
-							p.x = (int)kp[i].pt.x;
-							p.y = (int)kp[i].pt.y;
-
-							pts.push_back(p);
-						}
-					}
-					//printf("%d has %d\n\t\n\n\n", *it, pts.size());
-					//foruint i = 0; i < pts.size())
-					pair<uint, vector<Point> > pr(*it, pts);
-					mappedPoints.insert(pr);
-					//++i;
-					Scalar value = Scalar( rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255) );
-					Rect rr = boundingRect(pts);
-					//rectangle(keyPointImage, rr, value, 2, 8, 0);
-					string name = to_string(*it);
-					putText(keyPointImage, name.c_str(), Point(rr.x - 4, rr.y - 4), CV_FONT_HERSHEY_PLAIN, 1, value);
-				}
-
-				*******************************************************************
-				 * Approximation of the number of similar objects
-				 *******************************************************************
-
-				map<int, vector<int> > roiClusters;
-
-				//int i = 0;
-				int add_size = 0;
-				for(set<int>::iterator it = lset.begin(); it != lset.end(); ++it){
-					vector<int> pts;
-					for(uint i = ogsize; i < labels.size(); ++i){
-						if(*it == labels[i] && *it != 0){
-							pts.push_back(i);
-						}
-					}
-
-					if(!pts.empty()){
-						float n = (float)mappedPoints[*it].size()/pts.size();
-						printf("stability: %f --> %d has %d and total is %d :: Approx Num of objects: %f\n\n", stabilities[*it], *it, pts.size(), mappedPoints[*it].size(), n);
-						pair<uint, vector<int> > pr(*it, pts);
-						roiClusters.insert(pr);
-					}
-				}
-				cout << "--------------------------------------------------------------------------------------------" << endl;
-				cout << "---------------------------------------Statistics-------------------------------------------" << endl;
-				cout << "--------------------------------------------------------------------------------------------" << endl;
-				//printf("lset size = %d, stabilities size = %d\n", lset.size(), stabilities.size());
-
-				display("keypoints frame", keyPointImage);
-				//display("frame", frame);
-            }
-	 */
-
-}
