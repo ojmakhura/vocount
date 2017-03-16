@@ -720,7 +720,7 @@ int main(int argc, char** argv) {
 
     for(;;)
     {
-		Mat lap;
+		Mat fkprint;
 		//vector<Mat> segment_hist;
 		vector<float> segment_height, segment_width;
 		// Dataset made up of the segment histogram comparison with the {SAMPLE_SIZE}
@@ -787,15 +787,15 @@ int main(int argc, char** argv) {
 
 			if (!roiExtracted && descriptors.size() < 1) {
 				Mat f2 = frame.clone();
-				drawKeypoints(output_image, kp, f2, Scalar::all(-1),
-						DrawMatchesFlags::DEFAULT);
+				//drawKeypoints(output_image, kp, f2, Scalar::all(-1),
+						//DrawMatchesFlags::DEFAULT);
 				Mat x1;
 				drawKeypoints(frame, kp, x1, Scalar::all(-1),
 										DrawMatchesFlags::DEFAULT);
 
 				display("x1", x1);
 				//display("f2", f2);
-				roi = box.extract("Select ROI", output_image);
+				roi = box.extract("Select ROI", f2);
 
 				//initializes the tracker
 				if (!tracker->init(frame, roi)) {
@@ -1011,6 +1011,8 @@ int main(int argc, char** argv) {
 					printImage(destFolder, frameCount, "frame", frame);
 
 					printImage(destFolder, frameCount, "output_image", output_image);
+					Mat ff = drawKeyPoints(frame, kp, Scalar(0, 0, 255));
+					printImage(destFolder, frameCount, "frame_kp", ff);
 
 					for (uint i = 0; i < img_keypoints.size(); ++i) {
 						string s = to_string(i);
