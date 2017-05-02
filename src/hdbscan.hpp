@@ -1,6 +1,6 @@
 /*
  * hdbscan.h
- * Implementation of the HDBSCAN* algorithm, which is broken into several methods.
+ * Implementation of the hdbscan* algorithm, which is broken into several methods.
  *  Created on: 18 May 2016
  *      Author: junior
  */
@@ -27,13 +27,13 @@ using namespace clustering::distance;
 
 namespace clustering {
 /**
- * Implementation of the HDBSCAN* algorithm, which is broken into several methods.
+ * Implementation of the hdbscan* algorithm, which is broken into several methods.
  * @author zjullion
  */
 
 string getWarningMessage();
 
-class HDBSCAN {
+class hdbscan {
 
 private:
 	DistanceCalculator distanceFunction;
@@ -69,17 +69,12 @@ private:
 			vector<int>* clusterLabels, Cluster* parentCluster, int clusterLabel,
 			float edgeWeight);
 public:
-
-	HDBSCAN(calculator cal, uint minPoints, uint minClusterSize);
-	HDBSCAN(float* dataSet, int rows, int cols, calculator cal, uint minPoints, uint minClusterSize);
-	HDBSCAN(vector<vector<float> > dataSet, calculator cal, uint minPoints, uint minClusterSize);
-	HDBSCAN(vector<vector<Point> > contours, Mat frame, Mat flow, calculator cal, uint minPoints, uint minClusterSize);
-	HDBSCAN(vector<Point> contour, vector<Mat> dataset, calculator cal, uint minPoints, uint minClusterSize);
-	HDBSCAN(vector<Mat> dataset, calculator cal, uint minPoints, uint minClusterSize, bool indexed);
-	HDBSCAN(Mat& dataset, calculator cal, uint minPoints, uint minClusterSize);
-	HDBSCAN(string fileName, calculator cal, uint minPoints, uint minClusterSize);
-	HDBSCAN(string dataFileName, string constraintFileName, calculator cal, uint minPoints, uint minClusterSize);
-	~HDBSCAN();
+	hdbscan();
+	hdbscan(calculator cal, uint minPoints, uint minClusterSize);
+	hdbscan(float* dataSet, int rows, int cols, calculator cal, uint minPoints, uint minClusterSize);
+	hdbscan(vector<vector<float> > dataSet, calculator cal, uint minPoints, uint minClusterSize);
+	hdbscan(Mat& dataset, calculator cal, uint minPoints, uint minClusterSize);
+	~hdbscan();
 
 	vector<Cluster*>& getClusters();
 	vector<int>& getClusterLabels();
@@ -99,6 +94,11 @@ public:
 	 */
 	void run();
 	void cvRun(bool useDataset);
+	void run(vector<double>& dataset);
+	void run(vector<double>& dataset, int rows, int cols, bool rowwise);
+	void run(double* dataset, int size);
+	void run(double* dataset, int rows, int cols, bool rowwise);
+	void run(Mat& dataset);
 
 	/**
 	 * Reads in constraints from the file given, assuming the delimiter separates the points involved
@@ -205,5 +205,5 @@ public:
 
 };
 } /* namespace clustering */
-#endif /* HDBSCAN_H_ */
+#endif /* hdbscan_H_ */
 

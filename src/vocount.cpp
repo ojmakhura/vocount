@@ -22,7 +22,6 @@ using namespace std;
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace cv::ximgproc::segmentation;
-using namespace hdbscan;
 
 vector<vector<Point> > contours;
 vector<Vec4i> hierarchy;
@@ -114,99 +113,6 @@ Mat getSegmentImage(Mat& gs, map<uint, vector<Point> >& points){
 	return output_image;
 }
 
-UndirectedGraph constructMST(Mat& src) {
-
-	int nb_edges = 0;
-	Mat dataset = src.clone();
-	//int numPoints = dataset.rows * dataset.cols;
-	//vector<int> clusterLabels = new vector<int>(numPoints, 0);
-	int nb_channels = dataset.channels();
-
-	int selfEdgeCapacity = 0;
-	uint size = dataset.rows * dataset.cols;
-
-	//One bit is set (true) for each attached point, or unset (false) for unattached points:
-	//bool attachedPoints[selfEdgeCapacity] = { };
-	//The MST is expanded starting with the last point in the data set:
-	//unsigned int currentPoint = size - 1;
-	//int numAttachedPoints = 1;
-	//attachedPoints[size - 1] = true;
-
-	//Each point has a current neighbor point in the tree, and a current nearest distance:
-	vector<int>* nearestMRDNeighbors = new vector<int>(size);
-	vector<float>* weights = new vector<float>(size, numeric_limits<float>::max());
-
-	//Create an array for vertices in the tree that each point attached to:
-	vector<int>* otherVertexIndices = new vector<int>(size);
-
-	for (int i = 0; i < dataset.rows; i++) {
-		const float* p = dataset.ptr<float>(i);
-
-		for (int j = 0; j < dataset.cols; j++) {
-
-			//Mat ds(Size(3,3), CV_32FC1, numeric_limits<float>::max());
-			//vector<float> dsv(9, numeric_limits<float>::max());
-
-			int from = i * dataset.rows + j;
-			int to;
-			int r = 0, c = 0, min_r = i, min_c = j;
-			float min_d = numeric_limits<float>::max();
-			float coreDistance = 0;
-			min_d = numeric_limits<float>::max();
-
-			for(int k = -1; k <= 1; ++k){
-				for(int l = -1; l <= 1; ++l){
-
-					float distance = 0;
-					r = i+k;
-					c = j+l;
-					const float* p2 = dataset.ptr<float>(r);
-
-					if(r >= 0 && c >= 0 && r < dataset.rows && c < dataset.cols && !(r == i && c == j)){
-						//cout << "calculating distance " << endl;
-						distance = 0;
-
-						// calculate the distance between (i,j) and (k,l)
-						for (int channel = 0; channel < nb_channels; channel++) {
-							//printf("channel %d : (%f, %f)\n", channel, p[j * nb_channels + channel], p2[c * nb_channels + channel]);
-							distance += pow(p[j * nb_channels + channel] - p2[c * nb_channels + channel], 2);
-						}
-
-						distance = sqrt(distance);
-
-						if(distance > coreDistance){
-							coreDistance = distance;
-						}
-
-						if(distance < min_d){
-
-							//int from = i * dataset.rows + j;
-							to = r * dataset.rows + c;
-							min_d = distance;
-
-							// If this edge does not exist
-							if((*nearestMRDNeighbors)[to] != from){
-								min_r = r;
-								min_c = c;
-							}
-						}
-					} else if(r == i && c == j){
-						distance = 0;
-					}
-				}
-			}
-			(*otherVertexIndices)[from] = from;
-			(*nearestMRDNeighbors)[from] = to;
-			(*weights)[from] = min_d;
-		}
-	}
-	return UndirectedGraph(size, *nearestMRDNeighbors, *otherVertexIndices, *weights);
-	//printf("Dimensions: (%d, %d) -> \n", dataset.rows, dataset.cols);
-	//cout << "Printing graph" << endl;
-	//mst->print();
-	//cout << "Done" << endl;
-}
-
 Mat getHist(Mat frame, Rect roi){
 	Mat hsv;
 	Mat m = frame(roi);
@@ -227,132 +133,6 @@ Mat getHist(Mat frame, Rect roi){
 
 	return hist;
 }
-
-map<uint, vector<int> > runScan(vector<vector<float> > dataset, vector<int>& labels, set<int>& lset){
-	map<uint, vector<int> > mapped;
-	HDBSCAN scan(dataset, _EUCLIDEAN, 2, 2);
-	scan.run();
-	labels.insert(labels.end(), scan.getClusterLabels().begin(), scan.getClusterLabels().end());
-	lset.insert(labels.begin(), labels.end());
-
-	for (set<int>::iterator it = lset.begin(); it != lset.end(); ++it) {
-		vector<int> pts;
-		for (uint i = 0; i < labels.size(); ++i) {
-			if (*it == labels[i]) {
-				pts.push_back(i);
-			}
-		}
-		pair<uint, vector<int> > pr(*it, pts);
-		mapped.insert(pr);
-	}
-
-	return mapped;
-}
-
-void other(){
-/*
- *
-		// add query descriptors and keypoints to the query vectors
-		if (base_hist.size() < SAMPLE_SIZE) {
-		    vector<Point2f> roiPts;
-		    Mat roiDesc;
-	        // Get all keypoints inside the roi
-			for(uint i = 0; i < kp.size(); ++i){
-				Point p;
-				p.x = kp[i].pt.x;
-				p.y = kp[i].pt.y;
-
-				if(roi.contains(kp[i].pt)){
-					roiPts.push_back(kp[i].pt);
-					roiDesc.push_back(desc.row(i));
-				}
-			}
-			keypoints.push_back(kp);
-			descriptors.push_back(roiDesc);
-
-			// Calculate histograms for each tracked position and store them for later
-			Mat h = getHist(frame, roi);
-			base_hist.push_back(h);
-
-			base_height.push_back(roi.height);
-			base_width.push_back(roi.width);
-
-			// The first 5 entries of the histogram dataset are made up of
-			//
-		} else {
-			// Create datapoints from the samples and
-			if(sample_dataset[0].size() == 0){ // only do this if it hasn't been done before
-				for(uint i = 0; i < SAMPLE_SIZE; ++i){
-					for(uint j = 0; j < SAMPLE_SIZE; ++j){
-						double compare = compareHist(base_hist[i], base_hist[j], compare_method);
-						sample_dataset[i].push_back(compare);
-
-					}
-					sample_dataset[SAMPLE_SIZE].push_back(base_height[i]);
-					sample_dataset[SAMPLE_SIZE+1].push_back(base_width[i]);
-				}
-			}
-		}
-    if( !prevgray.empty() && base_hist.size() == SAMPLE_SIZE)
-    {
-		absdiff(frame, _prev, fdiff);
-
-        //algorithm->calc(gray, prevgray, uflow);
-        cvtColor(prevgray, cflow, COLOR_GRAY2BGR);
-        normalize(cflow, cflow, 0, 255, NORM_MINMAX);
-        vector<uint> keys;
-        //uflow.copyTo(flow);
-        //display("myflow", flow);
-
-        drawKeypoints( frame, kp, keyPointImage, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-
-        for (std::map<uint,vector<Point> >::iterator it=points.begin(); it!=points.end(); ++it){
-        	vector<Point> ps = it->second;
-        	keys.push_back(it->first);
-        	roi = boundingRect(ps);
-
-        	Mat m = frame(roi);
-        	Mat h = getHist(frame, roi);
-
-        	for(uint i = 0; i < SAMPLE_SIZE; ++i){
-        		double compare = compareHist(h, base_hist[i], compare_method);
-        		dataset[i].push_back(compare);
-        	}
-
-        	dataset[SAMPLE_SIZE].push_back(roi.height);
-        	dataset[SAMPLE_SIZE+1].push_back(roi.width);
-        }
-
-		for (uint i = 0; i < SAMPLE_SIZE+2; ++i) {
-			dataset[i].insert(dataset[i].end(), sample_dataset[i].begin(),
-					sample_dataset[i].end());
-		}
-
-		vector<int> labels;
-		set<int> lset;
-		map<uint, vector<int> > mapped = runScan(dataset, labels, lset);
-
-		printf("Found %d types of objects\n", lset.size());
-*/
-		/**
-		 * Find similar object to the samples
-		 */
-		/*for(uint i = points.size(); i < points.size()+SAMPLE_SIZE; ++i){
-			vector<int> cluster = mapped[labels[i]]; // get objects of the same cluster as one of the samples
-			printf("Sample %d is in cluster %d that has %d objects\n", i, labels[i], cluster.size());
-			Scalar cl = color_mapping(labels[i]);
-
-			for(uint j = 0; j < cluster.size(); ++j){ // get the label indices
-				int idx = cluster[j]; // to be used to find keys to the points map
-				vector<Point> pts = points[idx];
-				roi = boundingRect(pts);
-				rectangle(frame, roi, cl, 2, 8, 0);
-			}
-		}
-
-    }*/
-}
-
 
 void printImage(String folder, int idx, String name, Mat img) {
 	//string folder = "/home/ojmakh/programming/phd/data/";
@@ -445,12 +225,6 @@ Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour){
 	return x;
 }
 
-void getSignificantSegments(vector<KeyPoint> kp, set<int> clusters){
-
-
-
-}
-
 static void help(){
 	printf( "This is a programming for estimating the number of objects in the video.\n"
 	        "Usage: vocount\n"
@@ -520,110 +294,6 @@ void printStats(String folder, map<int32_t, vector<int32_t> > stats){
 	myfile.close();
 
 }
-
-Mat plotClusters2(Mat descriptors, const set<int>& selected, const vector<int>& labels){
-    Mat plot, conv;
-    vector<float> dist, redc;
-    normalize(descriptors, descriptors, 0, 255, NORM_MINMAX);
-    descriptors.convertTo(conv, CV_32SC1);
-
-
-    for(int i  = 0; i < conv.rows; ++i){
-        float x = 0;
-        for(int j = 0; j < conv.cols; ++j){
-            int32_t f = conv.at<int32_t>(i, j);
-            x += f*f;
-        }
-        x = (float)sqrt(x);
-
-        dist.push_back(x);
-    }
-
-    vector<float>::iterator min_dist = std::min_element(begin(dist), end(dist));
-    vector<float>::iterator max_dist = std::max_element(begin(dist), end(dist));
-
-    plot = Mat(descriptors.rows, (*max_dist)+20, CV_8UC3, Scalar(255, 255, 255));
-
-    for(uint i = 0; i < dist.size(); ++i){
-        float x = dist[i];
-        //float mag = sqrt(x*x + y*y);
-
-        x = (((float)x - *min_dist)/(*max_dist - *min_dist))*512;
-
-        //printf("x:(%f, %f) and y: (%f, %f) :::::: (%f, %f) mapped to (%f, %f)\n", *min_x, *max_x, *min_y, *max_y, dx[i], dy[i], x, y);
-
-        int label = labels[i];
-        set<int>::iterator it = std::find(selected.begin(), selected.end(), label);
-
-        if(it != selected.end()){ // the label is one of the selected, draw it red
-            circle( plot, Point( (int)i, (int)x ), 2, Scalar( 0, 0, 255 ), CV_FILLED);
-
-        } else{ // draw a green dot
-            circle( plot, Point( (int)i, (int)x ), 2, Scalar( 0, 255, 0 ), CV_FILLED);
-        }
-    }
-
-    display("plot", plot);
-
-    return plot;
-}
-
-Mat plotClusters(Mat descriptors, const set<int>& selected, const vector<int>& labels){
-    Mat plot, conv;
-    vector<float> dx, dy;
-    normalize(descriptors, descriptors, 0, 255, NORM_MINMAX);
-    descriptors.convertTo(conv, CV_32SC1);
-
-    plot = Mat(512, 512, CV_8UC3, Scalar(255, 255, 255));
-    for(int i  = 0; i < conv.rows; ++i){
-        float x = 0, y = 0;
-        for(int j = 0; j < conv.cols; ++j){
-            int32_t f = conv.at<int32_t>(i, j);
-            if(j%2 == 0){
-                x += f*f;
-            } else{
-                y += f*f;
-            }
-        }
-        x = (float)sqrt(x/32);
-        y = (float)sqrt(y/32);
-
-        dx.push_back(x);
-        dy.push_back(y);
-    }
-
-    vector<float>::iterator min_x = std::min_element(begin(dx), end(dx));
-    vector<float>::iterator min_y = std::min_element(begin(dy), end(dy));
-
-    vector<float>::iterator max_x = std::max_element(begin(dx), end(dx));
-    vector<float>::iterator max_y = std::max_element(begin(dy), end(dy));
-
-    for(uint i = 0; i < dx.size(); ++i){
-        float x = dx[i];
-        float y = dy[i];
-        //float mag = sqrt(x*x + y*y);
-
-        x = (((float)x - *min_x)/(*max_x - *min_x))*512;
-        y = (((float)y - *min_y)/(*max_y - *min_y))*512;
-
-        printf("x:(%f, %f) and y: (%f, %f) :::::: (%f, %f) mapped to (%f, %f)\n", *min_x, *max_x, *min_y, *max_y, dx[i], dy[i], x, y);
-
-        int label = labels[i];
-        set<int>::iterator it = std::find(selected.begin(), selected.end(), label);
-
-        if(it != selected.end()){ // the label is one of the selected, draw it red
-            circle( plot, Point( (int)x, (int)y ), 2, Scalar( 0, 0, 255 ), CV_FILLED);
-
-        } else{ // draw a green dot
-            circle( plot, Point( (int)x, (int)y ), 2, Scalar( 0, 255, 0 ), CV_FILLED);
-        }
-    }
-
-    display("plot", plot);
-
-    return plot;
-}
-
 
 void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstimates){
 	ofstream myfile;
@@ -851,17 +521,18 @@ int main(int argc, char** argv) {
 
 			if (!desc.empty()) {
 				int32_t selectedSampleSize = 0;
+				Mat d = desc.clone();
 				// Create clustering dataset
 				for (uint n = 0; n < descriptors.size(); ++n) {
-					desc.push_back(descriptors[n]);
+					d.push_back(descriptors[n]);
 				}
 
 				map<int, vector<KeyPoint> > mappedPoints;
 				//map<int, vector<KeyPoint> > kMappedPoints;
 
-				HDBSCAN scan(desc, _EUCLIDEAN, 4, 4);
+				hdbscan scan(_EUCLIDEAN, 4, 4);
 				//printf("scan creation done\n");
-				scan.run();
+				scan.run(d);
 				//printf("scan cluster done\n");
 				vector<int> labels = scan.getClusterLabels();
 				map<int, float> stabilities = scan.getClusterStabilities();

@@ -7,7 +7,7 @@
 
 #include "box_extractor.hpp"
 
-namespace hdbscan {
+namespace clustering {
 
 void BoxExtractor::mouseHandler(int event, int x, int y, int flags, void *param){
     BoxExtractor *self =static_cast<BoxExtractor*>(param);

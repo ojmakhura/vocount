@@ -10,7 +10,7 @@
 #include <opencv/cv.hpp>
 using namespace cv;
 
-namespace hdbscan {
+namespace clustering {
 
 class BoxExtractor {
 public:

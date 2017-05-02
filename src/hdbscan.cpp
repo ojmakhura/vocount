@@ -40,7 +40,22 @@ string getWarningMessage() {
 	return message;
 }
 
-HDBSCAN::HDBSCAN(calculator cal, uint minPoints, uint minClusterSize) {
+hdbscan::hdbscan(){
+	this->minPoints = 0;
+	this->minClusterSize = 0;
+	distanceFunction.setCalculator(_EUCLIDEAN);
+	selfEdges = true;
+	constraints = NULL;
+	clusterLabels = NULL;
+	mst = NULL;
+	clusters = NULL;
+	outlierScores = NULL;
+	hierarchy = NULL;
+	numPoints = 0;
+}
+
+
+hdbscan::hdbscan(calculator cal, uint minPoints, uint minClusterSize) {
 	this->minPoints = minPoints;
 	this->minClusterSize = minClusterSize;
 	distanceFunction.setCalculator(cal);
@@ -55,7 +70,7 @@ HDBSCAN::HDBSCAN(calculator cal, uint minPoints, uint minClusterSize) {
 	hierarchy = NULL;
 	numPoints = 0;
 }
-HDBSCAN::HDBSCAN(float* dataSet, int rows, int cols, calculator cal,
+hdbscan::hdbscan(float* dataSet, int rows, int cols, calculator cal,
 		uint minPoints, uint minClusterSize) {
 
 	this->minClusterSize = minClusterSize;
@@ -74,85 +89,7 @@ HDBSCAN::HDBSCAN(float* dataSet, int rows, int cols, calculator cal,
 	//printf("distances.cols(), distances.rows() numPoints : %d %d %d\n", cols, rows, numPoints);
 }
 
-HDBSCAN::HDBSCAN(vector<vector<float> > dataset, calculator cal, uint minPoints, uint minClusterSize){
-
-	this->minClusterSize = minClusterSize;
-	this->minPoints = minPoints;
-	//distanceFunction.setCalculator(cal);
-	selfEdges = true;
-	constraints = new vector<Constraint*>();
-	clusterLabels = NULL;
-	mst = NULL;
-	clusters = NULL; //new vector<Cluster*>();;
-	outlierScores = NULL;
-	hierarchy = NULL;
-	calculateCoreDistances(dataset);
-	numPoints = dataset[0].size();
-	clusterLabels = new vector<int>(numPoints, 0);
-
-}
-
-HDBSCAN::HDBSCAN(vector<vector<Point> > contours, Mat frame, Mat flow, calculator cal, uint minPoints, uint minClusterSize){
-	this->minClusterSize = minClusterSize;
-	this->minPoints = minPoints;
-	distanceFunction.setCalculator(cal);
-	selfEdges = true;
-	constraints = NULL;
-	mst = NULL;
-	clusters = NULL; //new vector<Cluster*>();;
-	outlierScores = NULL;
-	hierarchy = NULL;
-	//printf("cvCalculateCoreDistances(contours, frame, flow)\n");
-	cvCalculateCoreDistances(contours, frame, flow);
-	//printf("cvCalculateCoreDistances(contours, frame, flow) ================================\n");
-	//calculateCoreDistances(dataSet, rows, cols);
-	numPoints = 0;
-
-	for(uint i = 0; i < contours.size(); ++i){
-		for(uint j = 0; j < contours[i].size(); ++j){
-			++numPoints;
-		}
-	}
-	clusterLabels = new vector<int>(numPoints, 0);
-}
-
-
-HDBSCAN::HDBSCAN(vector<Point> contour, vector<Mat> dataset, calculator cal, uint minPoints, uint minClusterSize){
-	this->minClusterSize = minClusterSize;
-	this->minPoints = minPoints;
-	distanceFunction.setCalculator(cal);
-	selfEdges = true;
-	constraints = NULL;
-	mst = NULL;
-	clusters = NULL; // new vector<Cluster*>();
-	outlierScores = NULL;
-	hierarchy = NULL;
-	numPoints = contour.size();
-	clusterLabels = new vector<int>(numPoints, 0);
-	cout << " calculating core distances " << endl;
-	calculateCoreDistances(contour, dataset);
-
-}
-
-HDBSCAN::HDBSCAN(vector<Mat > dataset, calculator cal, uint minPoints, uint minClusterSize, bool indexed){
-	this->minClusterSize = minClusterSize;
-	this->minPoints = minPoints;
-	distanceFunction.setCalculator(cal);
-	selfEdges = true;
-	constraints = NULL;
-	mst = NULL;
-	clusters = NULL; // new vector<Cluster*>();
-	outlierScores = NULL;
-	hierarchy = NULL;
-	//printf("cvCalculateCoreDistances(contours, frame, flow)\n");
-	cvCalculateCoreDistances(dataset, indexed);
-	//printf("cvCalculateCoreDistances(contours, frame, flow) ================================\n");
-	//calculateCoreDistances(dataSet, rows, cols);
-	numPoints = dataset[0].rows * dataset[0].cols;
-	clusterLabels = new vector<int>(numPoints, 0);
-}
-
-HDBSCAN::HDBSCAN(Mat& dataset, calculator cal, uint minPoints, uint minClusterSize){
+hdbscan::hdbscan(Mat& dataset, calculator cal, uint minPoints, uint minClusterSize){
 	this->minClusterSize = minClusterSize;
 	this->minPoints = minPoints;
 	distanceFunction.setCalculator(cal);
@@ -170,46 +107,7 @@ HDBSCAN::HDBSCAN(Mat& dataset, calculator cal, uint minPoints, uint minClusterSi
 	distanceFunction.cvComputeDistance(dataset, minPoints-1);
 }
 
-HDBSCAN::HDBSCAN(string fileName, calculator cal, uint minPoints,
-		uint minClusterSize) {
-	this->minPoints = minPoints;
-	this->minClusterSize = minClusterSize;
-	distanceFunction.setCalculator(cal);
-	selfEdges = true;
-	constraints = NULL;
-	mst = NULL;
-	clusters = NULL; //new vector<Cluster*>();;
-	outlierScores = NULL;
-	hierarchy = NULL;
-	int rows = 0;
-	int cols = 0;
-	float* dataset = readInDataSet(fileName, &rows, &cols);
-	calculateCoreDistances(dataset, rows, cols);
-	numPoints = rows;
-	clusterLabels = new vector<int>(numPoints, 0);
-}
-
-HDBSCAN::HDBSCAN(string dataFileName, string constraintFileName, calculator cal,
-		uint minPoints, uint minClusterSize) {
-	this->minPoints = minPoints;
-	this->minClusterSize = minClusterSize;
-	distanceFunction.setCalculator(cal);
-	selfEdges = true;
-	constraints = NULL;
-	clusterLabels = NULL;
-	mst = NULL;
-	clusters = NULL;
-	outlierScores = NULL;
-	hierarchy = NULL;
-	//readInDataSet(dataFileName);
-	readInConstraints(constraintFileName);
-	//calculateCoreDistances();
-	//numPoints = dataSet.rows();
-	//distances = MatrixXf(numPoints, numPoints);
-	clusterLabels = new vector<int>(numPoints, 0);
-}
-
-HDBSCAN::~HDBSCAN() {
+hdbscan::~hdbscan() {
 
 	if (constraints != NULL) {
 
@@ -271,7 +169,7 @@ HDBSCAN::~HDBSCAN() {
  * @return A vector<float>[] where index [i][j] indicates the jth attribute of data point i
  * @throws IOException If any errors occur opening or reading from the file
  */
-float* HDBSCAN::readInDataSet(string fileName, int* rows, int* cols) {
+float* hdbscan::readInDataSet(string fileName, int* rows, int* cols) {
 
 	float* dataSet;
 	//dataSet = imread(fileName);
@@ -345,7 +243,7 @@ float* HDBSCAN::readInDataSet(string fileName, int* rows, int* cols) {
  * @return An vector of Constraints
  * @throws IOException If any errors occur opening or reading from the file
  */
-void HDBSCAN::readInConstraints(string fileName) {
+void hdbscan::readInConstraints(string fileName) {
 
 	constraints = new vector<Constraint*>();
 	std::ifstream inFile(fileName);
@@ -376,7 +274,7 @@ void HDBSCAN::readInConstraints(string fileName) {
  * @param distanceFunction A DistanceCalculator to compute distances between points
  * @return An array of core distances
  */
-void HDBSCAN::calculateCoreDistances(float* dataSet, int rows, int cols) {
+void hdbscan::calculateCoreDistances(float* dataSet, int rows, int cols) {
 
 	uint size = rows;
 
@@ -390,33 +288,7 @@ void HDBSCAN::calculateCoreDistances(float* dataSet, int rows, int cols) {
 
 }
 
-void HDBSCAN::calculateCoreDistances(vector<Point> contour, vector<Mat> dataset) {
-	int numNeighbors = minPoints - 1;
-	distanceFunction.cvComputeEuclidean(contour, dataset, numNeighbors, true);
-
-}
-
-void HDBSCAN::calculateCoreDistances(vector<vector<float> >& dataset){
-	int numNeighbors = minPoints - 1;
-	distanceFunction.computeDistance(dataset, numNeighbors);
-
-}
-
-void HDBSCAN::cvCalculateCoreDistances(vector<vector<Point> > contours, Mat frame, Mat flow) {
-
-	/*uint size = rows;
-
-
-
-	if (minPoints == 1 && size < minPoints) {
-		return;
-	}*/
-	int numNeighbors = minPoints - 1;
-	distanceFunction.cvComputeEuclidean(contours, flow, frame, numNeighbors);
-
-}
-
-void HDBSCAN::cvCalculateCoreDistances(vector<Mat> dataset, bool indexed) {
+void hdbscan::cvCalculateCoreDistances(vector<Mat> dataset, bool indexed) {
 
 	/*uint size = rows;
 
@@ -439,7 +311,7 @@ void HDBSCAN::cvCalculateCoreDistances(vector<Mat> dataset, bool indexed) {
  * @param distanceFunction A DistanceCalculator to compute distances between points
  */
 
-void HDBSCAN::constructMST(Mat& src) {
+void hdbscan::constructMST(Mat& src) {
 
 	int nb_edges = 0;
 	Mat dataset = src.clone();
@@ -550,7 +422,7 @@ void HDBSCAN::constructMST(Mat& src) {
 	//cout << "Done" << endl;
 }
 
-void HDBSCAN::constructMST() {
+void hdbscan::constructMST() {
 
 	//float* distances = distanceFunction.getDistance();
 	float* coreDistances = distanceFunction.getCoreDistances();
@@ -657,7 +529,7 @@ void HDBSCAN::constructMST() {
  * @param clusters A list of Clusters forming a cluster tree
  * @return true if there are any clusters with infinite stability, false otherwise
  */
-bool HDBSCAN::propagateTree() {
+bool hdbscan::propagateTree() {
 
 	map<int, Cluster*> clustersToExamine;
 
@@ -728,7 +600,7 @@ bool HDBSCAN::propagateTree() {
  * @param delimiter The delimiter for the output file
  * @param infiniteStability true if there are any clusters with infinite stability, false otherwise
  */
-void HDBSCAN::calculateOutlierScores(vector<float>* pointNoiseLevels,
+void hdbscan::calculateOutlierScores(vector<float>* pointNoiseLevels,
 		vector<int>* pointLastClusters, bool infiniteStability) {
 
 	float* coreDistances = distanceFunction.getCoreDistances();
@@ -797,7 +669,7 @@ void HDBSCAN::calculateOutlierScores(vector<float>* pointNoiseLevels,
  * @param edgeWeight The edge weight at which to remove the points from their previous Cluster
  * @return The new Cluster, or NULL if the clusterId was 0
  */
-Cluster* HDBSCAN::createNewCluster(set<int>* points, vector<int>* clusterLabels,
+Cluster* hdbscan::createNewCluster(set<int>* points, vector<int>* clusterLabels,
 		Cluster* parentCluster, int clusterLabel, float edgeWeight) {
 
 	for (set<int>::iterator it = points->begin(); it != points->end(); ++it) {
@@ -827,7 +699,7 @@ Cluster* HDBSCAN::createNewCluster(set<int>* points, vector<int>* clusterLabels,
  * @param constraints An vector of constraints
  * @param clusterLabels an array of current cluster labels for points
  */
-void HDBSCAN::calculateNumConstraintsSatisfied(set<int> newClusterLabels,
+void hdbscan::calculateNumConstraintsSatisfied(set<int> newClusterLabels,
 		vector<int> currentClusterLabels) {
 
 	if (constraints == NULL || constraints->size() == 0) {
@@ -903,21 +775,21 @@ void HDBSCAN::calculateNumConstraintsSatisfied(set<int> newClusterLabels,
 	}
 }
 
-vector<int>& HDBSCAN::getClusterLabels() {
+vector<int>& hdbscan::getClusterLabels() {
 	return *clusterLabels;
 }
 
-map<int, float>& HDBSCAN::getClusterStabilities(){
+map<int, float>& hdbscan::getClusterStabilities(){
 	return clusterStabilities;
 }
 
 /*
-MatrixXf HDBSCAN::getDataSet() {
+MatrixXf hdbscan::getDataSet() {
 	return dataSet;
 }
 */
 
-vector<Cluster*>& HDBSCAN::getClusters() {
+vector<Cluster*>& hdbscan::getClusters() {
 	return *clusters;
 }
 
@@ -939,7 +811,7 @@ vector<Cluster*>& HDBSCAN::getClusters() {
  * @return The cluster tree
  * @throws IOException If any errors occur opening or writing to the files
  */
-void HDBSCAN::computeHierarchyAndClusterTree(bool compactHierarchy,
+void hdbscan::computeHierarchyAndClusterTree(bool compactHierarchy,
 		vector<float>* pointNoiseLevels, vector<int>* pointLastClusters) {
 
 	//mst->print();
@@ -1225,8 +1097,47 @@ void HDBSCAN::computeHierarchyAndClusterTree(bool compactHierarchy,
 	delete affectedClusterLabels;
 	delete affectedVertices;
 }
+uint getDatasetSize(int rows, int cols, bool rowwise){
+    if(rowwise){
+        return rows;
+    } else{
+        return rows * cols;
+    }
+}
 
-void HDBSCAN::run() {
+void hdbscan::run(vector<double>& dataset){
+
+    this->run(dataset, (int)dataset.size(), 1, false);
+}
+
+
+void hdbscan::run(vector<double>& dataset, int rows, int cols, bool rowwise){
+    numPoints = getDatasetSize(rows, cols, rowwise);
+    clusterLabels = new vector<int>(numPoints, 0);
+    //this->distanceFunction.computeDistance(dataset, rows, cols, rowwise, minPoints-1);
+    this->run();
+}
+
+void hdbscan::run(double* dataset, int size){
+    this->run(dataset, size, 1, false);
+}
+
+void hdbscan::run(double* dataset, int rows, int cols, bool rowwise){
+    cout << "hdbscan::run(double* dataset, int rows, int cols, bool rowwise) " << rowwise << endl;
+    numPoints = getDatasetSize(rows, cols, rowwise);
+    clusterLabels = new vector<int>(numPoints, 0);
+    //this->distanceFunction.computeDistance(dataset, rows, cols, rowwise, minPoints-1);
+    this->run();
+}
+
+void hdbscan::run(Mat& dataset){
+    numPoints = getDatasetSize(dataset.rows, dataset.cols, true);
+    clusterLabels = new vector<int>(numPoints, 0);
+    this->distanceFunction.cvComputeDistance(dataset, minPoints-1);
+    this->run();
+}
+
+void hdbscan::run() {
 	int start = clock();
 	/*if (calcDistances) {
 		calculateCoreDistances(dataSet, rows, cols);
@@ -1323,7 +1234,7 @@ void HDBSCAN::run() {
  * @param numPoints The number of points in the original data set
  * @param infiniteStability true if there are any clusters with infinite stability, false otherwise
  */
-void HDBSCAN::findProminentClusters(bool infiniteStability) {
+void hdbscan::findProminentClusters(bool infiniteStability) {
 
 	vector<Cluster*>* solution = (*clusters)[1]->getPropagatedDescendants();
 	clusterStabilities.insert(pair<int, float>(0, 0.0f));
@@ -1386,12 +1297,12 @@ void HDBSCAN::findProminentClusters(bool infiniteStability) {
 
 }
 
-bool HDBSCAN::compareClusters(Cluster* one, Cluster* two){
+bool hdbscan::compareClusters(Cluster* one, Cluster* two){
 
 	return one == two;
 }
 
-void HDBSCAN::clean(){
+void hdbscan::clean(){
 
 }
 

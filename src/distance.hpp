@@ -35,12 +35,10 @@ public:
 	DistanceCalculator(calculator cal = _EUCLIDEAN);
 	~DistanceCalculator();
 	void computeDistance(float* dataset, int rows, int cols, int numNeighbors);
-	void computeDistance(vector<vector<float> > dataset, int numNeighbors);
 	void cvComputeDistance(vector<Mat>& dataset, int minPoints, bool indexed);
-	void cvComputeEuclidean(vector<vector<Point> > contours, Mat flow, Mat frame, int numNeighbors);
-	void cvComputeEuclidean(vector<Point> contour, vector<Mat>& dataset, int numNeighbors, bool includeIndex);
-	void computeDistance(vector<Point2f> dataset, int rows, int cols, int minPoints);
 	void cvComputeDistance(Mat& dataset, int minPoints);
+    void computeDistance(vector<float>& dataset, int rows, int cols, bool rowwise, int minPoints);
+    void computeDistance(float* dataset, int rows, int cols, bool rowwise, int minPoints);
 
 	float* getDistance();
 	//float* getSortedDistance();
@@ -65,14 +63,10 @@ private:
 	 * Computes the euclidean distance between two points, d = sqrt((x1-y1)^2 + (x2-y2)^2 + ... + (xn-yn)^2).
 	 */
 	void do_euclidean(float* dataset, int minPoints);
-	void do_euclidean(vector<vector<float> >& dataset, int minPoints);
 
-	void cvEuclidean(vector<Mat>* dataset, int numNeighbors);
-	void cvEuclidean(vector<vector<Point> > contours, Mat flow, Mat frame, int numNeighbors);
 	void do_euclidean(vector<Mat>* dataset, int numNeighbors, bool includeIndex);
 	void do_euclidean(Mat& dataset, int numNeighbors);
-	void do_euclidean(vector<Point> contour, vector<Mat>* dataset, int numNeighbors, bool includeIndex);
-	void comp_euclidean(vector<Point2f> dataset, int numNeighbors);
+    void do_euclidean(void* dataset, int minPoints, bool rowwise, bool isVector);
 	/**
 	 * Computes cosine similarity between two points, d = 1 - ((X�Y) / (||X||*||Y||))
 	 */
@@ -107,6 +101,8 @@ private:
 
 	void addDistance(uint i, uint j, float distance);
 
+    double getElement(void* dataset, int index, bool isVector);
+    void setDimenstions(int rows, int cols);
 };
 }
 }
