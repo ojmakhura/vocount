@@ -244,6 +244,7 @@ void getCount(framed& f, hdbscan& scan, int ogsize){
 				f.largest = *it;
 				f.lsize = n;
 			}
+			cout << f.frame << endl;
 			Mat kimg = drawKeyPoints(f.frame, f.mappedPoints[*it],
 					Scalar(0, 0, 255));
 			;

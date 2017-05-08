@@ -203,7 +203,7 @@ int main(int argc, char** argv) {
 
 			f.i = frameCount;
 			display("frame", frame);
-			f.frame = frame;
+			f.frame = frame.clone();
 
 			cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
 			vector<Mat> dataset;
@@ -328,10 +328,11 @@ int main(int argc, char** argv) {
 					dset.push_back(vcount.roiDesc[n]);
 				}
 
-
 				hdbscan scan(dset, _EUCLIDEAN, 4, 4);
 				scan.run();
-
+				int x = scan.getClusterLabels().size();
+				int y = dset.rows;
+				printf("label size = %d\n and dataset is %d\n", x, y);
 				getMappedPoint(f, scan);
 
 				/********************************************************************
