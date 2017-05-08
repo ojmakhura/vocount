@@ -211,13 +211,9 @@ void getMappedPoint(framed& f, hdbscan& scan){
 }
 
 void getCount(framed& f, hdbscan& scan, int ogsize){
-	cout
-			<< "################################################################################"
-			<< endl;
+	cout << "################################################################################" << endl;
 	cout << "                              " << f.i << endl;
-	cout
-			<< "################################################################################"
-			<< endl;
+	cout << "################################################################################" << endl;
 
 	set<int> lset;
 	map<int, float> stabilities = scan.getClusterStabilities();
@@ -244,7 +240,7 @@ void getCount(framed& f, hdbscan& scan, int ogsize){
 				f.largest = *it;
 				f.lsize = n;
 			}
-			cout << f.frame << endl;
+
 			Mat kimg = drawKeyPoints(f.frame, f.mappedPoints[*it],
 					Scalar(0, 0, 255));
 			;
@@ -262,6 +258,75 @@ void maintaintHistory(vocount& voc, framed& f){
 	voc.frameHistory.push_back(f);
 	if(voc.frameHistory.size() > 10){
 		voc.frameHistory.erase(voc.frameHistory.begin());
+	}
+}
+
+void runSegmentation(vocount& vcount, framed& f, Ptr<GraphSegmentation> graphSegmenter, Ptr<DenseOpticalFlow> flowAlgorithm){
+	vector<Mat> dataset;
+	split(f.frame, dataset);
+	int32_t estimation;
+	vector<Mat> d1;
+
+	d1.push_back(dataset[0]);
+	d1.push_back(dataset[1]);
+	d1.push_back(dataset[2]);
+
+	if (vcount.frameHistory.size() > 0 && !f.gray.empty()) {
+		framed fx = vcount.frameHistory[vcount.frameHistory.size() - 1];
+		Mat prevgray = vcount.frameHistory[vcount.frameHistory.size() - 1].gray;
+		flowAlgorithm->calc(prevgray, f.gray, f.flow);
+		Mat iFlow, fi;
+		mergeFlowAndImage(f.flow, fi, iFlow);
+		dataset.clear();
+		pyrMeanShiftFiltering(iFlow, iFlow, 10, 30, 1);
+		display("iFlow", iFlow);
+		split(iFlow, dataset);
+		d1.push_back(dataset[0]);
+		d1.push_back(dataset[2]);
+		//cout << "Getting d1 with flow" << endl;
+
+	}
+	//Mat mm;
+	merge(d1, f.dataset);
+	graphSegmenter->processImage(f.dataset, f.segments);
+}
+
+
+void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out) {
+	CV_Assert(gray.channels() == 1);
+	if (!flow.empty()) {
+
+		if(out.empty()){
+			out = Mat(flow.rows, flow.cols, flow.type());
+		}
+
+		Mat flow_split[2];
+		Mat magnitude, angle;
+		Mat hsv_split[3], hsv;
+		split(flow, flow_split);
+		cartToPolar(flow_split[0], flow_split[1], magnitude, angle, true);
+		normalize(magnitude, magnitude, 0, 255, NORM_MINMAX);
+		normalize(angle, angle, 0, 255, NORM_MINMAX);
+
+		hsv_split[0] = angle; // already in degrees - no normalization needed
+		Mat x;
+		if(gray.empty()){
+			x = Mat::ones(angle.size(), angle.type());
+		} else{
+			gray.convertTo(x, angle.type());
+		}
+		hsv_split[1] = x.clone();
+		hsv_split[2] = magnitude;
+		merge(hsv_split, 3, hsv);
+		cvtColor(hsv, out, COLOR_HSV2BGR);
+		normalize(out, out, 0, 255, NORM_MINMAX); // Normalise the matrix in the 0 - 255 range
+
+		Mat n;
+		out.convertTo(n, CV_8UC3); // Convert to 3 channel uchar matrix
+		n.copyTo(out);
+
+		// Normalise the flow within the range 0 ... 1
+		normalize(flow, flow, 0, 1, NORM_MINMAX);
 	}
 }
 

@@ -9,14 +9,14 @@
 #define PROCESS_FRAME_HPP_
 #include "hdbscan.hpp"
 #include <opencv/cv.hpp>
+#include <opencv2/ximgproc/segmentation.hpp>
 #include <vector>
 #include <cstdlib>
 #include <iostream>
 
 using namespace cv;
 using namespace std;
-
-
+using namespace cv::ximgproc::segmentation;
 
 typedef struct FRAMED{
 	int i;
@@ -39,6 +39,7 @@ typedef struct FRAMED{
 } framed;
 
 typedef struct VOCOUNT{
+	int step;
 	vector<Mat> roiDesc;
 	vector<vector<KeyPoint> > roiKeypoints;
 	vector<framed> frameHistory;
@@ -63,5 +64,7 @@ void maintaintHistory(vocount& voc, framed& f);
 set<int32_t> getIgnoreSegments(Rect roi, Mat segments);
 void getMappedPoint(framed& f, hdbscan& scan);
 void getCount(framed& f, hdbscan& scan, int ogsize);
+void runSegmentation(vocount& vcount, framed& f, Ptr<GraphSegmentation> graphSegmenter, Ptr<DenseOpticalFlow> flowAlgorithm);
+void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out);
 
 #endif /* PROCESS_FRAME_HPP_ */

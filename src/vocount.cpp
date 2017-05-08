@@ -44,44 +44,6 @@ static void help(){
 	        "\n" );
 }
 
-void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out) {
-	CV_Assert(gray.channels() == 1);
-	if (!flow.empty()) {
-
-		if(out.empty()){
-			out = Mat(flow.rows, flow.cols, flow.type());
-		}
-
-		Mat flow_split[2];
-		Mat magnitude, angle;
-		Mat hsv_split[3], hsv;
-		split(flow, flow_split);
-		cartToPolar(flow_split[0], flow_split[1], magnitude, angle, true);
-		normalize(magnitude, magnitude, 0, 255, NORM_MINMAX);
-		normalize(angle, angle, 0, 255, NORM_MINMAX);
-
-		hsv_split[0] = angle; // already in degrees - no normalization needed
-		Mat x;
-		if(gray.empty()){
-			x = Mat::ones(angle.size(), angle.type());
-		} else{
-			gray.convertTo(x, angle.type());
-		}
-		hsv_split[1] = x.clone();
-		hsv_split[2] = magnitude;
-		merge(hsv_split, 3, hsv);
-		cvtColor(hsv, out, COLOR_HSV2BGR);
-		normalize(out, out, 0, 255, NORM_MINMAX); // Normalise the matrix in the 0 - 255 range
-
-		Mat n;
-		out.convertTo(n, CV_8UC3); // Convert to 3 channel uchar matrix
-		n.copyTo(out);
-
-		// Normalise the flow within the range 0 ... 1
-		normalize(flow, flow, 0, 1, NORM_MINMAX);
-	}
-}
-
 void printStats(String folder, map<int32_t, vector<int32_t> > stats){
 	ofstream myfile;
 	String f = folder;
@@ -142,15 +104,15 @@ int main(int argc, char** argv) {
 	String destFolder;
 	bool print = false;
 	VideoCapture cap;
-    Ptr<DenseOpticalFlow> algorithm;
-    algorithm = optflow::createOptFlow_Farneback();
+    Ptr<DenseOpticalFlow> flowAlgorithm;
+    flowAlgorithm = optflow::createOptFlow_Farneback();
     BoxExtractor box;
     bool roiExtracted = false;
     int frameCount = 0;
     vocount vcount;
 
 	cv::CommandLineParser parser(argc, argv, "{help ||}{dir||}{n|1|}"
-			"{v||}{video||}");
+			"{v||}{video||}{w|1|}");
 
 	if(parser.has("help")){
 		help();
@@ -178,6 +140,12 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 
+	if(parser.has("w")){
+
+		String s = parser.get<String>("w");
+		vcount.step = atoi(s.c_str());
+	}
+
 	if (tracker == NULL) {
 		cout << "***Error in the instantiation of the tracker...***\n";
 		return -1;
@@ -203,37 +171,11 @@ int main(int argc, char** argv) {
 
 			f.i = frameCount;
 			display("frame", frame);
-			f.frame = frame.clone();
+			f.frame = frame;
 
 			cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
-			vector<Mat> dataset;
-			split(frame, dataset);
-			int32_t estimation;
 
-			d1.push_back(dataset[0]);
-			d1.push_back(dataset[1]);
-			d1.push_back(dataset[2]);
-
-			if (vcount.frameHistory.size() > 0 && !f.gray.empty()) {
-
-				Mat prevgray = vcount.frameHistory[vcount.frameHistory.size() - 2].gray;
-				algorithm->calc(prevgray, f.gray, f.flow);
-				Mat iFlow, fi;
-				mergeFlowAndImage(f.flow, fi, iFlow);
-				dataset.clear();
-				pyrMeanShiftFiltering(iFlow, iFlow, 10, 30, 1);
-				display("iFlow", iFlow);
-				split(iFlow, dataset);
-				d1.push_back(dataset[0]);
-				d1.push_back(dataset[2]);
-				//cout << "Getting d1 with flow" << endl;
-
-			}
-
-			//Mat mm;
-			merge(d1, f.dataset);
-			graphSegmenter->processImage(f.dataset, f.segments);
-
+			runSegmentation(vcount, f, graphSegmenter, flowAlgorithm);
 			if (!f.flow.empty()) {
 
 				Mat nm;
@@ -252,7 +194,7 @@ int main(int argc, char** argv) {
 			//pyrMeanShiftFiltering(frame, frame, 10, 30, 1);
 			detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
 			//fdesc = desc.clone();
-			uint ogsize = f.descriptors.rows;
+
 
 			if (!roiExtracted && vcount.roiDesc.size() < 1) {
 				Mat f2 = frame.clone();
@@ -307,10 +249,12 @@ int main(int argc, char** argv) {
 							roiDesc.push_back(f.descriptors.row(i));
 						}
 
-						xp.push_back(f.keypoints[i]);
+						//xp.push_back(f.keypoints[i]);
 					}
 
 				}
+				vcount.roiDesc.push_back(roiDesc);
+				vcount.roiKeypoints.push_back(roiPts);
 				//keypoints.push_back(roiPts);
 				//descriptors.push_back(roiDesc);
 				//printf("found %d object keypoints\n", roiDesc.rows);
@@ -319,41 +263,55 @@ int main(int argc, char** argv) {
 				//return 0;
 			}
 
-			if (!f.descriptors.empty()) {
+			if (!f.descriptors.empty() && !vcount.roiDesc.empty()) {
 				int32_t selectedSampleSize = 0;
 				// Create clustering dataset
 				Mat dset = f.descriptors.clone();
+				if(!vcount.frameHistory.empty()){
+					for(int j = 1; j < vcount.step; ++j){
+						int ix = vcount.frameHistory.size() - 1;
+						if(ix > 0){
+							framed fx = vcount.frameHistory[ix];
+							dset.push_back(fx.descriptors);
+						}
 
+					}
+
+				}
+				uint ogsize = dset.rows;
+
+				printf("original dset rows %d\n", dset.rows);
 				for (uint n = 0; n < vcount.roiDesc.size(); ++n) {
 					dset.push_back(vcount.roiDesc[n]);
 				}
+				printf("final dset rows %d\n", dset.rows);
 
 				hdbscan scan(dset, _EUCLIDEAN, 4, 4);
+				printf("scan set\n");
 				scan.run();
-				int x = scan.getClusterLabels().size();
-				int y = dset.rows;
-				printf("label size = %d\n and dataset is %d\n", x, y);
+				printf("scan run\n");
+				//int x = scan.getClusterLabels().size();
+				//int y = dset.rows;
 				getMappedPoint(f, scan);
+				printf("getMappedPoint(f, scan)\n");
 
 				/********************************************************************
 				 * Approximation of the number of similar objects
 				 *******************************************************************/
 
 				getCount(f, scan, ogsize);
-
-				//vector<Mat> img_keypoints;
+				printf("getCount(f, scan, ogsize);\n");
 
 				Mat img_allkps = drawKeyPoints(frame, f.matchedKeypoints, Scalar(0, 0, 255));
-				//Mat img_allkps ;
-				//drawKeypoints(frame, allkps, img_allkps, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 				set<int> tempSet;
 				tempSet.insert(f.labels.begin() + ogsize, f.labels.end());
 				if(selectedSampleSize > 0){
 					//printf("selectedSampleSize = %d\n", selectedSampleSize);
-					estimation = (int32_t)f.total/selectedSampleSize;
+					//estimation = (int32_t)f.total/selectedSampleSize;
 					printf("This final approximation is %f\n", f.total);
 				}
 				cout << "Cluster " << f.largest << " is the largest" << endl;
+				printf("Ogsize is %d and label size is %d\n", ogsize, f.labels.size());
 				set<int> clusterSegments;
 				for (uint x = 0; x < ogsize; ++x) {
 					// keypoint at location i
@@ -389,14 +347,12 @@ int main(int argc, char** argv) {
 				cout
 						<< "---------------------------------------Statistics-------------------------------------------"
 						<< endl;
-				//cout << "Number of matchedKeyPoints is "
-						//<< selectedFeatures << " out of " << ogsize
-						//<< endl;
 				cout
 						<< "--------------------------------------------------------------------------------------------"
 						<< endl;
 				//printf("lset size = %d, stabilities size = %d\n", lset.size(), stabilities.size());
 				//plotClusters2(fdesc, clusterSegments, labels);
+				printf("f.keyPointImages.size() = %d\n", f.keyPointImages.size());
 				display("keypoints frame", f.keyPointImages[f.keyPointImages.size()-1]);
 				//display("frame", frame);
 
@@ -439,8 +395,12 @@ int main(int argc, char** argv) {
 			//cvtColor(f.image, f.gray, COLOR_BGR2GRAY);
 
 			char c = (char) waitKey(20);
-			if (c == 'q')
+			if (c == 'q'){
 				break;
+			} else if (c == 's'){
+
+			}
+
 			maintaintHistory(vcount, f);
 			++frameCount;
 		} else{
