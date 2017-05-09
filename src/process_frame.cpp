@@ -180,9 +180,7 @@ void getMappedPoint(framed& f, hdbscan& scan){
 	map<int, float> stabilities = scan.getClusterStabilities();
 	set<int> lset, tempSet;
 	vector<float> sstabilities(lset.size());
-	lset.insert(f.labels.begin(), f.labels.end());
-	// temp set is the set of clusters for the sample data
-	//int i = 0;
+	lset.insert(f.labels.begin(), f.labels.begin() + f.descriptors.rows);
 	for (set<int>::iterator it = lset.begin(); it != lset.end(); ++it) {
 		vector<KeyPoint> pts;
 		for (uint i = 0; i < f.labels.size(); ++i) {
@@ -194,22 +192,16 @@ void getMappedPoint(framed& f, hdbscan& scan){
 				pts.push_back(f.keypoints[i]);
 			}
 		}
-		//printf("%d has %d\n\t\n\n\n", *it, pts.size());
-		//foruint i = 0; i < pts.size())
+
 		pair<uint, vector<KeyPoint> > pr(*it, pts);
 		f.mappedPoints.insert(pr);
 
-		//++i;
-		Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
-				rng.uniform(0, 255));
-		//Rect rr = boundingRect(pts);
-		//rectangle(keyPointImage, rr, value, 2, 8, 0);
-		//string name = to_string(*it);
-		//putText(keyPointImage, name.c_str(), Point(rr.x - 4, rr.y - 4),
-		//CV_FONT_HERSHEY_PLAIN, 1, value);
 	}
 }
 
+/**
+ *
+ */
 void getCount(framed& f, hdbscan& scan, int ogsize){
 	cout << "################################################################################" << endl;
 	cout << "                              " << f.i << endl;
@@ -217,12 +209,13 @@ void getCount(framed& f, hdbscan& scan, int ogsize){
 
 	set<int> lset;
 	map<int, float> stabilities = scan.getClusterStabilities();
-	lset.insert(f.labels.begin(),f. labels.end());
+	lset.insert(f.labels.begin(), f.labels.begin() + f.descriptors.rows);
 	for (set<int>::iterator it = lset.begin(); it != lset.end(); ++it) {
 		vector<int> pts;
 		for (uint i = ogsize; i < f.labels.size(); ++i) {
 			if (*it == f.labels[i] && *it != 0) {
 				pts.push_back(i);
+				f.selectedSampleSize++;
 			}
 		}
 
@@ -235,17 +228,15 @@ void getCount(framed& f, hdbscan& scan, int ogsize){
 					f.mappedPoints[*it].size(), n);
 			pair<uint, vector<int> > pr(*it, pts);
 			f.roiClusters.insert(pr);
+			f.selectedFeatures += f.mappedPoints[*it].size();
+			f.cest.push_back(n);
 
 			if (n > f.lsize) {
 				f.largest = *it;
 				f.lsize = n;
 			}
 
-			Mat kimg = drawKeyPoints(f.frame, f.mappedPoints[*it],
-					Scalar(0, 0, 255));
-			;
-			///drawKeypoints(frame, mappedPoints[*it], kimg,
-			//Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+			Mat kimg = drawKeyPoints(f.frame, f.mappedPoints[*it], Scalar(0, 0, 255));
 
 			f.keyPointImages.push_back(kimg);
 			f.matchedKeypoints.insert(f.matchedKeypoints.end(), f.mappedPoints[*it].begin(),
@@ -330,3 +321,22 @@ void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out) {
 	}
 }
 
+Mat getDataset(vocount& vcount, framed& f, uint* ogsize){
+	Mat dataset = f.descriptors;
+	if (!vcount.frameHistory.empty()) {
+		for (int j = 1; j < vcount.step; ++j) {
+			int ix = vcount.frameHistory.size() - j;
+			if (ix > 0) {
+				framed fx = vcount.frameHistory[ix];
+				dataset.push_back(fx.descriptors);
+			}
+		}
+	}
+	*ogsize = dataset.rows;
+	for (uint n = 0; n < vcount.roiDesc.size(); ++n) {
+		dataset.push_back(vcount.roiDesc[n]);
+	}
+
+	return dataset;
+
+}

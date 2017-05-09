@@ -28,18 +28,22 @@ typedef struct FRAMED{
 		dataset;
 	vector<Mat> keyPointImages;
 	vector<KeyPoint> keypoints, matchedKeypoints; 					/// Frame keypoints
-    map<int32_t, vector<int32_t> > stats;
-    map<int32_t, vector<int32_t> > clusterEstimates;
     map<int, vector<KeyPoint> > mappedPoints;
     map<int, vector<int> > roiClusters;
+	vector<int32_t> odata;
     vector<int> labels;
+    vector<int32_t> cest;
 	uint largest = 0;
 	float lsize = 0;
 	float total = 0;
+	int32_t selectedSampleSize = 0;
+	int32_t selectedFeatures = 0;
 } framed;
 
 typedef struct VOCOUNT{
 	int step;
+    map<int32_t, vector<int32_t> > stats;
+    map<int32_t, vector<int32_t> > clusterEstimates;
 	vector<Mat> roiDesc;
 	vector<vector<KeyPoint> > roiKeypoints;
 	vector<framed> frameHistory;
@@ -66,5 +70,6 @@ void getMappedPoint(framed& f, hdbscan& scan);
 void getCount(framed& f, hdbscan& scan, int ogsize);
 void runSegmentation(vocount& vcount, framed& f, Ptr<GraphSegmentation> graphSegmenter, Ptr<DenseOpticalFlow> flowAlgorithm);
 void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out);
+Mat getDataset(vocount& vcount, framed& f, uint* ogsize);
 
 #endif /* PROCESS_FRAME_HPP_ */
