@@ -31,7 +31,6 @@ typedef struct FRAMED{
     map<int, vector<KeyPoint> > mappedKeyPoints;					/// maps labels to their keypoints
     map<int, vector<int> > mappedLabels; 							/// maps labels to their indices
     map<int, int> roiClusterCount;									/// cluster labels for the r
-    //set<int> roiClusters;											/// cluster labels for the roi features
 	vector<int32_t> odata;
     vector<int> labels;
 	uint largest = 0;
