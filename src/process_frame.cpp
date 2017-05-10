@@ -6,8 +6,7 @@
  */
 
 #include "process_frame.hpp"
-
-
+#include <fstream>
 
 void display(char const* screen, const InputArray& m) {
 	if (!m.empty()) {
@@ -103,8 +102,6 @@ set<int32_t> getIgnoreSegments(Rect roi, Mat segments){
 	set<int32_t> span;
 	int32_t t = 3;
 	cout << roi << endl;
-	printf("roi.height = %d : roi.width = %d\n", roi.height, roi.width);
-	printf("roi.x = %d : roi.y = %d\n", roi.x, roi.y);
 
 	for(int i = roi.x; i < roi.x+roi.width; ++i){
 		Point p1(roi.x, roi.y-t);
@@ -158,45 +155,54 @@ set<int32_t> getIgnoreSegments(Rect roi, Mat segments){
 
 	}
 
-	printf("span has %d\n", span.size());
 
 	return span;
 }
 
-Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour){
+Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour, int type){
 	Mat x = in.clone();
-
-	for(vector<KeyPoint>::iterator it = points.begin(); it != points.end(); ++it){
-		circle(x, Point(it->pt.x, it->pt.y), 4, colour, CV_FILLED, 8, 0);
+	if(type == -1){
+		for(vector<KeyPoint>::iterator it = points.begin(); it != points.end(); ++it){
+			circle(x, Point(it->pt.x, it->pt.y), 4, colour, CV_FILLED, 8, 0);
+		}
+	} else{
+		drawKeypoints( in, points, x, Scalar::all(-1), type );
 	}
-
 
 	return x;
 }
 
-void getMappedPoint(framed& f, hdbscan& scan){
-	RNG rng(12345);
-	f.labels = scan.getClusterLabels();
-	map<int, float> stabilities = scan.getClusterStabilities();
-	set<int> lset, tempSet;
-	vector<float> sstabilities(lset.size());
-	lset.insert(f.labels.begin(), f.labels.begin() + f.descriptors.rows);
-	for (set<int>::iterator it = lset.begin(); it != lset.end(); ++it) {
-		vector<KeyPoint> pts;
-		for (uint i = 0; i < f.labels.size(); ++i) {
-			if (*it == f.labels[i]) {
-				Point p;
-				p.x = (int) f.keypoints[i].pt.x;
-				p.y = (int) f.keypoints[i].pt.y;
 
-				pts.push_back(f.keypoints[i]);
-			}
-		}
+vector<KeyPoint> getAllMatchedKeypoints(framed& f){
+	vector<KeyPoint> kp;
 
-		pair<uint, vector<KeyPoint> > pr(*it, pts);
-		f.mappedPoints.insert(pr);
-
+	for(map<int, int>::iterator it = f.roiClusterCount.begin(); it != f.roiClusterCount.end(); ++it){
+		vector<KeyPoint> k = f.mappedKeyPoints[it->first];
+		kp.insert(kp.end(), k.begin(), k.end());
 	}
+
+	return kp;
+}
+
+void mapKeyPoints(framed& f, hdbscan& scan, int ogsize){
+	// Only labels from the first n indices where n is the number of features found in f.frame
+	f.labels.insert(f.labels.begin(), scan.getClusterLabels().begin(), scan.getClusterLabels().begin()+f.descriptors.rows);
+
+	// add the indices and keypoints using labels as the key to the map
+	for(int i = 0; i < f.labels.size(); i++){
+		int l = f.labels[i];
+		f.mappedKeyPoints[l].push_back(f.keypoints[i]);
+		f.mappedLabels[l].push_back(i);
+	}
+
+	// get a cluster labels belonging to the sample features and map them with the number of labels
+
+	for(vector<int>::iterator it = scan.getClusterLabels().begin() + ogsize; it != scan.getClusterLabels().end(); ++it){
+		if(*it != 0){
+			f.roiClusterCount[*it]++;
+		}
+	}
+
 }
 
 /**
@@ -207,41 +213,31 @@ void getCount(framed& f, hdbscan& scan, int ogsize){
 	cout << "                              " << f.i << endl;
 	cout << "################################################################################" << endl;
 
-	set<int> lset;
 	map<int, float> stabilities = scan.getClusterStabilities();
-	lset.insert(f.labels.begin(), f.labels.begin() + f.descriptors.rows);
-	for (set<int>::iterator it = lset.begin(); it != lset.end(); ++it) {
-		vector<int> pts;
-		for (uint i = ogsize; i < f.labels.size(); ++i) {
-			if (*it == f.labels[i] && *it != 0) {
-				pts.push_back(i);
-				f.selectedSampleSize++;
-			}
+
+	for (map<int, int>::iterator it = f.roiClusterCount.begin(); it != f.roiClusterCount.end(); ++it) {
+		//vector<int> pts = f.mappedKeyPoints[*it];
+		f.total += it->second;
+
+		//if (!pts.empty()) {
+		int32_t n = f.mappedKeyPoints[it->first].size() / it->second;
+		f.total += it->second;
+		printf(
+				"stability: %f --> %d has %d and total is %d :: Approx Num of objects: %d\n\n",
+				stabilities[it->first], it->first, it->second,
+				f.mappedKeyPoints[it->first].size(), n);
+		f.selectedFeatures += f.mappedKeyPoints[it->first].size();
+
+		if (f.mappedKeyPoints[it->first].size() > f.lsize) {
+			f.largest = it->first;
+			f.lsize = f.mappedKeyPoints[it->first].size();
 		}
 
-		if (!pts.empty()) {
-			int32_t n = f.mappedPoints[*it].size() / pts.size();
-			f.total += n;
-			printf(
-					"stability: %f --> %d has %d and total is %d :: Approx Num of objects: %d\n\n",
-					stabilities[*it], *it, pts.size(),
-					f.mappedPoints[*it].size(), n);
-			pair<uint, vector<int> > pr(*it, pts);
-			f.roiClusters.insert(pr);
-			f.selectedFeatures += f.mappedPoints[*it].size();
-			f.cest.push_back(n);
+		Mat kimg = drawKeyPoints(f.frame, f.mappedKeyPoints[it->first],
+				Scalar(0, 0, 255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 
-			if (n > f.lsize) {
-				f.largest = *it;
-				f.lsize = n;
-			}
+		f.keyPointImages.push_back(kimg);
 
-			Mat kimg = drawKeyPoints(f.frame, f.mappedPoints[*it], Scalar(0, 0, 255));
-
-			f.keyPointImages.push_back(kimg);
-			f.matchedKeypoints.insert(f.matchedKeypoints.end(), f.mappedPoints[*it].begin(),
-					f.mappedPoints[*it].end());
-		}
 	}
 }
 
@@ -336,7 +332,99 @@ Mat getDataset(vocount& vcount, framed& f, uint* ogsize){
 	for (uint n = 0; n < vcount.roiDesc.size(); ++n) {
 		dataset.push_back(vcount.roiDesc[n]);
 	}
-
+	f.dataset = dataset;
 	return dataset;
+}
+
+
+void printStats(String folder, map<int32_t, vector<int32_t> > stats){
+	ofstream myfile;
+	String f = folder;
+	String name = "/stats.csv";
+	f += name;
+	myfile.open(f.c_str());
+
+	myfile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Actual\n";
+
+	for(map<int32_t, vector<int32_t> >::iterator it = stats.begin(); it != stats.end(); ++it){
+		vector<int32_t> vv = it->second;
+		myfile << it->first << ",";
+
+		for(uint i = 0; i < vv.size(); ++i){
+			myfile << vv[i] << ",";
+		}
+		myfile << "\n";
+	}
+
+	myfile.close();
+
+}
+
+
+
+void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstimates){
+	ofstream myfile;
+	String f = folder;
+	String name = "/ClusterEstimates.csv";
+	f += name;
+	myfile.open(f.c_str());
+
+	myfile << "Frame #,Cluster Sum, Cluster Avg.\n";
+
+	for(map<int32_t, vector<int32_t> >::iterator it = cEstimates.begin(); it != cEstimates.end(); ++it){
+		vector<int32_t> vv = it->second;
+		size_t sz = vv.size();
+		myfile << it->first << "," << vv[sz-1] << "," << vv[sz-2] << ",";
+
+		for(uint i = 0; i < vv.size()-2; ++i){
+			myfile << vv[i] << ",";
+		}
+		myfile << "\n";
+	}
+
+	myfile.close();
+
+}
+
+void matchByBruteForce(vocount& vcount, framed& f){
+	BFMatcher matcher(NORM_L1);
+	vector< DMatch > good_matches;
+	vector< DMatch > matches;
+    // drawing the results
+    Mat img_matches;
+	//matcher.add(vcount.roiDesc[0]);
+	//matcher.train();
+	matcher.match(f.descriptors, vcount.roiDesc[0], good_matches, Mat());
+	//matcher.match(f.descriptors, good_matches, Mat());//-- Localize the object
+	printf("train has %d, query has %d and good matches has %d\n", vcount.roiDesc[0].rows, f.descriptors.rows, good_matches.size());
+    drawMatches( vcount.samples[0], vcount.roiKeypoints[0], f.frame, f.keypoints,
+                 good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
+                 std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS  );
+    display("img_matches", img_matches);
+    /*std::vector<Point2f> obj;
+    std::vector<Point2f> scene;
+
+    for( size_t i = 0; i < good_matches.size(); i++ )
+    {
+        //-- Get the keypoints from the good matches
+        obj.push_back( vcount.roiKeypoints[0][ good_matches[i].queryIdx ].pt );
+        scene.push_back( f.keypoints[ good_matches[i].trainIdx ].pt );
+    }*/
+}
+
+void matchByFLANN(vocount& vcount, framed& f){
+	vector< DMatch > good_matches;
+	vector<vector< DMatch > > matches;
+	Mat objectMat = vcount.samples[0];
+	Mat sceneMat = f.frame;
+    //vector of keypoints
+    vector< cv::KeyPoint > keypointsO = vcount.roiKeypoints[0];
+    vector< cv::KeyPoint > keypointsS = f.keypoints;
+    Mat descriptors_object = f.descriptors;
+    Mat descriptors_scene = vcount.roiDesc[0];
+	//-- Step 3: Matching descriptor vectors using FLANN matcher
+	FlannBasedMatcher matcher;
+	matcher.knnMatch(descriptors_object, descriptors_scene, matches, 2);
+	good_matches.reserve(matches.size());
 
 }

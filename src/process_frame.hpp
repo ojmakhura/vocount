@@ -27,17 +27,18 @@ typedef struct FRAMED{
 		flow,
 		dataset;
 	vector<Mat> keyPointImages;
-	vector<KeyPoint> keypoints, matchedKeypoints; 					/// Frame keypoints
-    map<int, vector<KeyPoint> > mappedPoints;
-    map<int, vector<int> > roiClusters;
+	vector<KeyPoint> keypoints; 					/// Frame keypoints
+    map<int, vector<KeyPoint> > mappedKeyPoints;					/// maps labels to their keypoints
+    map<int, vector<int> > mappedLabels; 							/// maps labels to their indices
+    map<int, int> roiClusterCount;									/// cluster labels for the r
+    //set<int> roiClusters;											/// cluster labels for the roi features
 	vector<int32_t> odata;
     vector<int> labels;
-    vector<int32_t> cest;
 	uint largest = 0;
 	float lsize = 0;
 	float total = 0;
-	int32_t selectedSampleSize = 0;
 	int32_t selectedFeatures = 0;
+	vector<int32_t> cest;
 } framed;
 
 typedef struct VOCOUNT{
@@ -48,7 +49,7 @@ typedef struct VOCOUNT{
 	vector<vector<KeyPoint> > roiKeypoints;
 	vector<framed> frameHistory;
 	Rect2d roi;
-
+	vector<Mat> samples;
 } vocount;
 
 
@@ -62,14 +63,19 @@ Mat getSegmentImage(Mat& gs, map<uint, vector<Point> >& points);
 
 void printImage(String folder, int idx, String name, Mat img);
 
-Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour);
+Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour, int type);
 
 void maintaintHistory(vocount& voc, framed& f);
 set<int32_t> getIgnoreSegments(Rect roi, Mat segments);
-void getMappedPoint(framed& f, hdbscan& scan);
+void mapKeyPoints(framed& f, hdbscan& scan, int ogsize);
 void getCount(framed& f, hdbscan& scan, int ogsize);
 void runSegmentation(vocount& vcount, framed& f, Ptr<GraphSegmentation> graphSegmenter, Ptr<DenseOpticalFlow> flowAlgorithm);
 void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out);
 Mat getDataset(vocount& vcount, framed& f, uint* ogsize);
 
+void printStats(String folder, map<int32_t, vector<int32_t> > stats);
+
+void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstimates);
+void matchByBruteForce(vocount& vcount, framed& f);
+vector<KeyPoint> getAllMatchedKeypoints(framed& f);
 #endif /* PROCESS_FRAME_HPP_ */
