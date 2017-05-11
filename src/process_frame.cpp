@@ -184,22 +184,21 @@ vector<KeyPoint> getAllMatchedKeypoints(framed& f){
 	return kp;
 }
 
-void mapKeyPoints(framed& f, hdbscan& scan, int ogsize){
-	// Only labels from the first n indices where n is the number of features found in f.frame
-	f.labels.insert(f.labels.begin(), scan.getClusterLabels().begin(), scan.getClusterLabels().begin()+f.descriptors.rows);
+void mapKeyPoints(vocount& vcount, framed& f, hdbscan& scan, int ogsize){
 
 	// add the indices and keypoints using labels as the key to the map
-	for(int i = 0; i < f.labels.size(); i++){
+	for(uint i = 0; i < f.labels.size(); i++){
 		int l = f.labels[i];
 		f.mappedKeyPoints[l].push_back(f.keypoints[i]);
 		f.mappedLabels[l].push_back(i);
 	}
 
 	// get a cluster labels belonging to the sample features and map them with the number of labels
-
-	for(vector<int>::iterator it = scan.getClusterLabels().begin() + ogsize; it != scan.getClusterLabels().end(); ++it){
+	for(vector<int>::iterator it = f.roiFeatures.begin(); it != f.roiFeatures.end(); ++it){
 		if(*it != 0){
-			f.roiClusterCount[*it]++;
+			int idx = f.labels[*it];
+			if(idx != 0)
+				f.roiClusterCount[idx]++;
 		}
 	}
 
@@ -208,7 +207,7 @@ void mapKeyPoints(framed& f, hdbscan& scan, int ogsize){
 /**
  *
  */
-void getCount(framed& f, hdbscan& scan, int ogsize){
+void getCount(vocount& vcount, framed& f, hdbscan& scan, int ogsize){
 	cout << "################################################################################" << endl;
 	cout << "                              " << f.i << endl;
 	cout << "################################################################################" << endl;
@@ -221,7 +220,7 @@ void getCount(framed& f, hdbscan& scan, int ogsize){
 
 		//if (!pts.empty()) {
 		int32_t n = f.mappedKeyPoints[it->first].size() / it->second;
-		f.total += it->second;
+		f.total += n;
 		printf(
 				"stability: %f --> %d has %d and total is %d :: Approx Num of objects: %d\n\n",
 				stabilities[it->first], it->first, it->second,
@@ -234,7 +233,7 @@ void getCount(framed& f, hdbscan& scan, int ogsize){
 		}
 
 		Mat kimg = drawKeyPoints(f.frame, f.mappedKeyPoints[it->first],
-				Scalar(0, 0, 255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+				Scalar(0, 0, 255), -1);
 
 		f.keyPointImages.push_back(kimg);
 
@@ -249,33 +248,7 @@ void maintaintHistory(vocount& voc, framed& f){
 }
 
 void runSegmentation(vocount& vcount, framed& f, Ptr<GraphSegmentation> graphSegmenter, Ptr<DenseOpticalFlow> flowAlgorithm){
-	vector<Mat> dataset;
-	split(f.frame, dataset);
-	int32_t estimation;
-	vector<Mat> d1;
 
-	d1.push_back(dataset[0]);
-	d1.push_back(dataset[1]);
-	d1.push_back(dataset[2]);
-
-	if (vcount.frameHistory.size() > 0 && !f.gray.empty()) {
-		framed fx = vcount.frameHistory[vcount.frameHistory.size() - 1];
-		Mat prevgray = vcount.frameHistory[vcount.frameHistory.size() - 1].gray;
-		flowAlgorithm->calc(prevgray, f.gray, f.flow);
-		Mat iFlow, fi;
-		mergeFlowAndImage(f.flow, fi, iFlow);
-		dataset.clear();
-		pyrMeanShiftFiltering(iFlow, iFlow, 10, 30, 1);
-		display("iFlow", iFlow);
-		split(iFlow, dataset);
-		d1.push_back(dataset[0]);
-		d1.push_back(dataset[2]);
-		//cout << "Getting d1 with flow" << endl;
-
-	}
-	//Mat mm;
-	merge(d1, f.dataset);
-	graphSegmenter->processImage(f.dataset, f.segments);
 }
 
 
@@ -317,8 +290,10 @@ void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out) {
 	}
 }
 
-Mat getDataset(vocount& vcount, framed& f, uint* ogsize){
+uint getDataset(vocount& vcount, framed& f){
+	uint ogsize;
 	Mat dataset = f.descriptors;
+
 	if (!vcount.frameHistory.empty()) {
 		for (int j = 1; j < vcount.step; ++j) {
 			int ix = vcount.frameHistory.size() - j;
@@ -328,12 +303,10 @@ Mat getDataset(vocount& vcount, framed& f, uint* ogsize){
 			}
 		}
 	}
-	*ogsize = dataset.rows;
-	for (uint n = 0; n < vcount.roiDesc.size(); ++n) {
-		dataset.push_back(vcount.roiDesc[n]);
-	}
+	ogsize = dataset.rows;
+
 	f.dataset = dataset;
-	return dataset;
+	return ogsize;
 }
 
 
@@ -386,45 +359,10 @@ void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstima
 
 }
 
-void matchByBruteForce(vocount& vcount, framed& f){
-	BFMatcher matcher(NORM_L1);
-	vector< DMatch > good_matches;
-	vector< DMatch > matches;
-    // drawing the results
-    Mat img_matches;
-	//matcher.add(vcount.roiDesc[0]);
-	//matcher.train();
-	matcher.match(f.descriptors, vcount.roiDesc[0], good_matches, Mat());
-	//matcher.match(f.descriptors, good_matches, Mat());//-- Localize the object
-	printf("train has %d, query has %d and good matches has %d\n", vcount.roiDesc[0].rows, f.descriptors.rows, good_matches.size());
-    drawMatches( vcount.samples[0], vcount.roiKeypoints[0], f.frame, f.keypoints,
-                 good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
-                 std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS  );
-    display("img_matches", img_matches);
-    /*std::vector<Point2f> obj;
-    std::vector<Point2f> scene;
-
-    for( size_t i = 0; i < good_matches.size(); i++ )
-    {
-        //-- Get the keypoints from the good matches
-        obj.push_back( vcount.roiKeypoints[0][ good_matches[i].queryIdx ].pt );
-        scene.push_back( f.keypoints[ good_matches[i].trainIdx ].pt );
-    }*/
-}
-
-void matchByFLANN(vocount& vcount, framed& f){
-	vector< DMatch > good_matches;
-	vector<vector< DMatch > > matches;
-	Mat objectMat = vcount.samples[0];
-	Mat sceneMat = f.frame;
-    //vector of keypoints
-    vector< cv::KeyPoint > keypointsO = vcount.roiKeypoints[0];
-    vector< cv::KeyPoint > keypointsS = f.keypoints;
-    Mat descriptors_object = f.descriptors;
-    Mat descriptors_scene = vcount.roiDesc[0];
-	//-- Step 3: Matching descriptor vectors using FLANN matcher
-	FlannBasedMatcher matcher;
-	matcher.knnMatch(descriptors_object, descriptors_scene, matches, 2);
-	good_matches.reserve(matches.size());
-
+void findROIFeature(framed& f){
+	for(uint i = 0; i < f.keypoints.size(); ++i){
+		if(f.roi.contains(f.keypoints[i].pt)){
+			f.roiFeatures.push_back(i);
+		}
+	}
 }

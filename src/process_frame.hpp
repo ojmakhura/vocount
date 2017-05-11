@@ -21,10 +21,8 @@ using namespace cv::ximgproc::segmentation;
 typedef struct FRAMED{
 	int i;
 	Mat descriptors,  								/// Frame descriptors
-		segments,	  								/// Frame segments
 		frame,
 		gray,
-		flow,
 		dataset;
 	vector<Mat> keyPointImages;
 	vector<KeyPoint> keypoints; 					/// Frame keypoints
@@ -38,17 +36,15 @@ typedef struct FRAMED{
 	float total = 0;
 	int32_t selectedFeatures = 0;
 	vector<int32_t> cest;
+	Rect2d roi;
+	vector<int> roiFeatures;					/// indices of the features inside the roi
 } framed;
 
 typedef struct VOCOUNT{
-	int step;
+	int step;											/// How many frames to use in the dataset
     map<int32_t, vector<int32_t> > stats;
     map<int32_t, vector<int32_t> > clusterEstimates;
-	vector<Mat> roiDesc;
-	vector<vector<KeyPoint> > roiKeypoints;
 	vector<framed> frameHistory;
-	Rect2d roi;
-	vector<Mat> samples;
 } vocount;
 
 
@@ -66,15 +62,16 @@ Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour, int type);
 
 void maintaintHistory(vocount& voc, framed& f);
 set<int32_t> getIgnoreSegments(Rect roi, Mat segments);
-void mapKeyPoints(framed& f, hdbscan& scan, int ogsize);
-void getCount(framed& f, hdbscan& scan, int ogsize);
+void mapKeyPoints(vocount& vcount, framed& f, hdbscan& scan, int ogsize);
+void getCount(vocount& vcount, framed& f, hdbscan& scan, int ogsize);
 void runSegmentation(vocount& vcount, framed& f, Ptr<GraphSegmentation> graphSegmenter, Ptr<DenseOpticalFlow> flowAlgorithm);
 void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out);
-Mat getDataset(vocount& vcount, framed& f, uint* ogsize);
+uint getDataset(vocount& vcount, framed& f);
 
 void printStats(String folder, map<int32_t, vector<int32_t> > stats);
 
 void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstimates);
 void matchByBruteForce(vocount& vcount, framed& f);
 vector<KeyPoint> getAllMatchedKeypoints(framed& f);
+void findROIFeature(framed& f);
 #endif /* PROCESS_FRAME_HPP_ */

@@ -270,10 +270,6 @@ float* DistanceCalculator::getCoreDistances(){ return coreDistances; }
 
 void DistanceCalculator::do_euclidean(Mat& dataset, int numNeighbors){
 
-
-	//distance = 0;
-	//printf("calculating distance (%d, %d, %f)\n", rows, cols, *dataset);
-
 #ifdef USE_OPENMP
 #pragma omp parallel
 #endif

@@ -53,12 +53,10 @@ int main(int argc, char** argv) {
     vocount vcount;
 
     Ptr<Feature2D> detector = SURF::create(1500);
-	Ptr<GraphSegmentation> graphSegmenter = createGraphSegmentation();
 	Ptr<Tracker> tracker = Tracker::create("BOOSTING");
-    Ptr<DenseOpticalFlow> flowAlgorithm = optflow::createOptFlow_Farneback();
 
 	cv::CommandLineParser parser(argc, argv, "{help ||}{dir||}{n|1|}"
-			"{v||}{video||}{w|1|}");
+			"{v||}{video||}{w|1|}{d||}");
 
 	if(parser.has("help")){
 		help();
@@ -90,6 +88,8 @@ int main(int argc, char** argv) {
 
 		String s = parser.get<String>("w");
 		vcount.step = atoi(s.c_str());
+	} else{
+		vcount.step = 1;
 	}
 
 	if (tracker == NULL) {
@@ -109,100 +109,56 @@ int main(int argc, char** argv) {
 		vector<Mat> d1;
 
 		f.i = frameCount;
-		display("frame", frame);
 		f.frame = frame;
 
 		cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
-		runSegmentation(vcount, f, graphSegmenter, flowAlgorithm);
-		if (!f.flow.empty()) {
-
-			Mat nm;
-			mergeFlowAndImage(f.flow, f.gray, nm);
-			//display("nm", nm);
-		}
-
-		//printf("Rows before: %d\n", descriptors.rows);
-		map<uint, vector<Point> > points;
-		Mat output_image = getSegmentImage(f.segments, points);
-
 		detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
 		//fdesc = desc.clone();
 
-		if (!roiExtracted && vcount.roiDesc.size() < 1) {
+		if (!roiExtracted ) {
 			Mat f2 = frame.clone();
-			vcount.roi = box.extract("Select ROI", f2);
+			f.roi = box.extract("Select ROI", f2);
 
 			//initializes the tracker
-			if (!tracker->init(frame, vcount.roi)) {
+			if (!tracker->init(frame, f.roi)) {
 				cout << "***Could not initialize tracker...***\n";
 				return -1;
 			}
 
 			roiExtracted = true;
 
-		} else if (vcount.roiDesc.size() < SAMPLE_SIZE) {
+		} else {
 			RNG rng(12345);
-			tracker->update(f.frame, vcount.roi);
-			vcount.samples.push_back(frame(vcount.roi).clone());
+			tracker->update(f.frame, f.roi);
 			Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));
-			rectangle(frame, vcount.roi, value, 2, 8, 0);
+			rectangle(frame, f.roi, value, 2, 8, 0);
 			vector<KeyPoint> roiPts, xp;
-			Mat roiDesc;
-			set<int32_t> ignore = getIgnoreSegments(vcount.roi, f.segments);
-
-			/*for(set<int32_t>::iterator it = ignore.begin(); it != ignore.end(); ++it){
-			 printf("Segment : %d\n\n", *it);
-			 }*/
-
-			// Get all keypoints inside the roi
-			for (uint i = 0; i < f.keypoints.size(); ++i) {
-				Point p;
-				p.x = f.keypoints[i].pt.x;
-				p.y = f.keypoints[i].pt.y;
-
-				int32_t seg = f.segments.at<int32_t>(p); // get the segmentation id at point p
-
-				// find if the segment id is listed in the ignore list
-				set<int32_t>::iterator it = std::find(ignore.begin(),
-						ignore.end(), seg);
-
-				if (vcount.roi.contains(f.keypoints[i].pt)) { //&&
-					//printf("Segment is %d \n\n", seg);
-					if (it == ignore.end()) {
-						roiPts.push_back(f.keypoints[i]);
-						roiDesc.push_back(f.descriptors.row(i));
-					}
-
-				}
-
-			}
-			vcount.roiDesc.push_back(roiDesc);
-			vcount.roiKeypoints.push_back(roiPts);
-			//printf("found %d object keypoints\n", roiDesc.rows);
 
 		}
 
-		if (!f.descriptors.empty() && !vcount.roiDesc.empty()) {
+		display("frame", frame);
+
+		if (!f.descriptors.empty()) {
 			// Create clustering dataset
-			uint ogsize;
-			Mat dset = getDataset(vcount, f, &ogsize);// f.descriptors.clone();
-			hdbscan scan(dset, _EUCLIDEAN, 4, 4);
+			findROIFeature(f);
+			uint ogsize = getDataset(vcount, f);// f.descriptors.clone();
+			hdbscan scan(f.dataset, _EUCLIDEAN, 4*vcount.step, 4*vcount.step);
 			scan.run();
 
-			mapKeyPoints(f, scan, ogsize);
-			drawKeyPoints(frame, f.keypoints, Scalar(0, 0, 255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-			getCount(f, scan, ogsize);
+			// Only labels from the first n indices where n is the number of features found in f.frame
+			f.labels.insert(f.labels.begin(), scan.getClusterLabels().begin(), scan.getClusterLabels().begin()+f.descriptors.rows);
+
+			mapKeyPoints(vcount, f, scan, ogsize);
+			//drawKeyPoints(frame, f.keypoints, Scalar(0, 0, 255), -1);
+			getCount(vcount, f, scan, ogsize);
 
 			vector<KeyPoint> allPts = getAllMatchedKeypoints(f);
 
-			Mat img_allkps = drawKeyPoints(frame, allPts, Scalar(0, 0, 255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+			Mat img_allkps = drawKeyPoints(frame, allPts, Scalar(0, 0, 255), -1);
 
 			cout << "Cluster " << f.largest << " is the largest" << endl;
 			printf("Ogsize is %d and label size is %d\n", f.descriptors.rows,
 					f.labels.size());
-			double min, max;
-			minMaxLoc(f.segments, &min, &max);
-			printf("Max segment is %f\n", max);
 
 			cout
 					<< "--------------------------------------------------------------------------------------------"
@@ -219,9 +175,7 @@ int main(int argc, char** argv) {
 			if (print && f.roiClusterCount.size() > 0) {
 				printImage(destFolder, frameCount, "frame", frame);
 
-				printImage(destFolder, frameCount, "output_image",
-						output_image);
-				Mat ff = drawKeyPoints(frame, f.keypoints, Scalar(0, 0, 255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+				Mat ff = drawKeyPoints(frame, f.keypoints, Scalar(0, 0, 255), -1);
 				printImage(destFolder, frameCount, "frame_kp", ff);
 
 				for (uint i = 0; i < f.keyPointImages.size(); ++i) {
