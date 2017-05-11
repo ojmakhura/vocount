@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
 			RNG rng(12345);
 			tracker->update(f.frame, f.roi);
 			Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));
-			rectangle(frame, f.roi, value, 2, 8, 0);
+			rectangle(f.frame, f.roi, value, 2, 8, 0);
 			vector<KeyPoint> roiPts, xp;
 
 		}
@@ -142,7 +142,7 @@ int main(int argc, char** argv) {
 			// Create clustering dataset
 			findROIFeature(f);
 			uint ogsize = getDataset(vcount, f);// f.descriptors.clone();
-			hdbscan scan(f.dataset, _EUCLIDEAN, 4*vcount.step, 4*vcount.step);
+			hdbscan scan(f.dataset, _EUCLIDEAN, 6, 6);
 			scan.run();
 
 			// Only labels from the first n indices where n is the number of features found in f.frame
