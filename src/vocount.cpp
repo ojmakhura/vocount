@@ -48,7 +48,6 @@ int main(int argc, char** argv) {
 	bool print = false;
 	VideoCapture cap;
     BoxExtractor box;
-    bool roiExtracted = false;
     int frameCount = 0;
     vocount vcount;
 
@@ -56,7 +55,7 @@ int main(int argc, char** argv) {
 	Ptr<Tracker> tracker = Tracker::create("BOOSTING");
 
 	cv::CommandLineParser parser(argc, argv, "{help ||}{dir||}{n|1|}"
-			"{v||}{video||}{w|1|}{d||}");
+			"{v||}{video||}{w|1|}");
 
 	if(parser.has("help")){
 		help();
@@ -107,15 +106,19 @@ int main(int argc, char** argv) {
 
 		framed f;
 		vector<Mat> d1;
+		bool clusterInspect = false;
 
 		f.i = frameCount;
 		f.frame = frame;
 
 		cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
 		detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
-		//fdesc = desc.clone();
 
-		if (!roiExtracted ) {
+		// Listen for a key pressed
+		char c = (char) waitKey(20);
+		if (c == 'q') {
+			break;
+		} else if (c == 's' || parser.has("s")) { // select a roi if c has een pressed or if the program was run with -s option
 			Mat f2 = frame.clone();
 			f.roi = box.extract("Select ROI", f2);
 
@@ -125,22 +128,24 @@ int main(int argc, char** argv) {
 				return -1;
 			}
 
-			roiExtracted = true;
+			vcount.roiExtracted = true;
 
-		} else {
-			RNG rng(12345);
+		} else if(c == 'i'){ // inspect clusters
+			clusterInspect = true;
+		}
+
+		if (vcount.roiExtracted ){
 			tracker->update(f.frame, f.roi);
+			RNG rng(12345);
 			Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));
 			rectangle(f.frame, f.roi, value, 2, 8, 0);
-			vector<KeyPoint> roiPts, xp;
-
 		}
 
 		display("frame", frame);
 
 		if (!f.descriptors.empty()) {
 			// Create clustering dataset
-			findROIFeature(f);
+			findROIFeature(vcount, f);
 			uint ogsize = getDataset(vcount, f);// f.descriptors.clone();
 			hdbscan scan(f.dataset, _EUCLIDEAN, 6, 6);
 			scan.run();
@@ -157,8 +162,8 @@ int main(int argc, char** argv) {
 			Mat img_allkps = drawKeyPoints(frame, allPts, Scalar(0, 0, 255), -1);
 
 			cout << "Cluster " << f.largest << " is the largest" << endl;
-			printf("Ogsize is %d and label size is %d\n", f.descriptors.rows,
-					f.labels.size());
+			printf("f.descriptors.rows is %d and label size is %d\n", f.descriptors.rows,
+					scan.getClusterLabels().size());
 
 			cout
 					<< "--------------------------------------------------------------------------------------------"
@@ -203,13 +208,6 @@ int main(int argc, char** argv) {
 				pair<int32_t, vector<int32_t> > cpp(frameCount, f.cest);
 				vcount.clusterEstimates.insert(cpp);
 			}
-		}
-
-		char c = (char) waitKey(20);
-		if (c == 'q') {
-			break;
-		} else if (c == 's') {
-
 		}
 
 		maintaintHistory(vcount, f);

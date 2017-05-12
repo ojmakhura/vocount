@@ -292,7 +292,7 @@ void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out) {
 
 uint getDataset(vocount& vcount, framed& f){
 	uint ogsize;
-	Mat dataset = f.descriptors;
+	Mat dataset = f.descriptors.clone();
 
 	if (!vcount.frameHistory.empty()) {
 		for (int j = 1; j < vcount.step; ++j) {
@@ -359,9 +359,9 @@ void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstima
 
 }
 
-void findROIFeature(framed& f){
+void findROIFeature(vocount& vcount, framed& f){
 	for(uint i = 0; i < f.keypoints.size(); ++i){
-		if(f.roi.contains(f.keypoints[i].pt)){
+		if(vcount.roiExtracted && f.roi.contains(f.keypoints[i].pt)){
 			f.roiFeatures.push_back(i);
 		}
 	}

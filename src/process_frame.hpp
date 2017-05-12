@@ -42,9 +42,12 @@ typedef struct FRAMED{
 
 typedef struct VOCOUNT{
 	int step;											/// How many frames to use in the dataset
+	bool roiExtracted = false;
     map<int32_t, vector<int32_t> > stats;
     map<int32_t, vector<int32_t> > clusterEstimates;
 	vector<framed> frameHistory;
+	vector<Mat> roiDesc;
+	vector<vector<KeyPoint> > roiKeypoints;
 } vocount;
 
 
@@ -73,5 +76,5 @@ void printStats(String folder, map<int32_t, vector<int32_t> > stats);
 void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstimates);
 void matchByBruteForce(vocount& vcount, framed& f);
 vector<KeyPoint> getAllMatchedKeypoints(framed& f);
-void findROIFeature(framed& f);
+void findROIFeature(vocount& vcount, framed& f);
 #endif /* PROCESS_FRAME_HPP_ */
