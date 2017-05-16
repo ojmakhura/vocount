@@ -35,6 +35,7 @@ static void help(){
 	        "     [--dir=<output dir>]     		   	# the directly where to write to frame images\n"
 			"     [-n=<sample size>]       			# the number of frames to use for sample size\n"
 			"     [-w=<dataset width>]       		# the number of frames to use for dataset size\n"
+			"     [-s]       						# select roi from the first \n"
 	        "\n" );
 }
 
@@ -55,7 +56,7 @@ int main(int argc, char** argv) {
 	Ptr<Tracker> tracker = Tracker::create("BOOSTING");
 
 	cv::CommandLineParser parser(argc, argv, "{help ||}{dir||}{n|1|}"
-			"{v||}{video||}{w|1|}");
+			"{v||}{video||}{w|1|}{s||}");
 
 	if(parser.has("help")){
 		help();
@@ -103,7 +104,7 @@ int main(int argc, char** argv) {
 
     while(cap.read(frame))
     {
-
+		++frameCount;
 		framed f;
 		vector<Mat> d1;
 		bool clusterInspect = false;
@@ -118,7 +119,7 @@ int main(int argc, char** argv) {
 		char c = (char) waitKey(20);
 		if (c == 'q') {
 			break;
-		} else if (c == 's' || parser.has("s")) { // select a roi if c has een pressed or if the program was run with -s option
+		} else if (c == 's' || (parser.has("s") && !vcount.roiExtracted)) { // select a roi if c has een pressed or if the program was run with -s option
 			Mat f2 = frame.clone();
 			f.roi = box.extract("Select ROI", f2);
 
@@ -147,7 +148,7 @@ int main(int argc, char** argv) {
 			// Create clustering dataset
 			findROIFeature(vcount, f);
 			uint ogsize = getDataset(vcount, f);// f.descriptors.clone();
-			hdbscan scan(f.dataset, _EUCLIDEAN, 6, 6);
+			hdbscan scan(f.dataset, _EUCLIDEAN, vcount.step*6, vcount.step*6);
 			scan.run();
 
 			// Only labels from the first n indices where n is the number of features found in f.frame
@@ -164,16 +165,6 @@ int main(int argc, char** argv) {
 			cout << "Cluster " << f.largest << " is the largest" << endl;
 			printf("f.descriptors.rows is %d and label size is %d\n", f.descriptors.rows,
 					scan.getClusterLabels().size());
-
-			cout
-					<< "--------------------------------------------------------------------------------------------"
-					<< endl;
-			cout
-					<< "---------------------------------------Statistics-------------------------------------------"
-					<< endl;
-			cout
-					<< "--------------------------------------------------------------------------------------------"
-					<< endl;
 
 			printf("f.keyPointImages.size() = %d\n", f.keyPointImages.size());
 
@@ -193,7 +184,7 @@ int main(int argc, char** argv) {
 				printImage(destFolder, frameCount, "img_allkps", img_allkps);
 
 				f.odata.push_back(f.descriptors.rows);
-				//f.odata.push_back(f.selectedSampleSize);
+				f.odata.push_back(f.keyPointImages.size());
 				f.odata.push_back(ogsize);
 				f.odata.push_back(f.selectedFeatures);
 				f.odata.push_back(f.keyPointImages.size());
@@ -211,7 +202,6 @@ int main(int argc, char** argv) {
 		}
 
 		maintaintHistory(vcount, f);
-		++frameCount;
 
 	}
 

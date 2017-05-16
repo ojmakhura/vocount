@@ -276,45 +276,24 @@ void DistanceCalculator::do_euclidean(Mat& dataset, int numNeighbors){
 	{
 
 	float sortedDistance[rows];
-	int r1 = 0, c1 = 0;
 #ifdef USE_OPENMP
 #pragma omp for
 #endif
 	for (uint i = 0; i < rows; i++) {
-		float* p1 = dataset.ptr<float>(i);
 		for (uint j = 0; j < rows; j++) {
-			float* p2 = dataset.ptr<float>(j);
-			float sum, diff = 0.0;
-			uint roffset, offset2, offset1;
+			float sum;
+			uint offset1;
 			sum = 0;
-			int r2, c2;
-			for (uint k = 0; ((k < cols) && (i != j)); k++) {
-				float num1 = p1[k];
-				float num2 = p2[k];
-				diff = num1 - num2;
 
-				//printf("inner peace %d: (%f - %f) \n", k, num1, num2);
+			sum = cv::norm(dataset.row(i), dataset.row(j), NORM_L2);
 
-				sum += (diff * diff);
-				//}
-			}
-
-			sum = sqrt(sum);
-
-			//printf("sum = %f\n", sum);
 			int c;
 			if(j > i){
 				// Calculate the linearised upper triangular matrix offset
 				offset1 = i * rows + j;
 				c = offset1 - triangular(i + 1);
-				//printf("c calculated %d from (%d, %d)\n", c, i, j);
-				offset2 = j * rows + i;
-				//printf("offset calculated at (%d, %d)\n", offset1, offset2);
 
 				*(distance + c) = sum;
-				//printf("*(distance + c) 1 alloc %f\n", *(distance + c));
-				//*(distance + offset2) = sum;
-				//printf("distance sum set\n");
 			} else if(i == j){
 				c = -1;
 			} else{
@@ -323,10 +302,7 @@ void DistanceCalculator::do_euclidean(Mat& dataset, int numNeighbors){
 			}
 
 			(sortedDistance)[j] = sum;
-			//(sortedDistance)[offset2] = sum;
-			//printf("%.2f \n", *(distance + offset1));
 
-			//printf("Index : %d ------ > (%d, %d) = %f\n", c, i, j, sum);
 		}
 //#pragma omp barrier
 		//roffset = i * rows;
