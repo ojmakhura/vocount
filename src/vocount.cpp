@@ -183,8 +183,15 @@ int main(int argc, char** argv) {
 
 				printImage(destFolder, frameCount, "img_allkps", img_allkps);
 
-				f.odata.push_back(f.descriptors.rows);
-				f.odata.push_back(f.keyPointImages.size());
+				f.odata.push_back(f.roiFeatures.size());
+
+				int selSampleSize = 0;
+
+				for(map<int, int>::iterator it = f.roiClusterCount.begin(); it != f.roiClusterCount.end(); ++it){
+					selSampleSize += it->second;
+				}
+
+				f.odata.push_back(selSampleSize);
 				f.odata.push_back(ogsize);
 				f.odata.push_back(f.selectedFeatures);
 				f.odata.push_back(f.keyPointImages.size());
