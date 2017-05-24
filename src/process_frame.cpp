@@ -215,11 +215,9 @@ void getCount(vocount& vcount, framed& f, hdbscan& scan, int ogsize){
 	map<int, float> stabilities = scan.getClusterStabilities();
 
 	for (map<int, int>::iterator it = f.roiClusterCount.begin(); it != f.roiClusterCount.end(); ++it) {
-		//vector<int> pts = f.mappedKeyPoints[*it];
-		f.total += it->second;
 
-		//if (!pts.empty()) {
 		int32_t n = f.mappedKeyPoints[it->first].size() / it->second;
+		f.cest.push_back(n);
 		f.total += n;
 		printf(
 				"stability: %f --> %d has %d and total is %d :: Approx Num of objects: %d\n\n",
@@ -231,7 +229,6 @@ void getCount(vocount& vcount, framed& f, hdbscan& scan, int ogsize){
 			f.largest = it->first;
 			f.lsize = f.mappedKeyPoints[it->first].size();
 		}
-
 		Mat kimg = drawKeyPoints(f.frame, f.mappedKeyPoints[it->first],
 				Scalar(0, 0, 255), -1);
 
@@ -297,7 +294,7 @@ uint getDataset(vocount& vcount, framed& f){
 	if (!vcount.frameHistory.empty()) {
 		for (int j = 1; j < vcount.step; ++j) {
 			int ix = vcount.frameHistory.size() - j;
-			if (ix > 0) {
+			if (ix >= 0) {
 				framed fx = vcount.frameHistory[ix];
 				dataset.push_back(fx.descriptors);
 			}
