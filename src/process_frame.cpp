@@ -139,7 +139,6 @@ set<int32_t> getIgnoreSegments(Rect roi, Mat segments){
 		if(i1 == i2){
 			span.insert(i1);
 		}
-		///printf("(p1.x, p1.y) = (%d, %d) ::::::: (p2.x, p2.y) = (%d, %d)\n", p1.x, p2.y, i1, i2);
 
 		int end = roi.x + roi.width;
 		p1.x = end + t;
@@ -151,7 +150,6 @@ set<int32_t> getIgnoreSegments(Rect roi, Mat segments){
 		if(i1 == i2){
 			span.insert(i1);
 		}
-		///printf("(p1.x, p1.y) = (%d, %d) ::::::: (p2.x, p2.y) = (%d, %d)\n", p1.x, p2.y, i1, i2);
 
 	}
 
@@ -244,11 +242,6 @@ void maintaintHistory(vocount& voc, framed& f){
 	}
 }
 
-void runSegmentation(vocount& vcount, framed& f, Ptr<GraphSegmentation> graphSegmenter, Ptr<DenseOpticalFlow> flowAlgorithm){
-
-}
-
-
 void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out) {
 	CV_Assert(gray.channels() == 1);
 	if (!flow.empty()) {
@@ -299,8 +292,12 @@ uint getDataset(vocount& vcount, framed& f){
 				dataset.push_back(fx.descriptors);
 			}
 		}
+		ogsize = dataset.rows;
+
+		for(int i = 1; i < vcount.rsize; ++i){
+
+		}
 	}
-	ogsize = dataset.rows;
 
 	f.dataset = dataset;
 	return ogsize;
@@ -360,6 +357,11 @@ void findROIFeature(vocount& vcount, framed& f){
 	for(uint i = 0; i < f.keypoints.size(); ++i){
 		if(vcount.roiExtracted && f.roi.contains(f.keypoints[i].pt)){
 			f.roiFeatures.push_back(i);
+			if(f.roiDesc.empty()){
+				f.roiDesc = f.descriptors.row(i);
+			} else{
+				f.roiDesc.push_back(f.descriptors.row(i));
+			}
 		}
 	}
 }

@@ -25,7 +25,7 @@ using namespace cv::ximgproc::segmentation;
 //using namespace hdbscan;
 
 
-int SAMPLE_SIZE = 1;
+//int SAMPLE_SIZE = 1;
 
 
 static void help(){
@@ -63,11 +63,6 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
-	if (parser.has("n")) {
-		String s = parser.get<String>("n");
-		SAMPLE_SIZE = atoi(s.c_str());
-	}
-
 	if (parser.has("dir")) {
 		destFolder = parser.get<String>("dir");
 		print = true;
@@ -90,6 +85,11 @@ int main(int argc, char** argv) {
 		vcount.step = atoi(s.c_str());
 	} else{
 		vcount.step = 1;
+	}
+
+	if (parser.has("n")) {
+		String s = parser.get<String>("n");
+		vcount.rsize = atoi(s.c_str());
 	}
 
 	if (tracker == NULL) {

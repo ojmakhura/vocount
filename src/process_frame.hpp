@@ -38,18 +38,28 @@ typedef struct FRAMED{
 	vector<int32_t> cest;
 	Rect2d roi;
 	vector<int> roiFeatures;					/// indices of the features inside the roi
+	Mat roiDesc;
+	graph roiStructure;
+	list<graph> objStructures;
 } framed;
 
 typedef struct VOCOUNT{
-	int step;											/// How many frames to use in the dataset
+	int step, rsize;											/// How many frames to use in the dataset
 	bool roiExtracted = false;
     map<int32_t, vector<int32_t> > stats;
     map<int32_t, vector<int32_t> > clusterEstimates;
 	vector<framed> frameHistory;
-	vector<Mat> roiDesc;
-	vector<vector<KeyPoint> > roiKeypoints;
 } vocount;
 
+typedef struct EDGE{
+	float anglediff;
+	float distance;
+	int idxa, idxb;
+} edge;
+
+typedef struct GRAPH{
+	list<edge> edgeList;
+} graph;
 
 void display(char const* screen, const InputArray& m);
 
