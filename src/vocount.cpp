@@ -28,6 +28,7 @@ using namespace cv::ximgproc::segmentation;
 //int SAMPLE_SIZE = 1;
 
 
+
 static void help(){
 	printf( "This is a programming for estimating the number of objects in the video.\n"
 	        "Usage: vocount\n"
@@ -36,60 +37,35 @@ static void help(){
 			"     [-n=<sample size>]       			# the number of frames to use for sample size\n"
 			"     [-w=<dataset width>]       		# the number of frames to use for dataset size\n"
 			"     [-s]       						# select roi from the first \n"
+			"     [-i]       						# interactive results\n"
+			"     [-c]       						# cluster analysis method \n"
 	        "\n" );
 }
 
 
-
 int main(int argc, char** argv) {
-	//dummy_tester();
 	ocl::setUseOpenCL(true);
 	Mat frame;
-	String destFolder;
-	bool print = false;
 	VideoCapture cap;
     BoxExtractor box;
-    int frameCount = 0;
     vocount vcount;
 
     Ptr<Feature2D> detector = SURF::create(1500);
 	Ptr<Tracker> tracker = Tracker::create("BOOSTING");
+	cv::CommandLineParser parser(argc, argv,
+					"{help ||}{dir||}{n|1|}"
+					"{v||}{video||}{w|1|}{s||}"
+					"{i||}{c||}");
 
-	cv::CommandLineParser parser(argc, argv, "{help ||}{dir||}{n|1|}"
-			"{v||}{video||}{w|1|}{s||}");
 
-	if(parser.has("help")){
+	if (parser.has("help")) {
 		help();
 		return 0;
 	}
 
-	if (parser.has("dir")) {
-		destFolder = parser.get<String>("dir");
-		print = true;
-		printf("Will print to %s\n", destFolder.c_str());
-	}
-
-	if(parser.has("v") || parser.has("video")){
-
-		String video = parser.has("v") ? parser.get<String>("v") : parser.get<String>("video");
-		cap.open(video);
-	} else {
-		printf("You did not provide the video stream to open.");
+	if(!processOptions(vcount, parser, cap)){
 		help();
 		return -1;
-	}
-
-	if(parser.has("w")){
-
-		String s = parser.get<String>("w");
-		vcount.step = atoi(s.c_str());
-	} else{
-		vcount.step = 1;
-	}
-
-	if (parser.has("n")) {
-		String s = parser.get<String>("n");
-		vcount.rsize = atoi(s.c_str());
 	}
 
 	if (tracker == NULL) {
@@ -104,12 +80,11 @@ int main(int argc, char** argv) {
 
     while(cap.read(frame))
     {
-		++frameCount;
+		vcount.frameCount++;
 		framed f;
-		vector<Mat> d1;
 		bool clusterInspect = false;
 
-		f.i = frameCount;
+		f.i = vcount.frameCount;
 		f.frame = frame;
 
 		cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
@@ -147,41 +122,41 @@ int main(int argc, char** argv) {
 		if (!f.descriptors.empty()) {
 			// Create clustering dataset
 			findROIFeature(vcount, f);
-			uint ogsize = getDataset(vcount, f);// f.descriptors.clone();
+			getDataset(vcount, f);// f.descriptors.clone();
 			hdbscan scan(f.dataset, _EUCLIDEAN, vcount.step*6, vcount.step*6);
 			scan.run();
 
 			// Only labels from the first n indices where n is the number of features found in f.frame
 			f.labels.insert(f.labels.begin(), scan.getClusterLabels().begin(), scan.getClusterLabels().begin()+f.descriptors.rows);
 
-			mapKeyPoints(vcount, f, scan, ogsize);
+			mapKeyPoints(vcount, f, scan, f.ogsize);
 			//drawKeyPoints(frame, f.keypoints, Scalar(0, 0, 255), -1);
-			getCount(vcount, f, scan, ogsize);
+			//vector<KeyPoint> allPts = getAllMatchedKeypoints(f);
 
-			vector<KeyPoint> allPts = getAllMatchedKeypoints(f);
+			//f.img_allkps = drawKeyPoints(frame, allPts, Scalar(0, 0, 255), -1);
+			getCount(vcount, f, scan, f.ogsize);
 
-			Mat img_allkps = drawKeyPoints(frame, allPts, Scalar(0, 0, 255), -1);
 
 			cout << "Cluster " << f.largest << " is the largest" << endl;
 			printf("f.descriptors.rows is %d and label size is %d\n", f.descriptors.rows,
 					scan.getClusterLabels().size());
 
 			printf("f.keyPointImages.size() = %d\n", f.keyPointImages.size());
-
-			if (print && f.roiClusterCount.size() > 0) {
-				printImage(destFolder, frameCount, "frame", frame);
+			printData(vcount, f);
+			/*if (vcount.print && f.roiClusterCount.size() > 0) {
+				printImage(vcount.destFolder, vcount.frameCount, "frame", frame);
 
 				Mat ff = drawKeyPoints(frame, f.keypoints, Scalar(0, 0, 255), -1);
-				printImage(destFolder, frameCount, "frame_kp", ff);
+				printImage(vcount.destFolder, vcount.frameCount, "frame_kp", ff);
 
 				for (uint i = 0; i < f.keyPointImages.size(); ++i) {
 					string s = to_string(i);
 					String ss = "img_keypoints-";
 					ss += s.c_str();
-					printImage(destFolder, frameCount, ss, f.keyPointImages[i]);
+					printImage(vcount.destFolder, vcount.frameCount, ss, f.keyPointImages[i]);
 				}
 
-				printImage(destFolder, frameCount, "img_allkps", img_allkps);
+				printImage(vcount.destFolder, vcount.frameCount, "img_allkps", f.img_allkps);
 
 				f.odata.push_back(f.roiFeatures.size());
 
@@ -199,22 +174,22 @@ int main(int argc, char** argv) {
 				int32_t avg = f.total / f.keyPointImages.size();
 				f.odata.push_back(avg);
 				f.odata.push_back(0);
-				pair<int32_t, vector<int32_t> > pp(frameCount, f.odata);
+				pair<int32_t, vector<int32_t> > pp(vcount.frameCount, f.odata);
 				vcount.stats.insert(pp);
 				f.cest.push_back(avg);
 				f.cest.push_back(f.total);
-				pair<int32_t, vector<int32_t> > cpp(frameCount, f.cest);
+				pair<int32_t, vector<int32_t> > cpp(vcount.frameCount, f.cest);
 				vcount.clusterEstimates.insert(cpp);
-			}
+			}*/
 		}
 
 		maintaintHistory(vcount, f);
 
 	}
 
-    if(print){
-    	printStats(destFolder, vcount.stats);
-    	printClusterEstimates(destFolder, vcount.clusterEstimates);
+    if(vcount.print){
+    	printStats(vcount.destFolder, vcount.stats);
+    	printClusterEstimates(vcount.destFolder, vcount.clusterEstimates);
     }
 
 	return 0;

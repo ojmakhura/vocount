@@ -178,7 +178,6 @@ vector<KeyPoint> getAllMatchedKeypoints(framed& f){
 		vector<KeyPoint> k = f.mappedKeyPoints[it->first];
 		kp.insert(kp.end(), k.begin(), k.end());
 	}
-
 	return kp;
 }
 
@@ -230,9 +229,21 @@ void getCount(vocount& vcount, framed& f, hdbscan& scan, int ogsize){
 		Mat kimg = drawKeyPoints(f.frame, f.mappedKeyPoints[it->first],
 				Scalar(0, 0, 255), -1);
 
-		f.keyPointImages.push_back(kimg);
+		String ss = "img_keypoints-";
+		string s = to_string(f.keyPointImages.size());
+		ss += s.c_str();
+		//pair<String, Mat> p(ss, kimg);
+		//f.keyPointImages.insert(p);
+		f.keyPointImages[ss] = kimg;
 
 	}
+	vector<KeyPoint> kp = getAllMatchedKeypoints(f);
+	Mat mm = drawKeyPoints(f.frame, kp, Scalar(0, 0, 255), -1);
+
+	String ss = "img_allkps";
+
+	f.keyPointImages[ss] = mm;
+	//f.keyPointImages.push_back(mm);
 }
 
 void maintaintHistory(vocount& voc, framed& f){
@@ -281,7 +292,6 @@ void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out) {
 }
 
 uint getDataset(vocount& vcount, framed& f){
-	uint ogsize;
 	Mat dataset = f.descriptors.clone();
 
 	if (!vcount.frameHistory.empty()) {
@@ -292,7 +302,7 @@ uint getDataset(vocount& vcount, framed& f){
 				dataset.push_back(fx.descriptors);
 			}
 		}
-		ogsize = dataset.rows;
+		f.ogsize = dataset.rows;
 
 		for(int i = 1; i < vcount.rsize; ++i){
 
@@ -300,7 +310,7 @@ uint getDataset(vocount& vcount, framed& f){
 	}
 
 	f.dataset = dataset;
-	return ogsize;
+	return f.ogsize;
 }
 
 
@@ -353,15 +363,136 @@ void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstima
 
 }
 
+double calcDistanceL1(Point2f f1, Point2f f2){
+	double diff = f1.x - f2.x;
+	double sum = diff * diff;
+
+	diff = f1.y - f2.y;
+	sum += diff * diff;
+
+	return sum;
+}
+
+/**
+ * Find the roi features and at the same time find the central feature.
+ */
 void findROIFeature(vocount& vcount, framed& f){
+	Rect2d r = f.roi;
+
+	Point2f p;
+
+	p.x = (r.x + r.width)/2.0f;
+	p.y = (r.y + r.height)/2.0f;
+	double distance;
+
 	for(uint i = 0; i < f.keypoints.size(); ++i){
 		if(vcount.roiExtracted && f.roi.contains(f.keypoints[i].pt)){
 			f.roiFeatures.push_back(i);
+
+			// find the center feature index
+			if(f.centerFeature == -1){
+				f.centerFeature = i;
+				distance = calcDistanceL1(p, f.keypoints[i].pt);
+			} else {
+				double d1 = calcDistanceL1(p, f.keypoints[i].pt);
+
+				if(d1 < distance){
+					distance = d1;
+					f.centerFeature = i;
+				}
+
+			}
+
+			// create the roi descriptor
 			if(f.roiDesc.empty()){
 				f.roiDesc = f.descriptors.row(i);
 			} else{
 				f.roiDesc.push_back(f.descriptors.row(i));
 			}
 		}
+	}
+}
+
+
+bool processOptions(vocount& vcount, CommandLineParser& parser, VideoCapture& cap){
+
+	if (parser.has("dir")) {
+		vcount.destFolder = parser.get<String>("dir");
+		vcount.print = true;
+		printf("Will print to %s\n", vcount.destFolder.c_str());
+	}
+
+	if (parser.has("v") || parser.has("video")) {
+
+		vcount.inputPath =
+				parser.has("v") ?
+						parser.get<String>("v") : parser.get<String>("video");
+		cap.open(vcount.inputPath);
+	} else {
+		printf("You did not provide the video stream to open.");
+		return false;
+	}
+
+	if (parser.has("w")) {
+
+		String s = parser.get<String>("w");
+		vcount.step = atoi(s.c_str());
+	} else {
+		vcount.step = 1;
+	}
+
+	if (parser.has("n")) {
+		String s = parser.get<String>("n");
+		vcount.rsize = atoi(s.c_str());
+	}
+	return true;
+}
+
+void printData(vocount& vcount, framed& f){
+	if (vcount.print && f.roiClusterCount.size() > 0) {
+		printImage(vcount.destFolder, vcount.frameCount, "frame", f.frame);
+
+		Mat ff = drawKeyPoints(f.frame, f.keypoints, Scalar(0, 0, 255), -1);
+		printImage(vcount.destFolder, vcount.frameCount, "frame_kp", ff);
+
+		//printImage(vcount.destFolder, vcount.frameCount, "img_allkps", f.keyPointImages[0]);
+
+		for(map<String, Mat>::iterator it = f.keyPointImages.begin(); it != f.keyPointImages.end(); ++it){
+
+			printImage(vcount.destFolder, vcount.frameCount, it->first, it->second);
+		}
+
+		/*for (uint i = 1; i < f.keyPointImages.size(); ++i) {
+			string s = to_string(i-1);
+			String ss = "img_keypoints-";
+
+			ss += s.c_str();
+
+			printImage(vcount.destFolder, vcount.frameCount, ss, f.keyPointImages[i]);
+		}*/
+
+		f.odata.push_back(f.roiFeatures.size());
+
+		int selSampleSize = 0;
+
+		for (map<int, int>::iterator it = f.roiClusterCount.begin();
+				it != f.roiClusterCount.end(); ++it) {
+			selSampleSize += it->second;
+		}
+
+		f.odata.push_back(selSampleSize);
+		f.odata.push_back(f.ogsize);
+		f.odata.push_back(f.selectedFeatures);
+		f.odata.push_back(f.keyPointImages.size());
+		f.odata.push_back(f.total);
+		int32_t avg = f.total / f.keyPointImages.size();
+		f.odata.push_back(avg);
+		f.odata.push_back(0);
+		pair<int32_t, vector<int32_t> > pp(vcount.frameCount, f.odata);
+		vcount.stats.insert(pp);
+		f.cest.push_back(avg);
+		f.cest.push_back(f.total);
+		pair<int32_t, vector<int32_t> > cpp(vcount.frameCount, f.cest);
+		vcount.clusterEstimates.insert(cpp);
 	}
 }

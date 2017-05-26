@@ -18,39 +18,6 @@ using namespace cv;
 using namespace std;
 using namespace cv::ximgproc::segmentation;
 
-typedef struct FRAMED{
-	int i;
-	Mat descriptors,  								/// Frame descriptors
-		frame,
-		gray,
-		dataset;
-	vector<Mat> keyPointImages;
-	vector<KeyPoint> keypoints; 					/// Frame keypoints
-    map<int, vector<KeyPoint> > mappedKeyPoints;					/// maps labels to their keypoints
-    map<int, vector<int> > mappedLabels; 							/// maps labels to their indices
-    map<int, int> roiClusterCount;									/// cluster labels for the r
-	vector<int32_t> odata;
-    vector<int> labels;
-	uint largest = 0;
-	float lsize = 0;
-	float total = 0;
-	int32_t selectedFeatures = 0;
-	vector<int32_t> cest;
-	Rect2d roi;
-	vector<int> roiFeatures;					/// indices of the features inside the roi
-	Mat roiDesc;
-	graph roiStructure;
-	list<graph> objStructures;
-} framed;
-
-typedef struct VOCOUNT{
-	int step, rsize;											/// How many frames to use in the dataset
-	bool roiExtracted = false;
-    map<int32_t, vector<int32_t> > stats;
-    map<int32_t, vector<int32_t> > clusterEstimates;
-	vector<framed> frameHistory;
-} vocount;
-
 typedef struct EDGE{
 	float anglediff;
 	float distance;
@@ -58,8 +25,49 @@ typedef struct EDGE{
 } edge;
 
 typedef struct GRAPH{
-	list<edge> edgeList;
+	vector<edge> edgeList;
 } graph;
+
+typedef struct FRAMED{
+	int i, ogsize;
+	Mat descriptors,  												/// Frame descriptors
+		frame,														/// The frame
+		gray,														/// gray scale image
+		dataset;													/// hdbscan cluster
+		//img_allkps;													/// image with all the selected keypoints
+	map<String, Mat> keyPointImages;										/// images with cluster by cluster keypoints drawn
+	vector<KeyPoint> keypoints; 									/// Frame keypoints
+    map<int, vector<KeyPoint> > mappedKeyPoints;					/// maps labels to their keypoints
+    map<int, vector<int> > mappedLabels; 							/// maps labels to their indices
+    map<int, int> roiClusterCount;									/// cluster labels for the region of interest mapped to the number of roi point in the cluster
+	vector<int32_t> odata;											/// Output data
+    vector<int> labels;												/// hdbscan cluster labels
+	uint largest = 0;
+	float lsize = 0;
+	float total = 0;
+	int32_t selectedFeatures = 0;
+	vector<int32_t> cest;
+	Rect2d roi;														/// region of interest rectangle
+	vector<int> roiFeatures;										/// indices of the features inside the roi
+	int centerFeature = -1;											/// index of the roi central feature
+	Mat roiDesc;													/// region of interest desctiptors
+	graph roiStructure;												/// structure of the
+	vector<graph> objStructures;
+	vector<Rect2d> objBounds;										/// Bounding boxes for the individual objects in the frame
+} framed;
+
+typedef struct VOCOUNT{
+    int frameCount = 0;
+	String destFolder, inputPath;
+	int step, rsize;											/// How many frames to use in the dataset
+	bool roiExtracted = false;
+	bool interactive = false;
+	bool print = false;
+    map<int32_t, vector<int32_t> > stats;
+    map<int32_t, vector<int32_t> > clusterEstimates;
+	vector<framed> frameHistory;
+} vocount;
+
 
 void display(char const* screen, const InputArray& m);
 
@@ -87,4 +95,6 @@ void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstima
 void matchByBruteForce(vocount& vcount, framed& f);
 vector<KeyPoint> getAllMatchedKeypoints(framed& f);
 void findROIFeature(vocount& vcount, framed& f);
+bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
+void printData(vocount& vcount, framed& f);
 #endif /* PROCESS_FRAME_HPP_ */
