@@ -18,6 +18,11 @@ using namespace cv;
 using namespace std;
 using namespace cv::ximgproc::segmentation;
 
+typedef struct _box_structure{
+	Rect box;
+	vector<KeyPoint> points;
+} box_structure;
+
 typedef struct EDGE{
 	float anglediff;
 	float distance;
@@ -34,7 +39,6 @@ typedef struct FRAMED{
 		frame,														/// The frame
 		gray,														/// gray scale image
 		dataset;													/// hdbscan cluster
-		//img_allkps;													/// image with all the selected keypoints
 	map<String, Mat> keyPointImages;										/// images with cluster by cluster keypoints drawn
 	vector<KeyPoint> keypoints; 									/// Frame keypoints
     map<int, vector<KeyPoint> > mappedKeyPoints;					/// maps labels to their keypoints
@@ -53,7 +57,7 @@ typedef struct FRAMED{
 	Mat roiDesc;													/// region of interest desctiptors
 	graph roiStructure;												/// structure of the
 	vector<graph> objStructures;
-	vector<Rect2d> objBounds;										/// Bounding boxes for the individual objects in the frame
+	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
 } framed;
 
 typedef struct VOCOUNT{
@@ -97,4 +101,5 @@ vector<KeyPoint> getAllMatchedKeypoints(framed& f);
 void findROIFeature(vocount& vcount, framed& f);
 bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
 void printData(vocount& vcount, framed& f);
+void boxStructure(framed& f);
 #endif /* PROCESS_FRAME_HPP_ */

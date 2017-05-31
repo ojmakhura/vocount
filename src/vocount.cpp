@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
 		}
 
 		maintaintHistory(vcount, f);
-
+		boxStructure(f);
 	}
 
     if(vcount.print){

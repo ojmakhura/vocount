@@ -455,21 +455,9 @@ void printData(vocount& vcount, framed& f){
 		Mat ff = drawKeyPoints(f.frame, f.keypoints, Scalar(0, 0, 255), -1);
 		printImage(vcount.destFolder, vcount.frameCount, "frame_kp", ff);
 
-		//printImage(vcount.destFolder, vcount.frameCount, "img_allkps", f.keyPointImages[0]);
-
 		for(map<String, Mat>::iterator it = f.keyPointImages.begin(); it != f.keyPointImages.end(); ++it){
-
 			printImage(vcount.destFolder, vcount.frameCount, it->first, it->second);
 		}
-
-		/*for (uint i = 1; i < f.keyPointImages.size(); ++i) {
-			string s = to_string(i-1);
-			String ss = "img_keypoints-";
-
-			ss += s.c_str();
-
-			printImage(vcount.destFolder, vcount.frameCount, ss, f.keyPointImages[i]);
-		}*/
 
 		f.odata.push_back(f.roiFeatures.size());
 
@@ -495,4 +483,88 @@ void printData(vocount& vcount, framed& f){
 		pair<int32_t, vector<int32_t> > cpp(vcount.frameCount, f.cest);
 		vcount.clusterEstimates.insert(cpp);
 	}
+}
+
+int rectExist(vector<box_structure>& structures, Rect& r){
+
+	double maxIntersect = 0.0;
+	int maxIndex = -1;
+
+	for(uint i = 0; i < structures.size(); i++){
+		Rect r2 = r & structures[i].box;
+
+		if(r2.area() > maxIntersect){
+			maxIntersect = (r2.area()/r.area()) * 100;
+			maxIndex = i;
+		}
+	}
+
+	if(maxIntersect > 70.0){
+		return maxIndex;
+	}
+
+	return -1;
+}
+
+void boxStructure(framed& f){
+	box_structure mbs;
+	mbs.box = f.roi;
+/*
+	for(map<int, vector<int> >::iterator it = f.mappedLabels.begin(); it != f.mappedLabels.end(); it++){
+		vector<int> c_points = it->second;
+
+		for(vector<int>::iterator itr = c_points.begin(); itr != c_points.end(); itr++){
+			KeyPoint kp = f.keypoints[*itr];
+
+			if(std::find(f.roiFeatures.begin(), f.roiFeatures.end(), *itr) != f.roiFeatures.end()){ /// If this keypoint is one of the roi features
+				mbs.points.push_back(kp);
+			} else{
+				Point2f pshift;
+				pshift.x = kp.pt.x - roi_p.pt.x;
+				pshift.y = kp.pt.y - roi_p.pt.y;
+			}
+
+
+		}
+	}*/
+
+	for(uint i = 0; i < f.roiFeatures.size(); i++){
+		int lidx = f.roiFeatures[i];
+		// make sure only to chceck the roi features in selected clusters.
+		if(f.labels[lidx] != 0 && f.mappedKeyPoints.find(f.labels[lidx]) != f.mappedKeyPoints.end()){
+			printf("if(f.mappedKeyPoints.find(*it) != f.mappedKeyPoints.end()) f.labels[lidx] = %d\n", f.labels[lidx]);
+			KeyPoint roi_p = f.keypoints[lidx];
+			mbs.points.push_back(roi_p);
+			int label = f.labels[lidx];
+			vector<KeyPoint> c_points = f.mappedKeyPoints[label];
+
+			for(int j = 0; j < c_points.size(); j++){
+				if(c_points[j].pt != roi_p.pt){ // roi points have their own structure "mbs"
+					Point2f pshift;
+					pshift.x = c_points[j].pt.x - roi_p.pt.x;
+					pshift.y = c_points[j].pt.y - roi_p.pt.y;
+
+					// shift the roi to get roi for a possible new object
+					Rect nr = f.roi;
+					Point pp = pshift;
+
+					nr += pp;
+
+					// check that the rect does not already exist
+					int idx =rectExist(f.boxStructures, nr);
+					if(idx == -1){
+						box_structure bst;
+						bst.box = nr;
+						bst.points.push_back(c_points[j]);
+						f.boxStructures.push_back(bst);
+					} else{
+						f.boxStructures[idx].points.push_back(c_points[j]);
+					}
+				}
+			}
+		}
+	}
+
+	f.boxStructures.push_back(mbs);
+	printf("boxStructure found %lu objects\n\n", f.boxStructures.size());
 }
