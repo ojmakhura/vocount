@@ -51,7 +51,8 @@ int main(int argc, char** argv) {
     vocount vcount;
 
     Ptr<Feature2D> detector = SURF::create(1500);
-	Ptr<Tracker> tracker = Tracker::create("BOOSTING");
+	Ptr<Tracker> tracker = TrackerBoosting::create();
+
 	cv::CommandLineParser parser(argc, argv,
 					"{help ||}{dir||}{n|1|}"
 					"{v||}{video||}{w|1|}{s||}"
