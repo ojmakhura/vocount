@@ -41,9 +41,11 @@ typedef struct FRAMED{
 		dataset;													/// hdbscan cluster
 	map<String, Mat> keyPointImages;										/// images with cluster by cluster keypoints drawn
 	vector<KeyPoint> keypoints; 									/// Frame keypoints
-    map<int, vector<KeyPoint> > mappedKeyPoints;					/// maps labels to their keypoints
-    map<int, vector<int> > mappedLabels; 							/// maps labels to their indices
-    map<int, int> roiClusterCount;									/// cluster labels for the region of interest mapped to the number of roi point in the cluster
+    map<int, vector<KeyPoint> > clusterKeyPoints;					/// maps labels to their keypoints
+    map<int, vector<int> > clusterKeypointIdx; 						/// maps labels to the keypoint indices
+    map<int, vector<int> > roiClusterPoints;						/// cluster labels for the region of interest mapped to the roi points in the cluster
+    map<int, vector<int> > clusterSplitPoints;						/// for clusters where there is more than one roi point in the cluster. Maps the roi point
+    																/// index to all closest descriptor points indices
 	vector<int32_t> odata;											/// Output data
     vector<int> labels;												/// hdbscan cluster labels
 	uint largest = 0;
@@ -54,7 +56,7 @@ typedef struct FRAMED{
 	Rect2d roi;														/// region of interest rectangle
 	vector<int> roiFeatures;										/// indices of the features inside the roi
 	int centerFeature = -1;											/// index of the roi central feature
-	Mat roiDesc;													/// region of interest desctiptors
+	Mat roiDesc;													/// region of interest descriptors
 	graph roiStructure;												/// structure of the
 	vector<graph> objStructures;
 	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
@@ -102,4 +104,5 @@ void findROIFeature(vocount& vcount, framed& f);
 bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
 void printData(vocount& vcount, framed& f);
 void boxStructure(framed& f);
+void separateClusterPoints(framed& f);
 #endif /* PROCESS_FRAME_HPP_ */

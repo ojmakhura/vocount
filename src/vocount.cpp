@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
 
 			//f.img_allkps = drawKeyPoints(frame, allPts, Scalar(0, 0, 255), -1);
 			getCount(vcount, f, scan, f.ogsize);
-
+			boxStructure(f);
 
 			cout << "Cluster " << f.largest << " is the largest" << endl;
 			printf("f.descriptors.rows is %d and label size is %d\n", f.descriptors.rows,
@@ -144,48 +144,9 @@ int main(int argc, char** argv) {
 
 			printf("f.keyPointImages.size() = %d\n", f.keyPointImages.size());
 			printData(vcount, f);
-			/*if (vcount.print && f.roiClusterCount.size() > 0) {
-				printImage(vcount.destFolder, vcount.frameCount, "frame", frame);
-
-				Mat ff = drawKeyPoints(frame, f.keypoints, Scalar(0, 0, 255), -1);
-				printImage(vcount.destFolder, vcount.frameCount, "frame_kp", ff);
-
-				for (uint i = 0; i < f.keyPointImages.size(); ++i) {
-					string s = to_string(i);
-					String ss = "img_keypoints-";
-					ss += s.c_str();
-					printImage(vcount.destFolder, vcount.frameCount, ss, f.keyPointImages[i]);
-				}
-
-				printImage(vcount.destFolder, vcount.frameCount, "img_allkps", f.img_allkps);
-
-				f.odata.push_back(f.roiFeatures.size());
-
-				int selSampleSize = 0;
-
-				for(map<int, int>::iterator it = f.roiClusterCount.begin(); it != f.roiClusterCount.end(); ++it){
-					selSampleSize += it->second;
-				}
-
-				f.odata.push_back(selSampleSize);
-				f.odata.push_back(ogsize);
-				f.odata.push_back(f.selectedFeatures);
-				f.odata.push_back(f.keyPointImages.size());
-				f.odata.push_back(f.total);
-				int32_t avg = f.total / f.keyPointImages.size();
-				f.odata.push_back(avg);
-				f.odata.push_back(0);
-				pair<int32_t, vector<int32_t> > pp(vcount.frameCount, f.odata);
-				vcount.stats.insert(pp);
-				f.cest.push_back(avg);
-				f.cest.push_back(f.total);
-				pair<int32_t, vector<int32_t> > cpp(vcount.frameCount, f.cest);
-				vcount.clusterEstimates.insert(cpp);
-			}*/
 		}
 
 		maintaintHistory(vcount, f);
-		boxStructure(f);
 	}
 
     if(vcount.print){
