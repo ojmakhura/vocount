@@ -137,6 +137,7 @@ int main(int argc, char** argv) {
 			//f.img_allkps = drawKeyPoints(frame, allPts, Scalar(0, 0, 255), -1);
 			getCount(vcount, f, scan, f.ogsize);
 			boxStructure(f);
+			splitROIPoints(f, scan);
 
 			cout << "Cluster " << f.largest << " is the largest" << endl;
 			printf("f.descriptors.rows is %d and label size is %d\n", f.descriptors.rows,

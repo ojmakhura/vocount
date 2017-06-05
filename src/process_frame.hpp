@@ -106,5 +106,5 @@ void printData(vocount& vcount, framed& f);
 void boxStructure(framed& f);
 void separateClusterPoints(framed& f);
 vector<Point2f> reduceDescriptorDimensions(Mat descriptors);
-void splitROIPoints(framed& f, vector<Cluster*> clusters);
+void splitROIPoints(framed& f, hdbscan& scan);
 #endif /* PROCESS_FRAME_HPP_ */

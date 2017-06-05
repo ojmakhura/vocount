@@ -611,15 +611,25 @@ void boxStructure(framed& f){
 	f.keyPointImages[ss] = img_bounds;
 }
 
-void splitROIPoints(framed& f, vector<Cluster*> clusters){
+void splitROIPoints(framed& f, hdbscan& scan){
 	for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it){
 		if(it->second.size() > 1){
 			int clusterLabel = f.labels[it->first];
-
-			for(uint i = 0; i < clusters.size(); i++){
-				Cluster* cluster = clusters[i];
-				vector<Cluster*> descendents = *cluster->getPropagatedDescendants();
-				//cluster->
+			if(clusterLabel != 0){
+				cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>" << endl;
+				cout << "Cluster labels is " << clusterLabel << endl;
+				vector<Cluster*> clusters = scan.getClusters();
+				vector<int> children;
+				set<int> vc = clusters[clusterLabel]->getVirtualChildCluster();
+				for(uint i = 1; i < clusters.size(); i++){
+					Cluster* c = clusters[i];
+					if(c->getParent() != NULL && c->getParent()->getLabel() == clusterLabel){
+						children.push_back(c->getLabel());
+						printf("%d is a child of %d\n", c->getLabel(), clusterLabel);
+					}
+				}
+				printf("%d has %lu children and %lu virtual clusters\n", clusterLabel, children.size(), vc.size());
+				cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>" << endl;
 			}
 		}
 	}
@@ -628,9 +638,9 @@ void splitROIPoints(framed& f, vector<Cluster*> clusters){
 vector<Point2f> reduceDescriptorDimensions(Mat descriptors){
 	vector<Point2f> points;
 
-	for(uint i = 0; i < descriptors.rows; i++){
+	for(int i = 0; i < descriptors.rows; i++){
 		Point2f p(0, 0);
-		for(uint j = 0; j < descriptors.cols; i++){
+		for(int j = 0; j < descriptors.cols; i++){
 			float f = descriptors.at<float>(i, j);
 
 			if(j %2 == 0){
