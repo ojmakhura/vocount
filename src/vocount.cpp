@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
 			getDataset(vcount, f);// f.descriptors.clone();
 			hdbscan scan(f.dataset, _EUCLIDEAN, vcount.step*6, vcount.step*6);
 			scan.run();
-
+			vector<Cluster*> clusters = scan.getClusters();
 			// Only labels from the first n indices where n is the number of features found in f.frame
 			f.labels.insert(f.labels.begin(), scan.getClusterLabels().begin(), scan.getClusterLabels().begin()+f.descriptors.rows);
 

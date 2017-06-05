@@ -105,4 +105,6 @@ bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
 void printData(vocount& vcount, framed& f);
 void boxStructure(framed& f);
 void separateClusterPoints(framed& f);
+vector<Point2f> reduceDescriptorDimensions(Mat descriptors);
+void splitROIPoints(framed& f, vector<Cluster*> clusters);
 #endif /* PROCESS_FRAME_HPP_ */

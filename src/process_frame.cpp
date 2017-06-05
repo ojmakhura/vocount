@@ -610,3 +610,37 @@ void boxStructure(framed& f){
 	}
 	f.keyPointImages[ss] = img_bounds;
 }
+
+void splitROIPoints(framed& f, vector<Cluster*> clusters){
+	for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it){
+		if(it->second.size() > 1){
+			int clusterLabel = f.labels[it->first];
+
+			for(uint i = 0; i < clusters.size(); i++){
+				Cluster* cluster = clusters[i];
+				vector<Cluster*> descendents = *cluster->getPropagatedDescendants();
+				//cluster->
+			}
+		}
+	}
+}
+
+vector<Point2f> reduceDescriptorDimensions(Mat descriptors){
+	vector<Point2f> points;
+
+	for(uint i = 0; i < descriptors.rows; i++){
+		Point2f p(0, 0);
+		for(uint j = 0; j < descriptors.cols; i++){
+			float f = descriptors.at<float>(i, j);
+
+			if(j %2 == 0){
+				p.x += f;
+			} else{
+				p.y += f;
+			}
+		}
+		points.push_back(p);
+	}
+
+	return points;
+}

@@ -38,12 +38,12 @@ class hdbscan {
 private:
 	DistanceCalculator distanceFunction;
 	UndirectedGraph* mst;
-	vector<Constraint*>* constraints;
-	vector<Cluster*>* clusters;
-	vector<OutlierScore*>* outlierScores;
-	vector<int>* clusterLabels;
+	vector<Constraint*> constraints;
+	vector<Cluster*> clusters;
+	vector<OutlierScore*> outlierScores;
+	vector<int> clusterLabels;
 	map<int, float> clusterStabilities;
-	map<long, vector<int>* >* hierarchy;
+	map<long, vector<int>* > hierarchy;
 	bool selfEdges = true;
 	uint minPoints, minClusterSize, numPoints;
 
@@ -55,7 +55,7 @@ private:
 	 * @param constraints An vector of constraints
 	 * @param clusterLabels an array of current cluster labels for points
 	 */
-	void calculateNumConstraintsSatisfied(set<int> newClusterLabels, vector<int> currentClusterLabels);
+	void calculateNumConstraintsSatisfied(set<int>& newClusterLabels, vector<int>& currentClusterLabels);
 	/**
 	 * Removes the set of points from their parent Cluster, and creates a new Cluster, provided the
 	 * clusterId is not 0 (noise).
@@ -179,6 +179,7 @@ public:
 	 * @param infiniteStability true if there are any clusters with infinite stability, false otherwise
 	 */
 	void findProminentClusters(bool infiniteStability);
+	vector<int> findProminentClusters(bool infiniteStability, vector<Cluster*>* solution);
 
 	/**
 	 * Produces the outlier score for each point in the data set, and returns a sorted list of outlier

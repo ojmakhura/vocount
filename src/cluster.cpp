@@ -26,8 +26,6 @@ Cluster::Cluster() {
 	this->propagatedNumConstraintsSatisfied = 0;
 	this->parent = NULL;
 	this->hasChildren = false;
-	//this->virtualChildCluster = new set<int>();
-	//this->propagatedDescendants = new vector<Cluster*>(1);
 }
 
 /**
@@ -37,13 +35,6 @@ Cluster::Cluster() {
  * parent is being deleted
  */
 Cluster::~Cluster() {
-
-	/*if(parent != NULL){
-		delete parent;
-	}*/
-
-	//delete virtualChildCluster;
-	//delete propagatedDescendants;
 
 }
 
@@ -59,7 +50,7 @@ Cluster::Cluster(int label, Cluster* parent, float birthLevel, int numPoints) {
 	this->birthLevel = birthLevel;
 	this->deathLevel = 0;
 	this->numPoints = numPoints;
-	//this->offset = 0;
+	this->offset = 0;
 
 	this->stability = 0;
 	this->propagatedStability = 0;
@@ -68,13 +59,11 @@ Cluster::Cluster(int label, Cluster* parent, float birthLevel, int numPoints) {
 
 	this->numConstraintsSatisfied = 0;
 	this->propagatedNumConstraintsSatisfied = 0;
-	//this->virtualChildCluster = new set<int>();
 
 	this->parent = parent;
 	if (this->parent != NULL)
 		this->parent->hasChildren = true;
 	this->hasChildren = false;
-	//this->propagatedDescendants = new vector<Cluster*>();
 }
 
 /**
