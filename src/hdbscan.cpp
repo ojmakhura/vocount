@@ -550,17 +550,6 @@ bool hdbscan::propagateTree() {
 		}
 	}
 
-	/*for (vector<Cluster*>::iterator itr = clusters->begin(); itr != clusters->end(); ++itr) {
-		Cluster* cluster = *itr;
-		if (cluster != NULL && !cluster->hasKids()) {
-			//if()
-			clustersToExamine.insert(
-					pair<int, Cluster*>(cluster->getLabel(), cluster));
-			addedToExaminationList[cluster->getLabel()] = true;
-		}
-
-	}*/
-
 	//Iterate through every cluster, propagating stability from children to parents:
 	while (!clustersToExamine.empty()) {
 		map<int, Cluster*>::reverse_iterator itr = clustersToExamine.rbegin();
@@ -994,8 +983,6 @@ void hdbscan::computeHierarchyAndClusterTree(bool compactHierarchy,
 					}
 				}
 
-				//delete constructingSubCluster;
-				//delete unexploredSubClusterPoints;
 			}
 
 			//Finish exploring and cluster the first child cluster if there was a split and it was not already clustered:
@@ -1165,13 +1152,6 @@ void hdbscan::run() {
 
 	start = clock();
 
-	//int numPoints = coreDistances->size();
-
-
-	// Remove references to unneeded objects:
-	//vector<vector<float> >().swap(*dataSet);
-	//dataSet = NULL;
-
 	vector<float>* pointNoiseLevels = new vector<float>(numPoints);
 	vector<int>* pointLastClusters = new vector<int>(numPoints);
 	//Compute hierarchy and cluster tree:
@@ -1208,9 +1188,6 @@ void hdbscan::run() {
 	start = clock();
 	//Compute outlier scores for each point:
 	//cout << "calculateOutlierScores" << endl;
-	//calculateOutlierScores(pointNoiseLevels, pointLastClusters,
-			//infiniteStability);
-	//cout << "calculateOutlierScores done" << endl;
 
 	stop = clock();
 

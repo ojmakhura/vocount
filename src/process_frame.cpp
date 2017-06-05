@@ -322,7 +322,7 @@ void printStats(String folder, map<int32_t, vector<int32_t> > stats){
 	f += name;
 	myfile.open(f.c_str());
 
-	myfile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Actual\n";
+	myfile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
 
 	for(map<int32_t, vector<int32_t> >::iterator it = stats.begin(); it != stats.end(); ++it){
 		vector<int32_t> vv = it->second;
@@ -347,7 +347,7 @@ void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstima
 	f += name;
 	myfile.open(f.c_str());
 
-	myfile << "Frame #,Cluster Sum, Cluster Avg.\n";
+	myfile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
 
 	for(map<int32_t, vector<int32_t> >::iterator it = cEstimates.begin(); it != cEstimates.end(); ++it){
 		vector<int32_t> vv = it->second;
@@ -477,11 +477,13 @@ void printData(vocount& vcount, framed& f){
 		f.odata.push_back(f.total);
 		int32_t avg = f.total / f.keyPointImages.size();
 		f.odata.push_back(avg);
+		f.odata.push_back(f.boxStructures.size());
 		f.odata.push_back(0);
 		pair<int32_t, vector<int32_t> > pp(vcount.frameCount, f.odata);
 		vcount.stats.insert(pp);
 		f.cest.push_back(avg);
 		f.cest.push_back(f.total);
+		f.cest.push_back(f.boxStructures.size());
 		pair<int32_t, vector<int32_t> > cpp(vcount.frameCount, f.cest);
 		vcount.clusterEstimates.insert(cpp);
 	}
@@ -490,20 +492,21 @@ void printData(vocount& vcount, framed& f){
 int rectExist(vector<box_structure> structures, Rect& r){
 
 	double maxIntersect = 0.0;
-	Rect maxRec(0, 0, 0, 0);
+	//Rect maxRec(0, 0, 0, 0);
 	int maxIndex = -1;
 
 	for(uint i = 0; i < structures.size(); i++){
 		Rect r2 = r & structures[i].box;
-		if(r2.area() > maxRec.area()){
+		double sect = ((double)r2.area()/r.area()) * 100;
+		if(sect > maxIntersect){
 			maxIndex = i;
-			maxRec = r2;
+			//maxRec = r2;
+			maxIntersect = sect;
 		}
 	}
 
-	maxIntersect = (maxRec.area()/r.area()) * 100;
-	//cout << "max intersect is " << maxIntersect << endl;
-	if(maxIntersect > 90.0){
+
+	if(maxIntersect > 50.0){
 		return maxIndex;
 	}
 
@@ -578,9 +581,7 @@ void boxStructure(framed& f){
 				Rect nr = f.roi;
 
 				Point pp = pshift;
-
-				nr += pp;
-
+				nr = nr + pp;
 				// check that the rect does not already exist
 				int idx =rectExist(f.boxStructures, nr);
 				if(idx == -1){
@@ -599,7 +600,7 @@ void boxStructure(framed& f){
 	printf("boxStructure found %lu objects\n\n", f.boxStructures.size());
 	String ss = "img_bounds";
 
-	Mat img_bounds = f.frame.clone();
+	Mat img_bounds = f.keyPointImages["img_allkps"].clone();
 	for (uint i = 0; i < f.boxStructures.size(); i++) {
 		box_structure b = f.boxStructures[i];
 		RNG rng(12345);
