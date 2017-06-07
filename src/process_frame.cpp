@@ -657,9 +657,7 @@ void splitROIPoints(framed& f){
 				boxStructure(f1);
 				cout << "Cluster " << f1.largest << " is the largest" << endl;
 				printf("f1.descriptors.rows is %d and label size is %lu\n", f1.descriptors.rows, sc.getClusterLabels().size());
-
 				printf("f1.keyPointImages.size() = %lu\n", f1.keyPointImages.size());
-
 				cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << endl;
 			}
 		}
