@@ -37,13 +37,13 @@ class hdbscan {
 
 private:
 	DistanceCalculator distanceFunction;
-	UndirectedGraph* mst;
+	UndirectedGraph mst;
 	vector<Constraint*> constraints;
 	vector<Cluster*> clusters;
-	vector<OutlierScore*> outlierScores;
+	vector<OutlierScore> outlierScores;
 	vector<int> clusterLabels;
 	map<int, float> clusterStabilities;
-	map<long, vector<int>* > hierarchy;
+	map<long, vector<int> > hierarchy;
 	bool selfEdges = true;
 	uint minPoints, minClusterSize, numPoints;
 

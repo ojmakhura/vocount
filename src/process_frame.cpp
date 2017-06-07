@@ -7,6 +7,7 @@
 
 #include "process_frame.hpp"
 #include <fstream>
+#include <opencv/cv.hpp>
 
 void display(char const* screen, const InputArray& m) {
 	if (!m.empty()) {
@@ -181,7 +182,7 @@ vector<KeyPoint> getAllMatchedKeypoints(framed& f){
 	return kp;
 }
 
-void mapKeyPoints(vocount& vcount, framed& f, hdbscan& scan, int ogsize){
+void mapKeyPoints(framed& f, hdbscan& scan, int ogsize){
 
 	// add the indices and keypoints using labels as the key to the map
 	for(uint i = 0; i < f.labels.size(); i++){
@@ -194,8 +195,9 @@ void mapKeyPoints(vocount& vcount, framed& f, hdbscan& scan, int ogsize){
 	for(vector<int>::iterator it = f.roiFeatures.begin(); it != f.roiFeatures.end(); ++it){
 		if(*it != 0){
 			int idx = f.labels[*it];
-			if(idx != 0) // Cluster 0 represents outliers
+			if(idx != 0){ // Cluster 0 represents outliers
 				f.roiClusterPoints[idx].push_back(*it);
+			}
 		}
 	}
 
@@ -206,7 +208,7 @@ void mapKeyPoints(vocount& vcount, framed& f, hdbscan& scan, int ogsize){
 /**
  *
  */
-void getCount(vocount& vcount, framed& f, hdbscan& scan, int ogsize){
+void getCount(framed& f, hdbscan& scan, int ogsize){
 	cout << "################################################################################" << endl;
 	cout << "                              " << f.i << endl;
 	cout << "################################################################################" << endl;
@@ -218,8 +220,7 @@ void getCount(vocount& vcount, framed& f, hdbscan& scan, int ogsize){
 		int32_t n = f.clusterKeyPoints[it->first].size() / it->second.size();
 		f.cest.push_back(n);
 		f.total += n;
-		printf(
-				"stability: %f --> %d has %lu and total is %lu :: Approx Num of objects: %d\n\n",
+		printf("stability: %f --> %d has %lu and total is %lu :: Approx Num of objects: %d\n\n",
 				stabilities[it->first], it->first, it->second.size(),
 				f.clusterKeyPoints[it->first].size(), n);
 		f.selectedFeatures += f.clusterKeyPoints[it->first].size();
@@ -377,7 +378,7 @@ double calcDistanceL1(Point2f f1, Point2f f2){
 /**
  * Find the roi features and at the same time find the central feature.
  */
-void findROIFeature(vocount& vcount, framed& f){
+void findROIFeature(framed& f){
 	Rect2d r = f.roi;
 
 	Point2f p;
@@ -387,7 +388,7 @@ void findROIFeature(vocount& vcount, framed& f){
 	double distance;
 
 	for(uint i = 0; i < f.keypoints.size(); ++i){
-		if(vcount.roiExtracted && f.roi.contains(f.keypoints[i].pt)){
+		if(f.hasRoi && f.roi.contains(f.keypoints[i].pt)){
 			f.roiFeatures.push_back(i);
 
 			// find the center feature index
@@ -611,25 +612,55 @@ void boxStructure(framed& f){
 	f.keyPointImages[ss] = img_bounds;
 }
 
-void splitROIPoints(framed& f, hdbscan& scan){
+void splitROIPoints(framed& f){
 	for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it){
 		if(it->second.size() > 1){
 			int clusterLabel = f.labels[it->first];
 			if(clusterLabel != 0){
-				cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>" << endl;
+				cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Re-Cluster >>>>>>>>>>>>>>>>>>>>>>>>>>" << endl;
 				cout << "Cluster labels is " << clusterLabel << endl;
-				vector<Cluster*> clusters = scan.getClusters();
-				vector<int> children;
-				set<int> vc = clusters[clusterLabel]->getVirtualChildCluster();
-				for(uint i = 1; i < clusters.size(); i++){
-					Cluster* c = clusters[i];
-					if(c->getParent() != NULL && c->getParent()->getLabel() == clusterLabel){
-						children.push_back(c->getLabel());
-						printf("%d is a child of %d\n", c->getLabel(), clusterLabel);
+
+				vector<int> crois = f.clusterKeypointIdx[clusterLabel];
+
+				framed f1;
+				f1.i = f.i;
+				f1.dataset = f.descriptors.row(0);
+				f1.keypoints.push_back(f.keypoints[0]);
+				f1.frame = f.frame;
+				for(uint i = 1; i < crois.size(); i++){
+					int rp = crois[i];
+					f1.dataset.push_back(f.descriptors.row(rp));
+					f1.keypoints.push_back(f.keypoints[rp]);
+					//cout << i << " " << rp << endl;
+					for(uint j = 0; j < it->second.size(); j++){
+						if(it->second[j] == rp){
+							f1.roiFeatures.push_back(i);
+							if(f1.roiDesc.empty()){
+								f1.roiDesc = f.descriptors.row(rp);
+							} else{
+								f1.roiDesc.push_back(f.descriptors.row(rp));
+							}
+						}
 					}
 				}
-				printf("%d has %lu children and %lu virtual clusters\n", clusterLabel, children.size(), vc.size());
-				cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>" << endl;
+
+				f1.dataset = f1.dataset.clone();
+				f1.descriptors = f1.dataset.clone();
+				f1.ogsize = f1.dataset.rows;
+				f1.hasRoi = f.hasRoi;
+				printf("f1 has %lu roi points and %d dataset length\n", f1.roiFeatures.size(), f1.descriptors.rows);
+				hdbscan sc(f1.dataset, _EUCLIDEAN, 3, 3);
+				sc.run();
+				f1.labels = sc.getClusterLabels();
+				mapKeyPoints(f1, sc, f1.ogsize);
+				getCount(f1, sc, f1.ogsize);
+				boxStructure(f1);
+				cout << "Cluster " << f1.largest << " is the largest" << endl;
+				printf("f1.descriptors.rows is %d and label size is %lu\n", f1.descriptors.rows, sc.getClusterLabels().size());
+
+				printf("f1.keyPointImages.size() = %lu\n", f1.keyPointImages.size());
+
+				cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << endl;
 			}
 		}
 	}

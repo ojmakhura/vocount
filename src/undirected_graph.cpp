@@ -43,8 +43,8 @@ UndirectedGraph::~UndirectedGraph() {
  * @param verticesB An array of vertices corresponding to the array of edges
  * @param edgeWeights An array of edges corresponding to the arrays of vertices
  */
-UndirectedGraph::UndirectedGraph(int numVertices, vector<int>& verticesA,
-		vector<int>& verticesB, vector<float>& edgeWeights) {
+UndirectedGraph::UndirectedGraph(int numVertices, vector<int> verticesA,
+		vector<int> verticesB, vector<float> edgeWeights) {
 	this->numVertices = numVertices;
 	this->verticesA = verticesA;
 	this->verticesB = verticesB;
@@ -65,6 +65,11 @@ UndirectedGraph::UndirectedGraph(int numVertices, vector<int>& verticesA,
 			(this->edges)[vertexTwo].push_back(vertexOne);
 		}
 	}
+}
+
+UndirectedGraph::UndirectedGraph(){
+
+	this->numVertices = 0;
 }
 
 // ------------------------------ PUBLIC METHODS ------------------------------

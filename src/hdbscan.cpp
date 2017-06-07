@@ -45,7 +45,7 @@ hdbscan::hdbscan(){
 	this->minClusterSize = 0;
 	distanceFunction.setCalculator(_EUCLIDEAN);
 	selfEdges = true;
-	mst = NULL;
+	//mst = NULL;
 	numPoints = 0;
 }
 
@@ -55,7 +55,6 @@ hdbscan::hdbscan(calculator cal, uint minPoints, uint minClusterSize) {
 	this->minClusterSize = minClusterSize;
 	distanceFunction.setCalculator(cal);
 	selfEdges = true;
-	mst = NULL;
 	numPoints = 0;
 }
 hdbscan::hdbscan(float* dataSet, int rows, int cols, calculator cal,
@@ -65,10 +64,8 @@ hdbscan::hdbscan(float* dataSet, int rows, int cols, calculator cal,
 	this->minPoints = minPoints;
 	distanceFunction.setCalculator(cal);
 	selfEdges = true;
-	mst = NULL;
 	calculateCoreDistances(dataSet, rows, cols);
 	numPoints = rows;
-	//printf("distances.cols(), distances.rows() numPoints : %d %d %d\n", cols, rows, numPoints);
 }
 
 hdbscan::hdbscan(Mat& dataset, calculator cal, uint minPoints, uint minClusterSize){
@@ -76,7 +73,6 @@ hdbscan::hdbscan(Mat& dataset, calculator cal, uint minPoints, uint minClusterSi
 	this->minPoints = minPoints;
 	distanceFunction.setCalculator(cal);
 	selfEdges = true;
-	mst = NULL;
 	numPoints = dataset.rows;
 	distanceFunction.cvComputeDistance(dataset, minPoints-1);
 }
@@ -88,25 +84,13 @@ hdbscan::~hdbscan() {
 		delete constraints[i];
 	}
 
-	if (mst != NULL) {
-		delete mst;
-	}
-
-
 	for(uint i = 0; i < clusters.size(); ++i){
 		delete clusters[i];
 	}
 
-
-	for (uint i = 0; i < outlierScores.size(); ++i) {
-		delete outlierScores[i];
-	}
-
-
-
-	for(map<long, vector<int>* >::iterator it = hierarchy.begin(); it != hierarchy.end(); ++it){
+	/*for(map<long, vector<int>* >::iterator it = hierarchy.begin(); it != hierarchy.end(); ++it){
 		delete it->second;
-	}
+	}*/
 
 }
 
@@ -260,9 +244,9 @@ void hdbscan::cvCalculateCoreDistances(vector<Mat> dataset, bool indexed) {
  * @param distanceFunction A DistanceCalculator to compute distances between points
  */
 
-void hdbscan::constructMST(Mat& src) {
+/*void hdbscan::constructMST(Mat& src) {
 
-	int nb_edges = 0;
+	//int nb_edges = 0;
 	Mat dataset = src.clone();
 	numPoints = dataset.rows * dataset.cols;
 	clusterLabels.resize(numPoints, 0);
@@ -299,7 +283,7 @@ void hdbscan::constructMST(Mat& src) {
 
 			int from = i * dataset.rows + j;
 			int to;
-			int r = 0, c = 0, min_r = i, min_c = j;
+			int r = 0, c = 0;
 			float min_d = numeric_limits<float>::max();
 			float coreDistance = 0;
 			min_d = numeric_limits<float>::max();
@@ -369,7 +353,7 @@ void hdbscan::constructMST(Mat& src) {
 	//cout << "Printing graph" << endl;
 	//mst.print();
 	//cout << "Done" << endl;
-}
+}*/
 
 void hdbscan::constructMST() {
 
@@ -391,11 +375,11 @@ void hdbscan::constructMST() {
 	attachedPoints[size - 1] = true;
 
 	//Each point has a current neighbor point in the tree, and a current nearest distance:
-	vector<int>* nearestMRDNeighbors = new vector<int>(size - 1 + selfEdgeCapacity);
-	vector<float>* nearestMRDDistances = new vector<float>(size - 1 + selfEdgeCapacity, numeric_limits<float>::max());
+	vector<int> nearestMRDNeighbors(size - 1 + selfEdgeCapacity);
+	vector<float> nearestMRDDistances(size - 1 + selfEdgeCapacity, numeric_limits<float>::max());
 
 	//Create an array for vertices in the tree that each point attached to:
-	vector<int>* otherVertexIndices = new vector<int>(size - 1 + selfEdgeCapacity);
+	vector<int> otherVertexIndices(size - 1 + selfEdgeCapacity);
 
 	//Continue attaching points to the MST until all points are attached:
 	for(uint numAttachedPoints = 1; numAttachedPoints < size; numAttachedPoints++){
@@ -427,14 +411,14 @@ void hdbscan::constructMST() {
 				mutualReachabiltiyDistance = coreDistances[neighbor];
 			}
 
-			if (mutualReachabiltiyDistance < (*nearestMRDDistances)[neighbor]) {
-				(*nearestMRDDistances)[neighbor] = mutualReachabiltiyDistance;
-				(*nearestMRDNeighbors)[neighbor] = currentPoint;
+			if (mutualReachabiltiyDistance < nearestMRDDistances[neighbor]) {
+				nearestMRDDistances[neighbor] = mutualReachabiltiyDistance;
+				nearestMRDNeighbors[neighbor] = currentPoint;
 			}
 
 			//Check if the unattached point being updated is the closest to the tree:
-			if ((*nearestMRDDistances)[neighbor] <= nearestMRDDistance) {
-				nearestMRDDistance = (*nearestMRDDistances)[neighbor];
+			if (nearestMRDDistances[neighbor] <= nearestMRDDistance) {
+				nearestMRDDistance = nearestMRDDistances[neighbor];
 				nearestMRDPoint = neighbor;
 			}
 
@@ -442,7 +426,7 @@ void hdbscan::constructMST() {
 
 		//Attach the closest point found in this iteration to the tree:
 		attachedPoints[nearestMRDPoint] = true;
-		(*otherVertexIndices)[numAttachedPoints] = numAttachedPoints;
+		otherVertexIndices[numAttachedPoints] = numAttachedPoints;
 		//numAttachedPoints++;
 		currentPoint = nearestMRDPoint;
 
@@ -451,7 +435,7 @@ void hdbscan::constructMST() {
 
 	//If necessary, attach self edges:
 	if (selfEdges) {
-		size_t n = size * 2 - 1;
+		//size_t n = size * 2 - 1;
 
 		//parallel_for(size_t(0), n, [=](size_t i) {
 #ifdef USE_OPENMP
@@ -459,15 +443,15 @@ void hdbscan::constructMST() {
 #endif
 		for (uint i = size - 1; i < size * 2 - 1; i++) {
 			int vertex = i - (size - 1);
-			(*nearestMRDNeighbors)[i] = vertex;
-			(*otherVertexIndices)[i] = vertex;
-			(*nearestMRDDistances)[i] = coreDistances[vertex];
+			nearestMRDNeighbors[i] = vertex;
+			otherVertexIndices[i] = vertex;
+			nearestMRDDistances[i] = coreDistances[vertex];
 			//printf("At %d coreDistances[%d] = %f\n", i, vertex, coreDistances[vertex]);
 		}
 	}
 
-	mst = new UndirectedGraph(size, *nearestMRDNeighbors, *otherVertexIndices, *nearestMRDDistances);
-	//mst->print();
+	mst = UndirectedGraph(size, nearestMRDNeighbors, otherVertexIndices, nearestMRDDistances);
+	//mst.print();
 
 }
 
@@ -568,7 +552,6 @@ void hdbscan::calculateOutlierScores(vector<float>* pointNoiseLevels,
 	}*/
 
 	for (int i = 0; i < numPoints; i++) {
-		printf("hey %d\n", pointLastClusters->size());
 
 		int tmp = (*pointLastClusters)[i];
 
@@ -585,8 +568,7 @@ void hdbscan::calculateOutlierScores(vector<float>* pointNoiseLevels,
 			score = 1 - (epsilon_max / epsilon);
 		}
 		//printf("3333333333 %d of %d outlierScores size %d\n", i, numPoints, outlierScores->size(), coreDistances);
-		outlierScores.push_back(
-				new OutlierScore(score, coreDistances[i], i));
+		outlierScores.push_back(OutlierScore(score, coreDistances[i], i));
 		//printf("Finishes createing and pushing outlier\n");
 	}
 	//printf("outlierScores for loop complete\n");
@@ -747,27 +729,25 @@ vector<Cluster*>& hdbscan::getClusters() {
  * @return The cluster tree
  * @throws IOException If any errors occur opening or writing to the files
  */
-void hdbscan::computeHierarchyAndClusterTree(bool compactHierarchy,
-		vector<float>* pointNoiseLevels, vector<int>* pointLastClusters) {
+void hdbscan::computeHierarchyAndClusterTree(bool compactHierarchy, vector<float>* pointNoiseLevels, vector<int>* pointLastClusters) {
 
-	//mst->print();
+	//mst.print();
 	int lineCount = 0; // Indicates the number of lines written into
 								// hierarchyFile.
 
 	//The current edge being removed from the MST:
-	int currentEdgeIndex = mst->getNumEdges() - 1;
+	int currentEdgeIndex = mst.getNumEdges() - 1;
 	//hierarchy = new map<long, vector<int>*>();
 
 	int nextClusterLabel = 2;
 	bool nextLevelSignificant = true;
-	//clusters = new vector<Cluster*>();
 	//The previous and current cluster numbers of each point in the data set:
-	vector<int> previousClusterLabels(mst->getNumVertices(), 1);
-	vector<int> currentClusterLabels(mst->getNumVertices(), 1);
+	vector<int> previousClusterLabels(mst.getNumVertices(), 1);
+	vector<int> currentClusterLabels(mst.getNumVertices(), 1);
 
 	//A list of clusters in the cluster tree, with the 0th cluster (noise) null:
 	clusters.push_back(NULL);
-	clusters.push_back(new Cluster(1, NULL, NAN, mst->getNumVertices()));
+	clusters.push_back(new Cluster(1, NULL, NAN, mst.getNumVertices()));
 
 
 	if (!constraints.empty()) {//Calculate number of constraints satisfied for cluster 1:
@@ -780,20 +760,20 @@ void hdbscan::computeHierarchyAndClusterTree(bool compactHierarchy,
 	//
 
 	//Sets for the clusters and vertices that are affected by the edge(s) being removed:
-	set<int> affectedClusterLabels;// = new set<int>();
-	set<int> affectedVertices;// = new set<int>();
+	set<int> affectedClusterLabels;
+	set<int> affectedVertices;
 
 	while (currentEdgeIndex >= 0) {
 
-		float currentEdgeWeight = mst->getEdgeWeightAtIndex(currentEdgeIndex);
-		vector<Cluster*> newClusters;// = new vector<Cluster*>();
+		float currentEdgeWeight = mst.getEdgeWeightAtIndex(currentEdgeIndex);
+		vector<Cluster*> newClusters;
 		//Remove all edges tied with the current edge weight, and store relevant clusters and vertices:
-		while (currentEdgeIndex >= 0 && mst->getEdgeWeightAtIndex(currentEdgeIndex) == currentEdgeWeight) {
+		while (currentEdgeIndex >= 0 && mst.getEdgeWeightAtIndex(currentEdgeIndex) == currentEdgeWeight) {
 
-			int firstVertex = mst->getFirstVertexAtIndex(currentEdgeIndex);
-			int secondVertex = mst->getSecondVertexAtIndex(currentEdgeIndex);
+			int firstVertex = mst.getFirstVertexAtIndex(currentEdgeIndex);
+			int secondVertex = mst.getSecondVertexAtIndex(currentEdgeIndex);
 
-			mst->removeEdge(firstVertex, secondVertex);
+			mst.removeEdge(firstVertex, secondVertex);
 			if (currentClusterLabels[firstVertex] == 0) {
 				currentEdgeIndex--;
 				continue;
@@ -858,7 +838,7 @@ void hdbscan::computeHierarchyAndClusterTree(bool compactHierarchy,
 					int vertexToExplore = *(unexploredSubClusterPoints.begin());
 					unexploredSubClusterPoints.erase(
 							unexploredSubClusterPoints.begin());
-					vector<int>* v = mst->getEdgeListForVertex(vertexToExplore);
+					vector<int>* v = mst.getEdgeListForVertex(vertexToExplore);
 					for (vector<int>::iterator itr = v->begin();
 							itr != v->end(); ++itr) {
 						int neighbor = *itr;
@@ -943,7 +923,7 @@ void hdbscan::computeHierarchyAndClusterTree(bool compactHierarchy,
 					int vertexToExplore = *it;
 					unexploredFirstChildClusterPoints.erase(
 							unexploredFirstChildClusterPoints.begin());
-					vector<int>* v = mst->getEdgeListForVertex(vertexToExplore);
+					vector<int>* v = mst.getEdgeListForVertex(vertexToExplore);
 
 					for (vector<int>::iterator itr = v->begin();
 							itr != v->end(); ++itr) {
@@ -967,18 +947,11 @@ void hdbscan::computeHierarchyAndClusterTree(bool compactHierarchy,
 			}
 		}
 
-		/*if (newClusters->empty()) {
-			printf("compactHierarchy: %d, nextLevelSignificant: %d, newClusters: %d\n ", compactHierarchy, nextLevelSignificant, newClusters);
-		} else {
-			printf("compactHierarchy: %d, nextLevelSignificant: %d, newClusters.size(): %ld\n", compactHierarchy, nextLevelSignificant, newClusters->size());
-		}*/
-
 		if (!compactHierarchy || nextLevelSignificant || !newClusters.empty()) {
 
 			lineCount++;
 
-			//TODO: Clean the memory allocation with new
-			hierarchy.insert(pair<long, vector<int>*>(lineCount, new vector<int>(previousClusterLabels.begin(), previousClusterLabels.end())));
+			hierarchy.insert(pair<long, vector<int>>(lineCount, vector<int>(previousClusterLabels.begin(), previousClusterLabels.end())));
 		}
 
 		// Assign file offsets and calculate the number of constraints
@@ -1007,17 +980,16 @@ void hdbscan::computeHierarchyAndClusterTree(bool compactHierarchy,
 
 	}
 
-	// TODO: have to figure out how to clean this
-	vector<int>* labels = new vector<int>();
+	vector<int> labels;
 	// Write out the final level of the hierarchy (all points noise):
 	for (uint i = 0; i < previousClusterLabels.size() - 1; i++) {
-		labels->push_back(0);
+		labels.push_back(0);
 	}
-	labels->push_back(0);
-	hierarchy.insert(pair<long, vector<int>*>(0, labels));
+	labels.push_back(0);
+	hierarchy.insert(pair<long, vector<int>>(0, labels));
 	lineCount++;
 
-	//mst->print();
+	//mst.print();
 
 }
 uint getDatasetSize(int rows, int cols, bool rowwise){
@@ -1044,7 +1016,6 @@ void hdbscan::run(double* dataset, int size){
 }
 
 void hdbscan::run(double* dataset, int rows, int cols, bool rowwise){
-    cout << "hdbscan::run(double* dataset, int rows, int cols, bool rowwise) " << rowwise << endl;
     numPoints = getDatasetSize(rows, cols, rowwise);
     this->run();
 }
@@ -1056,77 +1027,14 @@ void hdbscan::run(Mat& dataset){
 }
 
 void hdbscan::run() {
-	int start = clock();
-	/*if (calcDistances) {
-		calculateCoreDistances(dataSet, rows, cols);
-	}*/
-	int stop = clock();
 
-	//cout << "calculateCoreDistances time : " << (stop-start)/double(CLOCKS_PER_SEC)*1000 << endl;
-
-	start = clock();
-	//Calculate minimum spanning tree:
-	//cout << "construct MST" << endl;
 	constructMST();
-	//cout << "constructed MST" << endl;
-	stop = clock();
-
-	//cout << "constructMST time : " << (stop-start)/double(CLOCKS_PER_SEC)*1000 << endl;
-
-	start = clock();
-	//cout << "quicksortByEdgeWeight" << endl;
-	mst->quicksortByEdgeWeight();
-	//cout << "quicksortByEdgeWeight done" << endl;
-	stop = clock();
-
-	//cout << "quicksortByEdgeWeight time : " << (stop-start)/double(CLOCKS_PER_SEC)*1000 << endl;
-
-	start = clock();
-
+	mst.quicksortByEdgeWeight();
 	vector<float> pointNoiseLevels (numPoints);
 	vector<int> pointLastClusters(numPoints);
-	//Compute hierarchy and cluster tree:
-
-	start = clock();
-	//cout << "computeHierarchyAndClusterTree" << endl;
 	computeHierarchyAndClusterTree(false, &pointNoiseLevels, &pointLastClusters);
-	//cout << "computeHierarchyAndClusterTree done" << endl;
-	//Remove references to unneeded objects:
-	mst = NULL;
-	//Propagate clusters:
-	stop = clock();
-
-	//cout << "computeHierarchyAndClusterTree time : " << (stop-start)/double(CLOCKS_PER_SEC)*1000 << endl;
-
-	start = clock();
-	//cout << "infiniteStability" << endl;
 	bool infiniteStability = propagateTree();
-	//cout << "infiniteStability done" << endl;
-
-	stop = clock();
-
-	//cout << "propagateTree time : " << (stop-start)/double(CLOCKS_PER_SEC)*1000 << endl;
-
-	start = clock();
-	//Compute final flat partitioning:
-	//cout << "findProminentClusters" << endl;
 	findProminentClusters(infiniteStability);
-	//cout << "findProminentClusters done" << endl;
-	stop = clock();
-
-	//cout << "findProminentClusters time : " << (stop-start)/double(CLOCKS_PER_SEC)*1000 << endl;
-
-	start = clock();
-	//Compute outlier scores for each point:
-	//cout << "calculateOutlierScores" << endl;
-
-	stop = clock();
-
-	//cout << "calculateOutlierScores time : " << (stop-start)/double(CLOCKS_PER_SEC)*1000 << endl;
-
-	start = clock();;
-
-	//cout << endl;
 }
 
 void hdbscan::findProminentClusters(bool infiniteStability){
@@ -1157,8 +1065,6 @@ vector<int> hdbscan::findProminentClusters(bool infiniteStability, vector<Cluste
 			if (significant.find(cluster->getOffset()) == significant.end()) {
 				clusterList = new vector<int>();
 				significant.insert(pair<long, vector<int> >(cluster->getOffset(), *clusterList));
-				//printf("inserting into significant");
-				//clusterStabilities.insert(pair<int, float>(cluster->getLabel(), cluster->getStability()));
 			}
 
 			clusterList->push_back(cluster->getLabel());
@@ -1171,16 +1077,15 @@ vector<int> hdbscan::findProminentClusters(bool infiniteStability, vector<Cluste
 		significant.erase(significant.begin());
 		vector<int> clusterList = p.second;
 		long offset = p.first;
-		vector<int>* hpSecond = hierarchy[offset+1];
+		vector<int>& hpSecond = hierarchy[offset+1];
 
-		for(uint i = 0; i < hpSecond->size(); i++){
-			int label = (*hpSecond)[i];
+		for(uint i = 0; i < hpSecond.size(); i++){
+			int label = hpSecond[i];
 			vector<int>::iterator it = find(clusterList.begin(), clusterList.end(), label);
 			if(it != clusterList.end()){
 				labels[i] = label;
 
 			}
-
 		}
 	}
 

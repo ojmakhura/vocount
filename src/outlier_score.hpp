@@ -36,8 +36,8 @@ public:
 
 	// ------------------------------ PUBLIC METHODS ------------------------------
 
-	bool operator<(OutlierScore* other);
-	int compareTO(OutlierScore* other);
+	bool operator<(const OutlierScore& other);
+	int compareTO(const OutlierScore& other);
 
 	// ------------------------------ GETTERS & SETTERS ------------------------------
 

@@ -60,6 +60,7 @@ typedef struct FRAMED{
 	graph roiStructure;												/// structure of the
 	vector<graph> objStructures;
 	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
+	bool hasRoi = false;
 } framed;
 
 typedef struct VOCOUNT{
@@ -89,8 +90,8 @@ Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour, int type);
 
 void maintaintHistory(vocount& voc, framed& f);
 set<int32_t> getIgnoreSegments(Rect roi, Mat segments);
-void mapKeyPoints(vocount& vcount, framed& f, hdbscan& scan, int ogsize);
-void getCount(vocount& vcount, framed& f, hdbscan& scan, int ogsize);
+void mapKeyPoints(framed& f, hdbscan& scan, int ogsize);
+void getCount(framed& f, hdbscan& scan, int ogsize);
 void runSegmentation(vocount& vcount, framed& f, Ptr<GraphSegmentation> graphSegmenter, Ptr<DenseOpticalFlow> flowAlgorithm);
 void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out);
 uint getDataset(vocount& vcount, framed& f);
@@ -100,11 +101,11 @@ void printStats(String folder, map<int32_t, vector<int32_t> > stats);
 void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstimates);
 void matchByBruteForce(vocount& vcount, framed& f);
 vector<KeyPoint> getAllMatchedKeypoints(framed& f);
-void findROIFeature(vocount& vcount, framed& f);
+void findROIFeature(framed& f);
 bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
 void printData(vocount& vcount, framed& f);
 void boxStructure(framed& f);
 void separateClusterPoints(framed& f);
 vector<Point2f> reduceDescriptorDimensions(Mat descriptors);
-void splitROIPoints(framed& f, hdbscan& scan);
+void splitROIPoints(framed& f);
 #endif /* PROCESS_FRAME_HPP_ */

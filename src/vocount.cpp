@@ -122,7 +122,8 @@ int main(int argc, char** argv) {
 
 		if (!f.descriptors.empty()) {
 			// Create clustering dataset
-			findROIFeature(vcount, f);
+			f.hasRoi = vcount.roiExtracted;
+			findROIFeature(f);
 			getDataset(vcount, f);// f.descriptors.clone();
 			hdbscan scan(f.dataset, _EUCLIDEAN, vcount.step*6, vcount.step*6);
 			scan.run();
@@ -130,20 +131,19 @@ int main(int argc, char** argv) {
 			// Only labels from the first n indices where n is the number of features found in f.frame
 			f.labels.insert(f.labels.begin(), scan.getClusterLabels().begin(), scan.getClusterLabels().begin()+f.descriptors.rows);
 
-			mapKeyPoints(vcount, f, scan, f.ogsize);
+			mapKeyPoints(f, scan, f.ogsize);
 			//drawKeyPoints(frame, f.keypoints, Scalar(0, 0, 255), -1);
 			//vector<KeyPoint> allPts = getAllMatchedKeypoints(f);
 
 			//f.img_allkps = drawKeyPoints(frame, allPts, Scalar(0, 0, 255), -1);
-			getCount(vcount, f, scan, f.ogsize);
+			getCount(f, scan, f.ogsize);
 			boxStructure(f);
-			splitROIPoints(f, scan);
+			splitROIPoints(f);
 
 			cout << "Cluster " << f.largest << " is the largest" << endl;
-			printf("f.descriptors.rows is %d and label size is %d\n", f.descriptors.rows,
-					scan.getClusterLabels().size());
+			printf("f.descriptors.rows is %d and label size is %u\n", f.descriptors.rows, scan.getClusterLabels().size());
 
-			printf("f.keyPointImages.size() = %d\n", f.keyPointImages.size());
+			printf("f.keyPointImages.size() = %u\n", f.keyPointImages.size());
 			printData(vcount, f);
 		}
 

@@ -72,8 +72,8 @@ public:
 	 * @param verticesB An array of vertices corresponding to the array of edges
 	 * @param edgeWeights An array of edges corresponding to the arrays of vertices
 	 */
-	UndirectedGraph(int numVertices, vector<int>& verticesA,
-			vector<int>& verticesB, vector<float>& edgeWeights);
+	UndirectedGraph(int numVertices, vector<int> verticesA, vector<int> verticesB, vector<float> edgeWeights);
+	UndirectedGraph();
 
 	// ------------------------------ PUBLIC METHODS ------------------------------
 
