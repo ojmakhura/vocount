@@ -1165,17 +1165,6 @@ vector<int> hdbscan::findProminentClusters(bool infiniteStability, vector<Cluste
 
 		}
 	}
-	/*cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << endl;
-	printf("clusters size: %d and significant size: %d\n\n[", clusters.size(), significant.size());
-
-	for(map<long, vector<int>>::iterator it = significant.begin(); it != significant.end(); ++it){
-		printf("Siginificant: %l --> %lu\n", it->first, it->second.size());
-		for(uint x = 0; x < it->second.size(); x++){
-
-		}
-	}
-
-	cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << endl;*/
 
 	while(!significant.empty()){
 		pair<long, vector<int> > p = *(significant.begin());
