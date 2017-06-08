@@ -181,29 +181,22 @@ vector<KeyPoint> getAllMatchedKeypoints(framed& f){
 }
 
 void c1(framed& f){
-	for (map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it) {
+	for (map<int, vector<int>>::iterator it = f.roiClusterPoints.begin();
+			it != f.roiClusterPoints.end(); ++it) {
 
-			int32_t n = f.clusterKeyPoints[it->first].size() / it->second.size();
-			f.cest.push_back(n);
-			f.total += n;
-			printf("%d has %lu and total is %lu :: Approx Num of objects: %d\n\n",
-					it->first, it->second.size(),
-					f.clusterKeyPoints[it->first].size(), n);
-			f.selectedFeatures += f.clusterKeyPoints[it->first].size();
+		int32_t n = f.clusterKeyPoints[it->first].size() / it->second.size();
+		f.cest.push_back(n);
+		f.total += n;
+		printf("%d has %lu and total is %lu :: Approx Num of objects: %d\n\n",
+				it->first, it->second.size(),
+				f.clusterKeyPoints[it->first].size(), n);
+		f.selectedFeatures += f.clusterKeyPoints[it->first].size();
 
-			if (f.clusterKeyPoints[it->first].size() > f.lsize) {
-				f.largest = it->first;
-				f.lsize = f.clusterKeyPoints[it->first].size();
-			}
-			/*Mat kimg = drawKeyPoints(f.frame, f.clusterKeyPoints[it->first],
-					Scalar(0, 0, 255), -1);
-
-			String ss = "img_keypoints-";
-			string s = to_string(f.keyPointImages.size());
-			ss += s.c_str();
-			f.keyPointImages[ss] = kimg;*/
-
+		if (f.clusterKeyPoints[it->first].size() > f.lsize) {
+			f.largest = it->first;
+			f.lsize = f.clusterKeyPoints[it->first].size();
 		}
+	}
 }
 
 void generateFinalPointClusters(framed& f){
