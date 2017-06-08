@@ -171,18 +171,67 @@ Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour, int type){
 	return x;
 }
 
-
 vector<KeyPoint> getAllMatchedKeypoints(framed& f){
 	vector<KeyPoint> kp;
 
-	for(map<int, vector<int> >::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it){
-		vector<KeyPoint> k = f.clusterKeyPoints[it->first];
-		kp.insert(kp.end(), k.begin(), k.end());
+	for(map<int, vector<KeyPoint> >::iterator it = f.finalPointClusters.begin(); it != f.finalPointClusters.end(); ++it){
+		kp.insert(kp.end(), it->second.begin(), it->second.end());
 	}
 	return kp;
 }
 
-void mapKeyPoints(framed& f, hdbscan& scan, int ogsize){
+void c1(framed& f){
+	for (map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it) {
+
+			int32_t n = f.clusterKeyPoints[it->first].size() / it->second.size();
+			f.cest.push_back(n);
+			f.total += n;
+			printf("%d has %lu and total is %lu :: Approx Num of objects: %d\n\n",
+					it->first, it->second.size(),
+					f.clusterKeyPoints[it->first].size(), n);
+			f.selectedFeatures += f.clusterKeyPoints[it->first].size();
+
+			if (f.clusterKeyPoints[it->first].size() > f.lsize) {
+				f.largest = it->first;
+				f.lsize = f.clusterKeyPoints[it->first].size();
+			}
+			/*Mat kimg = drawKeyPoints(f.frame, f.clusterKeyPoints[it->first],
+					Scalar(0, 0, 255), -1);
+
+			String ss = "img_keypoints-";
+			string s = to_string(f.keyPointImages.size());
+			ss += s.c_str();
+			f.keyPointImages[ss] = kimg;*/
+
+		}
+}
+
+void generateFinalPointClusters(framed& f){
+	framed f1;
+	map<int, int> pointsMap = splitROIPoints(f, f1);
+
+	for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it) {
+		if (it->second.size() == 1) {
+			int ptIdx = it->second[0];
+			f.finalPointClusters[ptIdx] = f.clusterKeyPoints[it->first];
+		}
+	}
+
+
+	for(map<int, vector<int>>::iterator it = f1.roiClusterPoints.begin(); it != f1.roiClusterPoints.end(); ++it) {
+
+		int nptIdx = it->second[0];
+		int optIdx = pointsMap[nptIdx];
+		f.finalPointClusters[optIdx] = f1.clusterKeyPoints[it->first];
+	}
+	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+	c1(f);
+	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+	c1(f1);
+	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+}
+
+void mapKeyPoints(framed& f){
 
 	// add the indices and keypoints using labels as the key to the map
 	for(uint i = 0; i < f.labels.size(); i++){
@@ -193,59 +242,45 @@ void mapKeyPoints(framed& f, hdbscan& scan, int ogsize){
 
 	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
 	for(vector<int>::iterator it = f.roiFeatures.begin(); it != f.roiFeatures.end(); ++it){
-		if(*it != 0){
-			int idx = f.labels[*it];
-			if(idx != 0){ // Cluster 0 represents outliers
-				f.roiClusterPoints[idx].push_back(*it);
-			}
+		int key = f.labels[*it];
+		if (key != 0) { // Cluster 0 represents outliers
+			f.roiClusterPoints[key].push_back(*it);
 		}
 	}
 
-	separateClusterPoints(f);
-
 }
+
 
 /**
  *
  */
-void getCount(framed& f, hdbscan& scan, int ogsize){
-	cout << "################################################################################" << endl;
-	cout << "                              " << f.i << endl;
-	cout << "################################################################################" << endl;
+void getCount(framed& f){
 
-	map<int, float> stabilities = scan.getClusterStabilities();
+	vector<KeyPoint> kp;
+	for(map<int, vector<KeyPoint> >::iterator it = f.finalPointClusters.begin(); it != f.finalPointClusters.end(); ++it){
+		f.cest.push_back(it->second.size());
+		f.total += it->second.size();
+		printf("Point %d has %lu objects\n", it->first, it->second.size());
+		f.selectedFeatures += it->second.size();
 
-	for (map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it) {
-
-		int32_t n = f.clusterKeyPoints[it->first].size() / it->second.size();
-		f.cest.push_back(n);
-		f.total += n;
-		printf("stability: %f --> %d has %lu and total is %lu :: Approx Num of objects: %d\n\n",
-				stabilities[it->first], it->first, it->second.size(),
-				f.clusterKeyPoints[it->first].size(), n);
-		f.selectedFeatures += f.clusterKeyPoints[it->first].size();
-
-		if (f.clusterKeyPoints[it->first].size() > f.lsize) {
+		if(it->second.size() > f.lsize){
 			f.largest = it->first;
-			f.lsize = f.clusterKeyPoints[it->first].size();
+			f.lsize = it->second.size();
 		}
-		Mat kimg = drawKeyPoints(f.frame, f.clusterKeyPoints[it->first],
-				Scalar(0, 0, 255), -1);
+
+		Mat kimg = drawKeyPoints(f.frame, it->second, Scalar(0, 0, 255), -1);
 
 		String ss = "img_keypoints-";
 		string s = to_string(f.keyPointImages.size());
 		ss += s.c_str();
 		f.keyPointImages[ss] = kimg;
-
+		kp.insert(kp.end(), it->second.begin(), it->second.end());
 	}
-	vector<KeyPoint> kp = getAllMatchedKeypoints(f);
+
 	Mat mm = drawKeyPoints(f.frame, kp, Scalar(0, 0, 255), -1);
 
 	String ss = "img_allkps";
 	f.keyPointImages[ss] = mm;
-
-
-
 }
 
 void maintaintHistory(vocount& voc, framed& f){
@@ -315,7 +350,6 @@ uint getDataset(vocount& vcount, framed& f){
 	return f.ogsize;
 }
 
-
 void printStats(String folder, map<int32_t, vector<int32_t> > stats){
 	ofstream myfile;
 	String f = folder;
@@ -338,8 +372,6 @@ void printStats(String folder, map<int32_t, vector<int32_t> > stats){
 	myfile.close();
 
 }
-
-
 
 void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstimates){
 	ofstream myfile;
@@ -414,7 +446,6 @@ void findROIFeature(framed& f){
 		}
 	}
 }
-
 
 bool processOptions(vocount& vcount, CommandLineParser& parser, VideoCapture& cap){
 
@@ -514,66 +545,20 @@ int rectExist(vector<box_structure> structures, Rect& r){
 	return -1;
 }
 
-/**
- *
- */
-void separateClusterPoints(framed& f){
-
-	for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it){
-		vector<int> clusterPts = f.clusterKeypointIdx[it->first];
-		vector<int> rcps = it->second;
-		if(it->second.size() > 1){ // only interested in splitting cluster if it has more than 1 roi point
-
-			for(size_t i = 0; i < clusterPts.size(); i++){
-				int closestPt = -1;
-				int xcptIdx;
-				double closestDis = 0;
-
-				int ptIdx = clusterPts[i];
-				for(size_t j = 0; j < rcps.size(); j++){
-					int cptIdx = rcps[j];
-
-					if(f.clusterSplitPoints[cptIdx].empty()){ // Make sure the roi point is in the vector
-						f.clusterSplitPoints[cptIdx].push_back(cptIdx);
-					}
-
-					if(ptIdx != cptIdx){
-						double dis = cv::norm(f.descriptors.row(ptIdx), f.descriptors.row(cptIdx), NORM_L1);
-						if(dis > closestDis){
-							closestDis = dis;
-							closestPt = ptIdx;
-							xcptIdx = cptIdx;
-						}
-					}
-				}
-
-				// add the point to the proper vector in the f.clusterSplitPoints
-				f.clusterSplitPoints[xcptIdx].push_back(closestPt);
-			}
-
-		} else{
-			int cptIdx = rcps[0];
-			f.clusterSplitPoints.insert(std::pair<int, vector<int>>(cptIdx, clusterPts));
-		}
-	}
-
-	printf("ended up stretching clusters from %lu to %lu sub clusters\n", f.clusterKeypointIdx.size(), f.clusterSplitPoints.size());
-}
-
 void boxStructure(framed& f){
 	box_structure mbs;
 	mbs.box = f.roi;
 
-	for(map<int, vector<int>>::iterator it = f.clusterSplitPoints.begin(); it != f.clusterSplitPoints.end(); ++it){
-		vector<int> c_points = it->second;
+	for(map<int, vector<KeyPoint>>::iterator it = f.finalPointClusters.begin(); it != f.finalPointClusters.end(); ++it){
+		vector<KeyPoint> c_points = it->second;
 		KeyPoint roi_p = f.keypoints[it->first];
 		mbs.points.push_back(roi_p);
 
 		for(uint j = 0; j < c_points.size(); j++){
-			int pointIndex = c_points[j];
+			//int pointIndex = c_points[j];
 
-			KeyPoint point = f.keypoints[pointIndex];
-			if(pointIndex != it->first){ // roi points have their own structure "mbs"
+			KeyPoint point = c_points[j];
+			if(point.pt != roi_p.pt){ // roi points have their own structure "mbs"
 				Point2f pshift;
 				pshift.x = point.pt.x - roi_p.pt.x;
 				pshift.y = point.pt.y - roi_p.pt.y;
@@ -612,56 +597,71 @@ void boxStructure(framed& f){
 	f.keyPointImages[ss] = img_bounds;
 }
 
-void splitROIPoints(framed& f){
-	for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it){
-		if(it->second.size() > 1){
-			int clusterLabel = f.labels[it->first];
-			if(clusterLabel != 0){
-				cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Re-Cluster >>>>>>>>>>>>>>>>>>>>>>>>>>" << endl;
-				cout << "Cluster labels is " << clusterLabel << endl;
+map<int, int> addDescriptors(framed& f, framed& f1, int cluster, vector<int> roipts){
 
-				vector<int> crois = f.clusterKeypointIdx[clusterLabel];
+	vector<int> crois = f.clusterKeypointIdx[cluster];
+	map<int, int> newMap;
 
-				framed f1;
-				f1.i = f.i;
-				f1.dataset = f.descriptors.row(0);
-				f1.keypoints.push_back(f.keypoints[0]);
-				f1.frame = f.frame;
-				for(uint i = 1; i < crois.size(); i++){
-					int rp = crois[i];
-					f1.dataset.push_back(f.descriptors.row(rp));
-					f1.keypoints.push_back(f.keypoints[rp]);
-					//cout << i << " " << rp << endl;
-					for(uint j = 0; j < it->second.size(); j++){
-						if(it->second[j] == rp){
-							f1.roiFeatures.push_back(i);
-							if(f1.roiDesc.empty()){
-								f1.roiDesc = f.descriptors.row(rp);
-							} else{
-								f1.roiDesc.push_back(f.descriptors.row(rp));
-							}
-						}
-					}
+	for(uint i = 0; i < crois.size(); i++){
+		int rp = crois[i];
+
+		f1.dataset.push_back(f.descriptors.row(rp));
+		f1.keypoints.push_back(f.keypoints[rp]);
+		newMap[f1.dataset.rows-1] = rp;
+
+		for(uint j = 0; j < roipts.size(); j++){
+			if(roipts[j] == rp){
+				f1.roiFeatures.push_back(i);
+				if(f1.roiDesc.empty()){
+					f1.roiDesc = f.descriptors.row(rp);
+				} else{
+					f1.roiDesc.push_back(f.descriptors.row(rp));
 				}
-
-				f1.dataset = f1.dataset.clone();
-				f1.descriptors = f1.dataset.clone();
-				f1.ogsize = f1.dataset.rows;
-				f1.hasRoi = f.hasRoi;
-				printf("f1 has %lu roi points and %d dataset length\n", f1.roiFeatures.size(), f1.descriptors.rows);
-				hdbscan sc(f1.dataset, _EUCLIDEAN, 3, 3);
-				sc.run();
-				f1.labels = sc.getClusterLabels();
-				mapKeyPoints(f1, sc, f1.ogsize);
-				getCount(f1, sc, f1.ogsize);
-				boxStructure(f1);
-				cout << "Cluster " << f1.largest << " is the largest" << endl;
-				printf("f1.descriptors.rows is %d and label size is %lu\n", f1.descriptors.rows, sc.getClusterLabels().size());
-				printf("f1.keyPointImages.size() = %lu\n", f1.keyPointImages.size());
-				cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << endl;
 			}
 		}
 	}
+
+	return newMap;
+}
+
+map<int, int> splitROIPoints(framed& f, framed& f1){
+
+	map<int, int> fToF1;
+	f1.i = f.i;
+	f1.frame = f.frame;
+	f1.hasRoi = f.hasRoi;
+
+	bool run = false;
+	for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it){
+		int clusterLabel = f.labels[it->first];
+		if (it->second.size() > 1) {
+
+			if(clusterLabel != 0){
+				run = true;
+			}
+
+			map<int, int> fm = addDescriptors(f, f1, clusterLabel, it->second);
+
+			fToF1.insert(fm.begin(), fm.end());
+
+		}
+	}
+
+	if(run){
+		f1.dataset = f1.dataset.clone();
+		f1.descriptors = f1.dataset.clone();
+		f1.ogsize = f1.dataset.rows;
+		f1.hasRoi = f.hasRoi;
+
+		hdbscan sc(f1.dataset, _EUCLIDEAN, 3, 3);
+		sc.run();
+		f1.labels = sc.getClusterLabels();
+		mapKeyPoints(f1);
+
+		return fToF1;
+	}
+
+	return map<int, int>();
 }
 
 vector<Point2f> reduceDescriptorDimensions(Mat descriptors){

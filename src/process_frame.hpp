@@ -44,7 +44,7 @@ typedef struct FRAMED{
     map<int, vector<KeyPoint> > clusterKeyPoints;					/// maps labels to their keypoints
     map<int, vector<int> > clusterKeypointIdx; 						/// maps labels to the keypoint indices
     map<int, vector<int> > roiClusterPoints;						/// cluster labels for the region of interest mapped to the roi points in the cluster
-    map<int, vector<int> > clusterSplitPoints;						/// for clusters where there is more than one roi point in the cluster. Maps the roi point
+    map<int, vector<KeyPoint> > finalPointClusters;					/// for clusters where there is more than one roi point in the cluster. Maps the roi point
     																/// index to all closest descriptor points indices
 	vector<int32_t> odata;											/// Output data
     vector<int> labels;												/// hdbscan cluster labels
@@ -90,8 +90,8 @@ Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour, int type);
 
 void maintaintHistory(vocount& voc, framed& f);
 set<int32_t> getIgnoreSegments(Rect roi, Mat segments);
-void mapKeyPoints(framed& f, hdbscan& scan, int ogsize);
-void getCount(framed& f, hdbscan& scan, int ogsize);
+void mapKeyPoints(framed& f);
+void getCount(framed& f);
 void runSegmentation(vocount& vcount, framed& f, Ptr<GraphSegmentation> graphSegmenter, Ptr<DenseOpticalFlow> flowAlgorithm);
 void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out);
 uint getDataset(vocount& vcount, framed& f);
@@ -103,9 +103,29 @@ void matchByBruteForce(vocount& vcount, framed& f);
 vector<KeyPoint> getAllMatchedKeypoints(framed& f);
 void findROIFeature(framed& f);
 bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
+
+/***
+ *
+ */
 void printData(vocount& vcount, framed& f);
+
+/**
+ *
+ */
 void boxStructure(framed& f);
-void separateClusterPoints(framed& f);
+
+/**
+ *
+ */
+void generateFinalPointClusters(framed& f);
+
+/**
+ *
+ */
 vector<Point2f> reduceDescriptorDimensions(Mat descriptors);
-void splitROIPoints(framed& f);
+
+/**
+ *
+ */
+map<int, int> splitROIPoints(framed& f, framed& f1);
 #endif /* PROCESS_FRAME_HPP_ */

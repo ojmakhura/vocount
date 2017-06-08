@@ -15,7 +15,7 @@
 #include <opencv2/ximgproc/segmentation.hpp>
 #include <ctime>
 #include <string>
-#include "box_extractor.hpp"
+//#include "box_extractor.hpp"
 #include "process_frame.hpp"
 
 using namespace std;
@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 	ocl::setUseOpenCL(true);
 	Mat frame;
 	VideoCapture cap;
-    BoxExtractor box;
+    //BoxExtractor box;
     vocount vcount;
 
     Ptr<Feature2D> detector = SURF::create(1500);
@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
 			break;
 		} else if (c == 's' || (parser.has("s") && !vcount.roiExtracted)) { // select a roi if c has een pressed or if the program was run with -s option
 			Mat f2 = frame.clone();
-			f.roi = box.extract("Select ROI", f2);
+			f.roi = selectROI("Select ROI", f2);
 
 			//initializes the tracker
 			if (!tracker->init(frame, f.roi)) {
@@ -121,24 +121,24 @@ int main(int argc, char** argv) {
 		display("frame", frame);
 
 		if (!f.descriptors.empty()) {
+
+			cout << "################################################################################" << endl;
+			cout << "                              " << f.i << endl;
+			cout << "################################################################################" << endl;
 			// Create clustering dataset
 			f.hasRoi = vcount.roiExtracted;
 			findROIFeature(f);
 			getDataset(vcount, f);// f.descriptors.clone();
-			hdbscan scan(f.dataset, _EUCLIDEAN, vcount.step*6, vcount.step*6);
+			hdbscan scan(f.dataset, _EUCLIDEAN, vcount.step*4, vcount.step*4);
 			scan.run();
 			vector<Cluster*> clusters = scan.getClusters();
 			// Only labels from the first n indices where n is the number of features found in f.frame
 			f.labels.insert(f.labels.begin(), scan.getClusterLabels().begin(), scan.getClusterLabels().begin()+f.descriptors.rows);
 
-			mapKeyPoints(f, scan, f.ogsize);
-			//drawKeyPoints(frame, f.keypoints, Scalar(0, 0, 255), -1);
-			//vector<KeyPoint> allPts = getAllMatchedKeypoints(f);
-
-			//f.img_allkps = drawKeyPoints(frame, allPts, Scalar(0, 0, 255), -1);
-			getCount(f, scan, f.ogsize);
+			mapKeyPoints(f);
+			generateFinalPointClusters(f);
+			getCount(f);
 			boxStructure(f);
-			splitROIPoints(f);
 
 			cout << "Cluster " << f.largest << " is the largest" << endl;
 			printf("f.descriptors.rows is %d and label size is %u\n", f.descriptors.rows, scan.getClusterLabels().size());
