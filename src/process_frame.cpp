@@ -627,7 +627,7 @@ map<int, int> splitROIPoints(framed& f, framed& f1){
 	bool run = false;
 	for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it){
 		int clusterLabel = f.labels[it->first];
-		if (it->second.size() > 1) {
+		if (it->second.size() > 1){// && clusterLabel != 0) {
 
 			if(clusterLabel != 0){
 				run = true;
