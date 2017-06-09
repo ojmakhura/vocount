@@ -226,7 +226,7 @@ void generateFinalPointClusters(framed& f){
 
 void mapKeyPoints(framed& f){
 
-	// add the indices and keypoints using labels as the key to the map
+	// Map cluster labels to the indices of the points
 	for(uint i = 0; i < f.labels.size(); i++){
 		int l = f.labels[i];
 		f.clusterKeyPoints[l].push_back(f.keypoints[i]);
@@ -378,7 +378,7 @@ void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstima
 	for(map<int32_t, vector<int32_t> >::iterator it = cEstimates.begin(); it != cEstimates.end(); ++it){
 		vector<int32_t> vv = it->second;
 		size_t sz = vv.size();
-		myfile << it->first << "," << vv[sz-1] << "," << vv[sz-2] << ",";
+		myfile << it->first << "," << vv[sz-1] << "," << vv[sz-2] << "," << vv[sz-3] << ",";
 
 		for(uint i = 0; i < vv.size()-2; ++i){
 			myfile << vv[i] << ",";
@@ -442,8 +442,8 @@ void findROIFeature(framed& f){
 
 bool processOptions(vocount& vcount, CommandLineParser& parser, VideoCapture& cap){
 
-	if (parser.has("dir")) {
-		vcount.destFolder = parser.get<String>("dir");
+	if (parser.has("o")) {
+		vcount.destFolder = parser.get<String>("o");
 		vcount.print = true;
 		printf("Will print to %s\n", vcount.destFolder.c_str());
 	}
@@ -506,9 +506,9 @@ void printData(vocount& vcount, framed& f){
 		f.odata.push_back(0);
 		pair<int32_t, vector<int32_t> > pp(vcount.frameCount, f.odata);
 		vcount.stats.insert(pp);
+		f.cest.push_back(f.boxStructures.size());
 		f.cest.push_back(avg);
 		f.cest.push_back(f.total);
-		f.cest.push_back(f.boxStructures.size());
 		pair<int32_t, vector<int32_t> > cpp(vcount.frameCount, f.cest);
 		vcount.clusterEstimates.insert(cpp);
 	}
@@ -623,14 +623,17 @@ map<int, int> splitROIPoints(framed& f, framed& f1){
 	f1.i = f.i;
 	f1.frame = f.frame;
 	f1.hasRoi = f.hasRoi;
+	int n = 0;
 
 	bool run = false;
 	for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it){
-		int clusterLabel = f.labels[it->first];
+		int clusterLabel = it->first;
 		if (it->second.size() > 1){// && clusterLabel != 0) {
 
 			if(clusterLabel != 0){
 				run = true;
+			} else{
+				n++;
 			}
 
 			map<int, int> fm = addDescriptors(f, f1, clusterLabel, it->second);
@@ -638,6 +641,10 @@ map<int, int> splitROIPoints(framed& f, framed& f1){
 			fToF1.insert(fm.begin(), fm.end());
 
 		}
+	}
+
+	if(!run && n > 0){
+		run = true;
 	}
 
 	if(run){

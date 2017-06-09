@@ -33,7 +33,7 @@ static void help(){
 	printf( "This is a programming for estimating the number of objects in the video.\n"
 	        "Usage: vocount\n"
 	        "     [-v][-video]=<video>         	   	# Video file to read\n"
-	        "     [--dir=<output dir>]     		   	# the directly where to write to frame images\n"
+	        "     [-o=<output dir>]     		   	# the directly where to write to frame images\n"
 			"     [-n=<sample size>]       			# the number of frames to use for sample size\n"
 			"     [-w=<dataset width>]       		# the number of frames to use for dataset size\n"
 			"     [-s]       						# select roi from the first \n"
@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
 	Ptr<Tracker> tracker = TrackerBoosting::create();
 
 	cv::CommandLineParser parser(argc, argv,
-					"{help ||}{dir||}{n|1|}"
+					"{help ||}{o||}{n|1|}"
 					"{v||}{video||}{w|1|}{s||}"
 					"{i||}{c||}");
 
