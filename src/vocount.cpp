@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
     vocount vcount;
 
     Ptr<Feature2D> detector = SURF::create(1500);
-	Ptr<Tracker> tracker = TrackerBoosting::create();
+	Ptr<Tracker> tracker;
 
 	cv::CommandLineParser parser(argc, argv,
 					"{help ||}{o||}{n|1|}"
@@ -69,11 +69,6 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 
-	if (tracker == NULL) {
-		cout << "***Error in the instantiation of the tracker...***\n";
-		return -1;
-	}
-
     if( !cap.isOpened() ){
         printf("Could not open stream\n");
     	return -1;
@@ -86,7 +81,7 @@ int main(int argc, char** argv) {
 		bool clusterInspect = false;
 
 		f.i = vcount.frameCount;
-		f.frame = frame;
+		f.frame = frame.clone();
 
 		cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
 		detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
@@ -96,6 +91,13 @@ int main(int argc, char** argv) {
 		if (c == 'q') {
 			break;
 		} else if (c == 's' || (parser.has("s") && !vcount.roiExtracted)) { // select a roi if c has een pressed or if the program was run with -s option
+			tracker = TrackerBoosting::create();
+
+			if (tracker == NULL) {
+				cout << "***Error in the instantiation of the tracker...***\n";
+				return -1;
+			}
+
 			Mat f2 = frame.clone();
 			f.roi = selectROI("Select ROI", f2);
 
@@ -118,7 +120,7 @@ int main(int argc, char** argv) {
 			rectangle(f.frame, f.roi, value, 2, 8, 0);
 		}
 
-		display("frame", frame);
+		display("frame", f.frame);
 
 		if (!f.descriptors.empty()) {
 

@@ -180,21 +180,20 @@ vector<KeyPoint> getAllMatchedKeypoints(framed& f){
 	return kp;
 }
 
-void c1(framed& f){
-	for (map<int, vector<int>>::iterator it = f.roiClusterPoints.begin();
-			it != f.roiClusterPoints.end(); ++it) {
+void countPrint(framed& f){
+	for (map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it) {
+		if(it->first != 0){
+			int32_t n = f.clusterKeyPoints[it->first].size() / it->second.size();
+			f.cest.push_back(n);
+			f.total += n;
+			printf("%d has %lu and total is %lu :: Approx Num of objects: %d\n\n", it->first, it->second.size(),
+					f.clusterKeyPoints[it->first].size(), n);
+			f.selectedFeatures += f.clusterKeyPoints[it->first].size();
 
-		int32_t n = f.clusterKeyPoints[it->first].size() / it->second.size();
-		f.cest.push_back(n);
-		f.total += n;
-		printf("%d has %lu and total is %lu :: Approx Num of objects: %d\n\n",
-				it->first, it->second.size(),
-				f.clusterKeyPoints[it->first].size(), n);
-		f.selectedFeatures += f.clusterKeyPoints[it->first].size();
-
-		if (f.clusterKeyPoints[it->first].size() > f.lsize) {
-			f.largest = it->first;
-			f.lsize = f.clusterKeyPoints[it->first].size();
+			if (f.clusterKeyPoints[it->first].size() > f.lsize) {
+				f.largest = it->first;
+				f.lsize = f.clusterKeyPoints[it->first].size();
+			}
 		}
 	}
 }
@@ -204,23 +203,41 @@ void generateFinalPointClusters(framed& f){
 	map<int, int> pointsMap = splitROIPoints(f, f1);
 
 	for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it) {
-		if (it->second.size() == 1) {
+		if (it->first != 0 && it->second.size() == 1) {
 			int ptIdx = it->second[0];
 			f.finalPointClusters[ptIdx] = f.clusterKeyPoints[it->first];
 		}
 	}
 
-
 	for(map<int, vector<int>>::iterator it = f1.roiClusterPoints.begin(); it != f1.roiClusterPoints.end(); ++it) {
+		if(it->first != 0 && it->second.size() == 1){
+			int nptIdx = it->second[0];
+			int optIdx = pointsMap[nptIdx];
+			f.finalPointClusters[optIdx] = f1.clusterKeyPoints[it->first];
+		}
+	}
 
-		int nptIdx = it->second[0];
-		int optIdx = pointsMap[nptIdx];
-		f.finalPointClusters[optIdx] = f1.clusterKeyPoints[it->first];
+	if(f.finalPointClusters.size() == 0){
+
+		for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it) {
+			if (it->first != 0) {
+				int ptIdx = it->second[0];
+				f.finalPointClusters[ptIdx] = f.clusterKeyPoints[it->first];
+			}
+		}
+
+		for(map<int, vector<int>>::iterator it = f1.roiClusterPoints.begin(); it != f1.roiClusterPoints.end(); ++it) {
+			if(it->first != 0){
+				int nptIdx = it->second[0];
+				int optIdx = pointsMap[nptIdx];
+				f.finalPointClusters[optIdx] = f1.clusterKeyPoints[it->first];
+			}
+		}
 	}
 	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-	c1(f);
+	countPrint(f);
 	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-	c1(f1);
+	countPrint(f1);
 	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 }
 
@@ -236,10 +253,12 @@ void mapKeyPoints(framed& f){
 	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
 	for(vector<int>::iterator it = f.roiFeatures.begin(); it != f.roiFeatures.end(); ++it){
 		int key = f.labels[*it];
-		if (key != 0) { // Cluster 0 represents outliers
-			f.roiClusterPoints[key].push_back(*it);
-		}
+		f.roiClusterPoints[key].push_back(*it);
 	}
+
+	/*for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it) {
+		cout << "mapKeyPoints(framed& f) roiClusterPoints " << it->first << " it->second.size() " << it->second.size() << endl;
+	}*/
 
 }
 
@@ -623,28 +642,28 @@ map<int, int> splitROIPoints(framed& f, framed& f1){
 	f1.i = f.i;
 	f1.frame = f.frame;
 	f1.hasRoi = f.hasRoi;
-	int n = 0;
 
 	bool run = false;
 	for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it){
-		int clusterLabel = it->first;
-		if (it->second.size() > 1){// && clusterLabel != 0) {
+		if (it->second.size() > 1 && it->first != 0) {
 
-			if(clusterLabel != 0){
-				run = true;
-			} else{
-				n++;
-			}
-
-			map<int, int> fm = addDescriptors(f, f1, clusterLabel, it->second);
-
+			run = true;
+			map<int, int> fm = addDescriptors(f, f1, it->first, it->second);
 			fToF1.insert(fm.begin(), fm.end());
-
 		}
 	}
 
-	if(!run && n > 0){
+	cout << "f.roiClusterPoints[0].size() " << f.roiClusterPoints[0].size() << endl;
+	/**
+	 * If there code above did not need reclustering, we check if the noise cluster has
+	 * more roi features, in which case we add it to the reclustering data.
+	 */
+	if(!run && f.roiClusterPoints[0].size() > 0 && f1.dataset.rows == 0){
+
 		run = true;
+		map<int, int> fm = addDescriptors(f, f1, 0, f.roiClusterPoints[0]);
+
+		fToF1.insert(fm.begin(), fm.end());
 	}
 
 	if(run){
@@ -653,7 +672,7 @@ map<int, int> splitROIPoints(framed& f, framed& f1){
 		f1.ogsize = f1.dataset.rows;
 		f1.hasRoi = f.hasRoi;
 
-		hdbscan sc(f1.dataset, _EUCLIDEAN, 3, 3);
+		hdbscan sc(f1.dataset, _EUCLIDEAN, 4, 4);
 		sc.run();
 		f1.labels = sc.getClusterLabels();
 		mapKeyPoints(f1);
