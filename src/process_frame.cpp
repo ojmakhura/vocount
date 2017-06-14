@@ -8,6 +8,9 @@
 #include "process_frame.hpp"
 #include <fstream>
 #include <opencv/cv.hpp>
+#include <dirent.h>
+
+using namespace std;
 
 void display(char const* screen, const InputArray& m) {
 	if (!m.empty()) {
@@ -351,12 +354,9 @@ uint getDataset(vocount& vcount, framed& f){
 				dataset.push_back(fx.descriptors);
 			}
 		}
-		f.ogsize = dataset.rows;
 
-		for(int i = 1; i < vcount.rsize; ++i){
-
-		}
 	}
+	f.ogsize = dataset.rows;
 
 	f.dataset = dataset;
 	return f.ogsize;
@@ -522,7 +522,14 @@ void printData(vocount& vcount, framed& f){
 		int32_t avg = f.total / f.keyPointImages.size();
 		f.odata.push_back(avg);
 		f.odata.push_back(f.boxStructures.size());
-		f.odata.push_back(0);
+
+		map<int, int>::iterator it = vcount.truth.find(f.i);
+
+		if(it == vcount.truth.end()){
+			f.odata.push_back(0);
+		} else{
+			f.odata.push_back(it->second);
+		}
 		pair<int32_t, vector<int32_t> > pp(vcount.frameCount, f.odata);
 		vcount.stats.insert(pp);
 		f.cest.push_back(f.boxStructures.size());
@@ -701,4 +708,32 @@ vector<Point2f> reduceDescriptorDimensions(Mat descriptors){
 	}
 
 	return points;
+}
+
+map<int, int> getFrameTruth(String truthFolder){
+	map<int, int> trueCount;
+	DIR*     dir;
+	    dirent*  pdir;
+
+	    dir = opendir(truthFolder.c_str());     // open current directory
+
+	    while (pdir = readdir(dir)) {
+	        String s = pdir->d_name;
+	        if(s != "." && s != ".."){
+	            String full = truthFolder + "/";
+	            full = full + pdir->d_name;
+	            Mat image = imread(full, CV_LOAD_IMAGE_GRAYSCALE);
+				threshold(image, image, 200, 255, THRESH_BINARY);
+				Mat labels;
+				connectedComponents(image, labels, 8, CV_16U);
+				double min, max;
+				cv::minMaxLoc(labels, &min, &max);
+
+				char* pch = strtok (pdir->d_name," ");
+				int fnum = atoi(pch);
+				trueCount[fnum] = int(max);
+	        }
+	    }
+
+	return trueCount;
 }

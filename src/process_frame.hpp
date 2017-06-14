@@ -73,6 +73,7 @@ typedef struct VOCOUNT{
     map<int32_t, vector<int32_t> > stats;
     map<int32_t, vector<int32_t> > clusterEstimates;
 	vector<framed> frameHistory;
+    map<int, int> truth;
 } vocount;
 
 
@@ -128,4 +129,9 @@ vector<Point2f> reduceDescriptorDimensions(Mat descriptors);
  *
  */
 map<int, int> splitROIPoints(framed& f, framed& f1);
+
+/**
+ * Get the true count of objects from the given folder. The
+ */
+map<int, int> getFrameTruth(String truthFolder);
 #endif /* PROCESS_FRAME_HPP_ */

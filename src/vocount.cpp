@@ -36,6 +36,7 @@ static void help(){
 	        "     [-o=<output dir>]     		   	# the directly where to write to frame images\n"
 			"     [-n=<sample size>]       			# the number of frames to use for sample size\n"
 			"     [-w=<dataset width>]       		# the number of frames to use for dataset size\n"
+			"     [-t=<truth count dir>]			# The folder that contains binary images for each frame in the video with objects tagged \n"
 			"     [-s]       						# select roi from the first \n"
 			"     [-i]       						# interactive results\n"
 			"     [-c]       						# cluster analysis method \n"
@@ -56,12 +57,16 @@ int main(int argc, char** argv) {
 	cv::CommandLineParser parser(argc, argv,
 					"{help ||}{o||}{n|1|}"
 					"{v||}{video||}{w|1|}{s||}"
-					"{i||}{c||}");
+					"{i||}{c||}{t||}");
 
 
 	if (parser.has("help")) {
 		help();
 		return 0;
+	}
+
+	if(parser.has("t")){
+		vcount.truth = getFrameTruth(parser.get<String>("t"));
 	}
 
 	if(!processOptions(vcount, parser, cap)){
