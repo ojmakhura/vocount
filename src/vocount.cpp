@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
 			tracker->update(f.frame, f.roi);
 			RNG rng(12345);
 			Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));
-			rectangle(f.frame, f.roi, value, 2, 8, 0);
+			rectangle(frame, f.roi, value, 2, 8, 0);
 		}
 
 		display("frame", f.frame);

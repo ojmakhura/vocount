@@ -87,11 +87,9 @@ Mat getSegmentImage(Mat& gs, map<uint, vector<Point> >& points){
 }
 
 void printImage(String folder, int idx, String name, Mat img) {
-	//string folder = "/home/ojmakh/programming/phd/data/";
 	stringstream sstm;
 
 	sstm << folder.c_str() << "/" << idx << " " << name.c_str() << ".jpg";
-	//cout << "printing " << sstm.str() << endl;
 	imwrite(sstm.str(), img);
 }
 
