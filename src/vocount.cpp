@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
     //BoxExtractor box;
     vocount vcount;
 
-    Ptr<Feature2D> detector = SURF::create(1500);
+    Ptr<Feature2D> detector = SURF::create(500);
 	Ptr<Tracker> tracker;
 
 	cv::CommandLineParser parser(argc, argv,
@@ -122,10 +122,10 @@ int main(int argc, char** argv) {
 			tracker->update(f.frame, f.roi);
 			RNG rng(12345);
 			Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));
-			rectangle(f.frame, f.roi, value, 2, 8, 0);
+			rectangle(frame, f.roi, value, 2, 8, 0);
 		}
 
-		display("frame", f.frame);
+		display("frame", frame);
 
 		if (!f.descriptors.empty()) {
 
@@ -136,8 +136,8 @@ int main(int argc, char** argv) {
 			f.hasRoi = vcount.roiExtracted;
 			findROIFeature(f);
 			getDataset(vcount, f);// f.descriptors.clone();
-			hdbscan scan(f.dataset, _EUCLIDEAN, vcount.step*4, vcount.step*4);
-			scan.run();
+			hdbscan<float> scan(_EUCLIDEAN, vcount.step*3, vcount.step*3);
+			scan.run(f.dataset.ptr<float>(), f.dataset.rows, f.dataset.cols, true);
 			vector<Cluster*> clusters = scan.getClusters();
 			// Only labels from the first n indices where n is the number of features found in f.frame
 			f.labels.insert(f.labels.begin(), scan.getClusterLabels().begin(), scan.getClusterLabels().begin()+f.descriptors.rows);
