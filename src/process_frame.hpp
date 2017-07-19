@@ -134,4 +134,9 @@ map<int, int> splitROIPoints(framed& f, framed& f1);
  * Get the true count of objects from the given folder. The
  */
 map<int, int> getFrameTruth(String truthFolder);
+
+/**
+ *
+ */
+Mat getDistanceDataset(vector<int>roiIdx, Mat descriptors);
 #endif /* PROCESS_FRAME_HPP_ */

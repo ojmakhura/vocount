@@ -735,3 +735,60 @@ map<int, int> getFrameTruth(String truthFolder){
 
 	return trueCount;
 }
+
+
+/**
+ *
+ */
+Mat getDistanceDataset(Mat descriptors, Mat roiDesc){
+	Mat dset(descriptors.rows, roiDesc.rows, CV_32FC1);
+
+	float* data = dset.ptr<float>(0);
+
+#ifdef USE_OPENMP
+#pragma omp for shared(data)
+#endif
+	for (size_t i = 0; i < descriptors.rows; ++i) {
+		Mat row = descriptors.row(i);
+		int x = i * 3;
+
+		for (size_t j = 0; j < roiDesc.rows; ++j) {
+			Mat d = roiDesc.row(j);
+			float distance = norm(row, d);
+#ifdef USE_OPENMP
+#pragma omp barrier
+#endif
+			data[x + j] = distance;
+		}
+	}
+
+	return dset;
+}
+
+/**
+ *
+ */
+Mat getDistanceDataset(Mat descriptors, vector<int> roiIdx){
+	Mat dset(descriptors.rows, roiIdx.size(), CV_32FC1);
+
+	float* data = dset.ptr<float>(0);
+
+#ifdef USE_OPENMP
+#pragma omp for shared(data)
+#endif
+	for (size_t i = 0; i < descriptors.rows; ++i) {
+		Mat row = descriptors.row(i);
+		int x = i * 3;
+
+		for (size_t j = 0; j < roiIdx.size(); ++j) {
+			Mat d = descriptors.row(roiIdx[j]);
+			float distance = norm(row, d);
+#ifdef USE_OPENMP
+#pragma omp barrier
+#endif
+			data[x + j] = distance;
+		}
+	}
+
+	return dset;
+}
