@@ -24,7 +24,7 @@ private:
 	int numVertices;
 	vector<int> verticesA;
 	vector<int> verticesB;
-	vector<float> edgeWeights;
+	vector<double> edgeWeights;
 	vector<vector<int> > edges;
 
 	/**
@@ -72,7 +72,7 @@ public:
 	 * @param verticesB An array of vertices corresponding to the array of edges
 	 * @param edgeWeights An array of edges corresponding to the arrays of vertices
 	 */
-	UndirectedGraph(int numVertices, vector<int> verticesA, vector<int> verticesB, vector<float> edgeWeights);
+	UndirectedGraph(int numVertices, vector<int> verticesA, vector<int> verticesB, vector<double> edgeWeights);
 	UndirectedGraph();
 
 	// ------------------------------ PUBLIC METHODS ------------------------------
@@ -95,7 +95,7 @@ public:
 
 	int getSecondVertexAtIndex(int index);
 
-	float getEdgeWeightAtIndex(int index);
+	double getEdgeWeightAtIndex(int index);
 
 	vector<int>* getEdgeListForVertex(int vertex);
 	/**

@@ -44,7 +44,7 @@ UndirectedGraph::~UndirectedGraph() {
  * @param edgeWeights An array of edges corresponding to the arrays of vertices
  */
 UndirectedGraph::UndirectedGraph(int numVertices, vector<int> verticesA,
-		vector<int> verticesB, vector<float> edgeWeights) {
+		vector<int> verticesB, vector<double> edgeWeights) {
 	this->numVertices = numVertices;
 	this->verticesA = verticesA;
 	this->verticesB = verticesB;
@@ -224,7 +224,7 @@ int UndirectedGraph::getSecondVertexAtIndex(int index) {
 	return this->verticesB[index];
 }
 
-float UndirectedGraph::getEdgeWeightAtIndex(int index) {
+double UndirectedGraph::getEdgeWeightAtIndex(int index) {
 	return this->edgeWeights[index];
 }
 
@@ -273,7 +273,7 @@ void UndirectedGraph::print() {
 	}
 
 	printf("\n\nedgeWeights\n");
-	for (vector<float>::iterator itr = edgeWeights.begin(); itr != edgeWeights.end(); itr++) {
+	for (vector<double>::iterator itr = edgeWeights.begin(); itr != edgeWeights.end(); itr++) {
 		printf("%f, ", *itr);
 	}
 

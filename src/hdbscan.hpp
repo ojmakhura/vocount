@@ -43,10 +43,10 @@ private:
 	vector<Cluster*> clusters;
 	vector<OutlierScore> outlierScores;
 	vector<int> clusterLabels;
-	map<int, float> clusterStabilities;
+	map<int, double> clusterStabilities;
 	map<long, vector<int> > hierarchy;
 	bool selfEdges = true;
-	uint minPoints, minClusterSize, numPoints;
+	uint minPoints, numPoints;
 
 	/**
 	 * Calculates the number of constraints satisfied by the new clusters and virtual children of the
@@ -68,17 +68,17 @@ private:
 	 */
 	Cluster* createNewCluster(set<int>* points,
 			vector<int>* clusterLabels, Cluster* parentCluster, int clusterLabel,
-			float edgeWeight);
+			double edgeWeight);
 
 	void run();
 public:
 	hdbscan();
-	hdbscan(calculator cal, uint minPoints, uint minClusterSize);
+	hdbscan(calculator cal, uint minPts);
 	~hdbscan();
 
 	vector<Cluster*>& getClusters();
 	vector<int>& getClusterLabels();
-	map<int, float>& getClusterStabilities();
+	map<int, double>& getClusterStabilities();
 
 	/**
 	 * Reads in the input data set from the file given, assuming the delimiter separates attributes
@@ -86,7 +86,7 @@ public:
 	 * if any part of the input is improperly formatted.
 	 * @param fileName The path to the input file
 	 */
-	float* readInDataSet(string fileName, int* rowp, int* colc);
+	double* readInDataSet(string fileName, int* rowp, int* colc);
 
 	/**
 	 *
@@ -107,7 +107,7 @@ public:
 
 	/**
 	 * Calculates the core distances for each point in the data set, given some value for k.
-	 * @param dataSet A vector<float>[] where index [i][j] indicates the jth attribute of data point i
+	 * @param dataSet A vector<double>[] where index [i][j] indicates the jth attribute of data point i
 	 * @param k Each point's core distance will be it's distance to the kth nearest neighbor
 	 * @param distanceFunction A DistanceCalculator to compute distances between points
 	 */
@@ -117,7 +117,7 @@ public:
 	/**
 	 * Constructs the minimum spanning tree of mutual reachability distances for the data set, given
 	 * the core distances for each point.
-	 * @param dataSet A vector<float>[] where index [i][j] indicates the jth attribute of data point i
+	 * @param dataSet A vector<double>[] where index [i][j] indicates the jth attribute of data point i
 	 * @param coreDistances An array of core distances for each data point
 	 * @param selfEdges If each point should have an edge to itself with weight equal to core distance
 	 * @param distanceFunction A DistanceCalculator to compute distances between points
@@ -137,11 +137,11 @@ public:
 	 * @param hierarchyOutputFile The path to the hierarchy output file
 	 * @param treeOutputFile The path to the cluster tree output file
 	 * @param delimiter The delimiter to be used while writing both files
-	 * @param pointNoiseLevels A vector<float> to be filled with the levels at which each point becomes noise
+	 * @param pointNoiseLevels A vector<double> to be filled with the levels at which each point becomes noise
 	 * @param pointLastClusters An vector<int> to be filled with the last label each point had before becoming noise
 	 */
 	void computeHierarchyAndClusterTree(bool compactHierarchy,
-			vector<float>* pointNoiseLevels, vector<int>* pointLastClusters);
+			vector<double>* pointNoiseLevels, vector<int>* pointLastClusters);
 
 	/**
 	 * Propagates constraint satisfaction, stability, and lowest child death level from each child
@@ -169,16 +169,21 @@ public:
 	 * Produces the outlier score for each point in the data set, and returns a sorted list of outlier
 	 * scores.  propagateTree() must be called before calling this method.
 	 * @param clusters A list of Clusters forming a cluster tree which has already been propagated
-	 * @param pointNoiseLevels A vector<float> with the levels at which each point became noise
+	 * @param pointNoiseLevels A vector<double> with the levels at which each point became noise
 	 * @param pointLastClusters An vector<int> with the last label each point had before becoming noise
 	 * @param coreDistances An array of core distances for each data point
 	 * @param outlierScoresOutputFile The path to the outlier scores output file
 	 * @param delimiter The delimiter for the output file
 	 * @param infiniteStability true if there are any clusters with infinite stability, false otherwise
 	 */
-	void calculateOutlierScores(vector<float>* pointNoiseLevels, vector<int>* pointLastClusters, bool infiniteStability);
+	void calculateOutlierScores(vector<double>* pointNoiseLevels, vector<int>* pointLastClusters, bool infiniteStability);
 
 	bool compareClusters(Cluster* one, Cluster* two);
+
+	double* getCoreDistances();
+	DistanceCalculator<T1>& getDistanceFunction();
+
+	double getDistance(uint i, uint j);
 
 	void clean();
 

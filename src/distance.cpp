@@ -82,8 +82,8 @@ void DistanceCalculator<T>::setDimenstions(int rows, int cols){
     this->rows = rows;
     this->cols = cols;
     int sub = (rows * rows -rows)/2;
-    this->distance = new float[sub];
-    this->coreDistances = new float[rows];
+    this->distance = new double[sub];
+    this->coreDistances = new double[rows];
 }
 
 template <class T>
@@ -175,8 +175,8 @@ void DistanceCalculator<T>::computeDistance(T* dataset, int rows, int cols, int 
 	this->rows = rows;
 	this->cols = cols;
 	int sub = (rows * rows -rows)/2;
-	this->distance = new float[sub];
-	this->coreDistances = new float[rows];
+	this->distance = new double[sub];
+	this->coreDistances = new double[rows];
 
 	if (cal == _EUCLIDEAN) {
 		do_euclidean(dataset, minPoints);
@@ -193,10 +193,10 @@ void DistanceCalculator<T>::computeDistance(T* dataset, int rows, int cols, int 
 }
 
 template <class T>
-float* DistanceCalculator<T>::getDistance(){ return distance; }
+double* DistanceCalculator<T>::getDistance(){ return distance; }
 
 template <class T>
-float* DistanceCalculator<T>::getCoreDistances(){ return coreDistances; }
+double* DistanceCalculator<T>::getCoreDistances(){ return coreDistances; }
 
 /**************************************************************************
  * Private methods
@@ -219,9 +219,9 @@ void DistanceCalculator<T>::do_euclidean(T* dataset, int numNeighbors) {
 
 			for (uint k = 0; ((k < cols) && (i != j)); k++) {
 
-				float num1 = *(dataset + i * cols + k);
-				float num2 = *(dataset + j * cols + k);
-				float diff = num1 - num2;
+				double num1 = *(dataset + i * cols + k);
+				double num2 = *(dataset + j * cols + k);
+				double diff = num1 - num2;
 
 				sum += (diff * diff);
 			}
@@ -343,7 +343,7 @@ uint DistanceCalculator<T>::triangular(uint n){
  *
  */
 template <class T>
-float DistanceCalculator<T>::getDistance(uint row, uint col){
+double DistanceCalculator<T>::getDistance(uint row, uint col){
 
 	uint idx;
 	if (row < col) {

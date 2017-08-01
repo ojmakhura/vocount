@@ -37,20 +37,20 @@ public:
     void computeDistance(vector<T>& dataset, int rows, int cols, bool rowwise, int minPoints);
     void computeDistance(T* dataset, int rows, int cols, bool rowwise, int minPoints);
 
-	float* getDistance();
-	float* getCoreDistances();
+    double* getDistance();
+    double* getCoreDistances();
 
 	/**
 	 * Retrieves the distance from the array. Because the array
 	 * is an upper triangular matrix stored as a 1 dimensional array
 	 *
 	 */
-	float getDistance(uint row, uint col);
+    double getDistance(uint row, uint col);
 
 	void setCalculator(calculator cal);
 
 private:
-	float* distance, *coreDistances;
+	double* distance, *coreDistances;
 	uint rows, cols;
 	uint internalRows, internalCols;
 	calculator cal = _EUCLIDEAN;

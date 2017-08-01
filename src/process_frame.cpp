@@ -9,6 +9,7 @@
 #include <fstream>
 #include <opencv/cv.hpp>
 #include <dirent.h>
+#include <gsl/gsl_statistics.h>
 
 using namespace std;
 
@@ -86,12 +87,6 @@ Mat getSegmentImage(Mat& gs, map<uint, vector<Point> >& points){
 	return output_image;
 }
 
-void printImage(String folder, int idx, String name, Mat img) {
-	stringstream sstm;
-
-	sstm << folder.c_str() << "/" << idx << " " << name.c_str() << ".jpg";
-	imwrite(sstm.str(), img);
-}
 
 /**
  * Find the possible segment of interest
@@ -242,25 +237,25 @@ void generateFinalPointClusters(framed& f){
 	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 }
 
-void mapKeyPoints(framed& f){
+void mapClusters(vector<int>& labels, map_kp& clusterKeyPoints, map_t& clusterKeypointIdx, vector<KeyPoint>& keypoints){
 
 	// Map cluster labels to the indices of the points
-	for(uint i = 0; i < f.labels.size(); i++){
-		int l = f.labels[i];
-		f.clusterKeyPoints[l].push_back(f.keypoints[i]);
-		f.clusterKeypointIdx[l].push_back(i);
+	for(uint i = 0; i < labels.size(); i++){
+		int l = labels[i];
+		clusterKeyPoints[l].push_back(keypoints[i]);
+		clusterKeypointIdx[l].push_back(i);
 	}
+}
 
+map_t mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int>& labels){
+
+	map_t rcp;
 	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
-	for(vector<int>::iterator it = f.roiFeatures.begin(); it != f.roiFeatures.end(); ++it){
-		int key = f.labels[*it];
-		f.roiClusterPoints[key].push_back(*it);
+	for (vector<int>::iterator it = roiFeatures.begin(); it != roiFeatures.end(); ++it) {
+		int key = labels[*it];
+		rcp[key].push_back(*it);
 	}
-
-	/*for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it) {
-		cout << "mapKeyPoints(framed& f) roiClusterPoints " << it->first << " it->second.size() " << it->second.size() << endl;
-	}*/
-
+	return rcp;
 }
 
 
@@ -358,53 +353,6 @@ uint getDataset(vocount& vcount, framed& f){
 
 	f.dataset = dataset;
 	return f.ogsize;
-}
-
-void printStats(String folder, map<int32_t, vector<int32_t> > stats){
-	ofstream myfile;
-	String f = folder;
-	String name = "/stats.csv";
-	f += name;
-	myfile.open(f.c_str());
-
-	myfile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
-
-	for(map<int32_t, vector<int32_t> >::iterator it = stats.begin(); it != stats.end(); ++it){
-		vector<int32_t> vv = it->second;
-		myfile << it->first << ",";
-
-		for(uint i = 0; i < vv.size(); ++i){
-			myfile << vv[i] << ",";
-		}
-		myfile << "\n";
-	}
-
-	myfile.close();
-
-}
-
-void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstimates){
-	ofstream myfile;
-	String f = folder;
-	String name = "/ClusterEstimates.csv";
-	f += name;
-	myfile.open(f.c_str());
-
-	myfile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
-
-	for(map<int32_t, vector<int32_t> >::iterator it = cEstimates.begin(); it != cEstimates.end(); ++it){
-		vector<int32_t> vv = it->second;
-		size_t sz = vv.size();
-		myfile << it->first << "," << vv[sz-1] << "," << vv[sz-2] << "," << vv[sz-3] << ",";
-
-		for(uint i = 0; i < vv.size()-2; ++i){
-			myfile << vv[i] << ",";
-		}
-		myfile << "\n";
-	}
-
-	myfile.close();
-
 }
 
 double calcDistanceL1(Point2f f1, Point2f f2){
@@ -677,11 +625,11 @@ map<int, int> splitROIPoints(framed& f, framed& f1){
 		f1.ogsize = f1.dataset.rows;
 		f1.hasRoi = f.hasRoi;
 
-		hdbscan<float> sc(_EUCLIDEAN, 4, 4);
+		hdbscan<float> sc(_EUCLIDEAN, 4);
 		sc.run(f1.dataset.ptr<float>(), f1.dataset.rows, f1.dataset.cols, true);
 		f1.labels = sc.getClusterLabels();
-		mapKeyPoints(f1);
-
+		//mapKeyPoints(f1);
+		mapClusters(f.labels, f.clusterKeyPoints, f.clusterKeypointIdx, f.keypoints);
 		return fToF1;
 	}
 
@@ -745,9 +693,11 @@ Mat getDistanceDataset(Mat descriptors, Mat roiDesc){
 
 	float* data = dset.ptr<float>(0);
 
+/*
 #ifdef USE_OPENMP
 #pragma omp for shared(data)
 #endif
+*/
 	for (size_t i = 0; i < descriptors.rows; ++i) {
 		Mat row = descriptors.row(i);
 		int x = i * 3;
@@ -755,9 +705,11 @@ Mat getDistanceDataset(Mat descriptors, Mat roiDesc){
 		for (size_t j = 0; j < roiDesc.rows; ++j) {
 			Mat d = roiDesc.row(j);
 			float distance = norm(row, d);
+/*
 #ifdef USE_OPENMP
 #pragma omp barrier
 #endif
+*/
 			data[x + j] = distance;
 		}
 	}
@@ -773,9 +725,11 @@ Mat getDistanceDataset(Mat descriptors, vector<int> roiIdx){
 
 	float* data = dset.ptr<float>(0);
 
+/*
 #ifdef USE_OPENMP
 #pragma omp for shared(data)
 #endif
+*/
 	for (size_t i = 0; i < descriptors.rows; ++i) {
 		Mat row = descriptors.row(i);
 		int x = i * 3;
@@ -783,12 +737,202 @@ Mat getDistanceDataset(Mat descriptors, vector<int> roiIdx){
 		for (size_t j = 0; j < roiIdx.size(); ++j) {
 			Mat d = descriptors.row(roiIdx[j]);
 			float distance = norm(row, d);
+/*
 #ifdef USE_OPENMP
 #pragma omp barrier
 #endif
+*/
 			data[x + j] = distance;
 		}
 	}
 
 	return dset;
+}
+
+
+Mat getColourDataset(Mat f, vector<KeyPoint> pts){
+	cout << "getting stdata" << endl;
+	Mat m(pts.size(), 3, CV_32FC1);
+	float* data = m.ptr<float>(0);
+	for(size_t i = 0; i < pts.size(); i++){
+		Point2f pt = pts[i].pt;
+		Vec3b p = f.at<Vec3b>(pt);
+		int idx = i * 3;
+		data[idx] = p.val[0];
+		data[idx + 1] = p.val[1];
+		data[idx + 2] = p.val[2];
+	}
+	cout << "getting stdata done" << endl;
+	return m;
+}
+
+map_d getMinMaxDistances(map_t mp, hdbscan<float>& sc, double* core){
+
+	map_d pm;
+	double zero = 0.00000000000;
+
+	for(map_t::iterator it = mp.begin(); it != mp.end(); ++it){
+		vector<int> idc = it->second;
+
+		for(size_t i = 0; i < idc.size(); i++){
+
+			// min and max core distances
+			if(pm[it->first].size() == 0){
+				pm[it->first].push_back(core[idc[i]]);
+				pm[it->first].push_back(core[idc[i]]);
+			} else{
+				// min core distance
+				if(pm[it->first][0] > core[idc[i]] && (core[idc[i]] < zero || core[idc[i]] > zero)){
+					pm[it->first][0] = core[idc[i]];
+				}
+
+				//max core distance
+				if(pm[it->first][1] < core[idc[i]]){
+					pm[it->first][1] = core[idc[i]];
+				}
+			}
+
+			// Calculating min and max distances
+			for(size_t j = i+1; j < idc.size(); j++){
+				double d = sc.getDistance(i, j);
+
+				if(pm[it->first].size() == 2){
+					pm[it->first].push_back(d);
+					pm[it->first].push_back(d);
+				} else{
+					// min distance
+					if(pm[it->first][2] > d && (d < zero || d > zero)){
+						pm[it->first][2] = d;
+					}
+
+					// max distance
+					if(pm[it->first][3] < d){
+						pm[it->first][3] = d;
+					}
+				}
+			}
+		}
+	}
+
+	return pm;
+}
+
+map<String, double> getStatistics(map_d distances, double* cr, double* dr){
+
+	map<String, double> stats;
+	//double cr[distances.size()];
+	//double dr[distances.size()];
+
+	int c = 0;
+	for(map_d::iterator it = distances.begin(); it != distances.end(); ++it){
+
+		cr[c] = it->second[1]/it->second[0];
+
+		/*if(it->second[0] == 0.0){
+			cr[c] = numeric_limits<double>::max();
+		}*/
+
+		/*if(cr[c] != cr[c]){
+			printf("**********cr[c] is nan\n");
+		}*/
+
+		dr[c] = it->second[3]/it->second[2];
+		/*if(it->second[2] == 0.0){
+			dr[c] = numeric_limits<double>::max();
+		}*/
+		/*if(dr[c] != dr[c]){
+			printf("**********dr[c] is nan\n");
+		}
+
+
+		printf("cr : [%4f/%4f = %4f] | dr : [%4f/%4f = %4f]\n", it->second[1], it->second[0], cr[c], it->second[3], it->second[2], dr[c]);*/
+		c++;
+	}
+	/*printf("cr = [");
+	for(int i = 0; i < distances.size(); i++){
+		printf("%.4f, ", cr[i]);
+	}
+	printf("] \n\ndr = [");
+	for(int i = 0; i < distances.size(); i++){
+		printf("%.4f, ", dr[i]);
+	}
+	printf("]\n\n");*/
+
+	// Calculating core distance statistics
+	stats["mean_cr"] = gsl_stats_mean(cr, 1, c);
+	stats["sd_cr"] = gsl_stats_sd(cr, 1, c);
+	stats["variance_cr"] = gsl_stats_variance(cr, 1, c);
+	stats["max_cr"] = gsl_stats_max(cr, 1, c);
+	stats["kurtosis_cr"] = gsl_stats_kurtosis(cr, 1, c);
+	stats["skew_cr"] = gsl_stats_skew(cr, 1, c);
+
+	stats["mean_dr"] = gsl_stats_mean(dr, 1, c);
+	stats["sd_dr"] = gsl_stats_sd(dr, 1, c);
+	stats["variance_dr"] = gsl_stats_variance(dr, 1, c);
+	stats["max_dr"] = gsl_stats_max(dr, 1, c);
+	stats["kurtosis_dr"] = gsl_stats_kurtosis(dr, 1, c);
+	stats["skew_dr"] = gsl_stats_skew(dr, 1, c);
+	stats["count"] = c;
+
+	/*printf("stats[\"mean_cr\"] = %f\n", stats["mean_cr"]);
+	printf("stats[\"sd_cr\"] = %f\n", stats["sd_cr"]);
+	printf("stats[\"variance_cr\"] = %f\n", stats["variance_cr"]);
+	printf("stats[\"max_cr\"] = %f\n", stats["max_cr"]);
+	printf("stats[\"kurtosis_cr\"] = %f\n", stats["kurtosis_cr"]);
+	printf("stats[\"skew_cr\"] = %f\n", stats["skew_cr"]);
+
+	// Calculating distance statistics
+	printf("\n\n******************\nstats[\"mean_dr\"] = %f\n", stats["mean_dr"]);
+	printf("stats[\"sd_dr\"] = %f\n", stats["sd_dr"]);
+	printf("stats[\"variance_dr\"] = %f\n", stats["variance_dr"]);
+	printf("stats[\"max_dr\"] = %f\n", stats["max_dr"]);
+	printf("stats[\"kurtosis_dr\"] = %f\n", stats["kurtosis_dr"]);
+	printf("stats[\"skew_dr\"] = %f\n", stats["skew_dr"]);
+
+	printf("\nstats[\"count\"] = %f\n", stats["count"]);*/
+
+	//int validity = analyseStats(stats);
+
+	//printf("valididty -----> %d\n", validity);
+
+	return stats;
+}
+
+int analyseStats(map<String, double> stats){
+	 int validity = -1;
+	if((stats["skew_dr"] > 0.0 || stats["skew_dr"] != stats["skew_dr"]) && (stats["kurtosis_dr"] > 0.0 || stats["kurtosis_dr"] != stats["kurtosis_dr"])){
+		validity = 2;
+	} else if(stats["skew_dr"] < 0.0 && stats["kurtosis_dr"] > 0.0){
+		validity = 1;
+	} else if(stats["skew_dr"] > 0.0 && stats["kurtosis_dr"] < 0.0){
+		validity = 0;
+	} else{
+		validity = -1;
+	}
+
+	if((stats["skew_cr"] > 0.0 || stats["skew_cr"] != stats["skew_cr"]) && (stats["kurtosis_cr"] > 0.0 || stats["kurtosis_cr"] != stats["kurtosis_cr"])){
+		validity += 2;
+	} else if(stats["skew_cr"] < 0.0 && stats["kurtosis_cr"] > 0.0){
+		validity += 1;
+	} else if(stats["skew_cr"] > 0.0 && stats["kurtosis_cr"] < 0.0){
+		validity += 0;
+	} else{
+		validity += -1;
+	}
+
+	return validity;
+}
+
+Mat getSelected(Mat desc, vector<int> indices){
+	Mat m;
+	for(size_t i = 0; i < indices.size(); i++){
+		if(m.empty()){
+			m = desc.row(indices[i]);
+
+		} else{
+			m.push_back(desc.row(indices[i]));
+		}
+	}
+
+	return m;
 }

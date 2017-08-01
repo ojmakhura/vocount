@@ -18,6 +18,11 @@ using namespace cv;
 using namespace std;
 using namespace cv::ximgproc::segmentation;
 
+typedef map<int, vector<int>> map_t;
+typedef map<int, vector<double>> map_d;
+typedef map<int, vector<KeyPoint>> map_kp;
+typedef set<int> set_t;
+
 typedef struct _box_structure{
 	Rect box;
 	vector<KeyPoint> points;
@@ -41,16 +46,16 @@ typedef struct FRAMED{
 		dataset;													/// hdbscan cluster
 	map<String, Mat> keyPointImages;										/// images with cluster by cluster keypoints drawn
 	vector<KeyPoint> keypoints; 									/// Frame keypoints
-    map<int, vector<KeyPoint> > clusterKeyPoints;					/// maps labels to their keypoints
-    map<int, vector<int> > clusterKeypointIdx; 						/// maps labels to the keypoint indices
-    map<int, vector<int> > roiClusterPoints;						/// cluster labels for the region of interest mapped to the roi points in the cluster
-    map<int, vector<KeyPoint> > finalPointClusters;					/// for clusters where there is more than one roi point in the cluster. Maps the roi point
+    map_kp clusterKeyPoints;					/// maps labels to their keypoints
+    map_t clusterKeypointIdx; 						/// maps labels to the keypoint indices
+    map_t roiClusterPoints;						/// cluster labels for the region of interest mapped to the roi points in the cluster
+    map_kp finalPointClusters;					/// for clusters where there is more than one roi point in the cluster. Maps the roi point
     																/// index to all closest descriptor points indices
 	vector<int32_t> odata;											/// Output data
     vector<int> labels;												/// hdbscan cluster labels
 	uint largest = 0;
-	float lsize = 0;
-	float total = 0;
+	double lsize = 0;
+	double total = 0;
 	int32_t selectedFeatures = 0;
 	vector<int32_t> cest;
 	Rect2d roi;														/// region of interest rectangle
@@ -65,6 +70,7 @@ typedef struct FRAMED{
 
 typedef struct VOCOUNT{
     int frameCount = 0;
+    int colourMinPts;
 	String destFolder, inputPath;
 	int step, rsize;											/// How many frames to use in the dataset
 	bool roiExtracted = false;
@@ -91,24 +97,18 @@ Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour, int type);
 
 void maintaintHistory(vocount& voc, framed& f);
 set<int32_t> getIgnoreSegments(Rect roi, Mat segments);
-void mapKeyPoints(framed& f);
+//void mapKeyPoints(framed& f);
+void mapClusters(vector<int>& labels, map_kp& clusterKeyPoints, map_t& clusterKeypointIdx, vector<KeyPoint>& keypoints);
 void getCount(framed& f);
 void runSegmentation(vocount& vcount, framed& f, Ptr<GraphSegmentation> graphSegmenter, Ptr<DenseOpticalFlow> flowAlgorithm);
 void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out);
 uint getDataset(vocount& vcount, framed& f);
 
-void printStats(String folder, map<int32_t, vector<int32_t> > stats);
-
-void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstimates);
 void matchByBruteForce(vocount& vcount, framed& f);
 vector<KeyPoint> getAllMatchedKeypoints(framed& f);
 void findROIFeature(framed& f);
 bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
 
-/***
- *
- */
-void printData(vocount& vcount, framed& f);
 
 /**
  *
@@ -139,4 +139,35 @@ map<int, int> getFrameTruth(String truthFolder);
  *
  */
 Mat getDistanceDataset(vector<int>roiIdx, Mat descriptors);
+
+/**
+ * map sample features to their clusters
+ */
+map_t mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int>& labels);
+
+/**
+ * Given the descriptors and their keypoints, find the Mat object representing the colour values
+ */
+Mat getColourDataset(Mat f, vector<KeyPoint> pts);
+
+/**
+ * Find the minimum and maximum core distances and intra cluster distances
+ */
+map_d getMinMaxDistances(map_t mp, hdbscan<float>& sc, double* core);
+
+/**
+ * Get the statistics for the core distance and intra cluster distances
+ */
+map<String, double> getStatistics(map_d distances, double* cr, double* dr);
+
+/**
+ *
+ */
+int analyseStats(map<String, double> stats);
+
+/***
+ *
+ */
+Mat getSelected(Mat desc, vector<int> indices);
+
 #endif /* PROCESS_FRAME_HPP_ */
