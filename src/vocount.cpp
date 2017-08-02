@@ -38,90 +38,7 @@ static void help(){
 }
 
 
-int detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPoint> keypoints){
-	int chosenMinPts = 2, mpts;
-	printf("Detecting minPts value for colour clustering.\n");
-	map<int, map<String, double>> stats;
-	Mat dataset = getColourDataset(descriptors, keypoints);
-	size_t size = 0;
-	map<int, int> choices;
-	int chosenCount = 1, currentCount = 1;
-	map_t clusterKeypointIdxMap;
-	map_kp clusterKeyPointsMap;
 
-	for(int i = 3; i < 30; i++){
-
-		printf("\n\n >>>>>>>>>>>>>>>>>>>>>>>>> Clustering for minPts = %d\n", i);
-		map_kp clusterKeyPoints;
-		map_t clusterKeypointIdx;
-
-		hdbscan<float> scanc(_EUCLIDEAN, i);
-		scanc.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
-		vector<int> labels = scanc.getClusterLabels();
-		set<int> lsetkps(labels.begin(), labels.end());
-		double* corecl = scanc.getCoreDistances();
-		mapClusters(labels, clusterKeyPoints, clusterKeypointIdx, keypoints);
-		map_d disMapCl = getMinMaxDistances(clusterKeypointIdx, scanc, corecl);
-		double cr[disMapCl.size()];
-		double dr[disMapCl.size()];
-		stats[i] = getStatistics(disMapCl, cr, dr);
-		//int v = analyseStats(stats[i]);
-
-		if(disMapCl.size() != size){
-			size = disMapCl.size();
-			mpts = i;
-			currentCount = 1;
-		} else{
-			currentCount++;
-			printf("Choosing %d min points\n", mpts);
-
-			if(currentCount > chosenCount){
-				chosenCount = currentCount;
-				chosenMinPts = mpts;
-				clusterKeypointIdxMap = clusterKeypointIdx;
-				clusterKeyPointsMap = clusterKeyPoints;
-			}
-		}
-
-		String imageName = "frame_keypoints_";
-
-		for(map_t::iterator it = clusterKeypointIdx.begin(); it != clusterKeypointIdx.end(); ++it){
-			String imageName = "frame_keypoints_";
-			imageName += to_string(it->first);
-			Mat m = drawKeyPoints(frame, clusterKeyPoints[it->first], Scalar(0, 0, 255), -1);
-			printImage("./draws/", i, imageName, m);
-		}
-	}
-	printf(">>>>>>>> VALID CHOICE OF minPts IS %d <<<<<<<<<\n", chosenMinPts);
-	printStatistics(stats, "./");
-	vector<KeyPoint> selkp;
-	Mat selDset;
-	for(map_t::iterator it = clusterKeypointIdxMap.begin(); it != clusterKeypointIdxMap.end(); ++it){
-
-		Mat m = drawKeyPoints(frame, clusterKeyPointsMap[it->first], Scalar(0, 0, 255), -1);
-		display("choose", m);
-		// Listen for a key pressed
-		char c = ' ';
-		while(true){
-			if (c == 'a') {
-				Mat xx = getSelected(descriptors, it->second);
-				selkp.insert(selkp.end(), clusterKeyPointsMap[it->first].begin(), clusterKeyPointsMap[it->first].end());
-				if(selDset.empty()){
-					cout << "Clone adding new data for cluster " << it->first << endl;
-					selDset = xx.clone();
-				} else{
-					cout << "adding new data for cluster " << it->first << endl;
-					selDset.push_back(xx);
-				}
-				break;
-			} else if (c == 'q'){
-				break;
-			}
-			c = (char) waitKey(20);
-		}
-	}
-	return chosenMinPts;
-}
 
 int main(int argc, char** argv) {
 	ocl::setUseOpenCL(true);
@@ -129,6 +46,7 @@ int main(int argc, char** argv) {
 	VideoCapture cap;
     //BoxExtractor box;
     vocount vcount;
+    selection_t colourSel;
 
     Ptr<Feature2D> detector = SURF::create(500);
 	Ptr<Tracker> tracker;
@@ -136,7 +54,7 @@ int main(int argc, char** argv) {
 	cv::CommandLineParser parser(argc, argv,
 					"{help ||}{o||}{n|1|}"
 					"{v||}{video||}{w|1|}{s||}"
-					"{i||}{c||}{t||}");
+					"{i||}{c||}{t||}{l||}");
 
 
 	if (parser.has("help")) {
@@ -158,11 +76,7 @@ int main(int argc, char** argv) {
     	return -1;
     }
 
-    cap.read(frame);
-    framed f;
-    detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
-    detectColourSelectionMinPts(frame, f.descriptors, f.keypoints);
-    /*while(cap.read(frame))
+    while(cap.read(frame))
     {
 		vcount.frameCount++;
 		framed f;
@@ -173,6 +87,10 @@ int main(int argc, char** argv) {
 
 		cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
 		detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
+
+		if(colourSel.minPts == -1 && parser.has("c")){
+			colourSel = detectColourSelectionMinPts(frame, f.descriptors, f.keypoints);
+		}
 
 		// Listen for a key pressed
 		char c = (char) waitKey(20);
@@ -217,7 +135,7 @@ int main(int argc, char** argv) {
 			cout << "################################################################################" << endl;
 			// Create clustering dataset
 			f.hasRoi = vcount.roiExtracted;
-			findROIFeature(f);
+			findROIFeature(f, colourSel);
 			getDataset(vcount, f);// f.descriptors.clone();
 			hdbscan<float> scan(_EUCLIDEAN, vcount.step*3);
 			scan.run(f.dataset.ptr<float>(), f.dataset.rows, f.dataset.cols, true);
@@ -237,6 +155,18 @@ int main(int argc, char** argv) {
 
 			printf("f.keyPointImages.size() = %u\n", f.keyPointImages.size());
 			printData(vcount, f);
+
+			if(vcount.frameHistory.size() >= 2){
+				// Do selected descriptor clustering
+				if(parser.has("l") && colourSel.minPts != -1){
+
+				}
+
+				// Do index based clustering
+				if (parser.has("i")) {
+
+				}
+			}
 		}
 
 		maintaintHistory(vcount, f);
@@ -245,7 +175,7 @@ int main(int argc, char** argv) {
     if(vcount.print){
     	printStats(vcount.destFolder, vcount.stats);
     	printClusterEstimates(vcount.destFolder, vcount.clusterEstimates);
-    }*/
+    }
 
 	return 0;
 }

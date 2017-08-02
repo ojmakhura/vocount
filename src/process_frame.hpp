@@ -23,6 +23,13 @@ typedef map<int, vector<double>> map_d;
 typedef map<int, vector<KeyPoint>> map_kp;
 typedef set<int> set_t;
 
+typedef struct {
+	int minPts;
+	vector<int> selectedPtsIdx;
+	vector<KeyPoint> selectedPts;
+	Mat selectedDesc;
+} selection_t;
+
 typedef struct _box_structure{
 	Rect box;
 	vector<KeyPoint> points;
@@ -82,33 +89,102 @@ typedef struct VOCOUNT{
     map<int, int> truth;
 } vocount;
 
+typedef struct {
+	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
+    map_kp clusterKeyPoints;					/// maps labels to their keypoints
+    map_t clusterKeypointIdx; 						/// maps labels to the keypoint indices
+    map_t roiClusterPoints;						/// cluster labels for the region of interest mapped to the roi points in the cluster
+    map_kp finalPointClusters;					/// for clusters where there is more than one roi point in the cluster. Maps the roi point
+    																/// index to all closest descriptor points indices
+	vector<int32_t> odata;											/// Output data
+    vector<int> labels;												/// hdbscan cluster labels
 
+} results_c;
+
+/**
+ *
+ */
 void display(char const* screen, const InputArray& m);
 
+/**
+ *
+ */
 Scalar hsv_to_rgb(Scalar c);
 
+/**
+ *
+ */
 Scalar color_mapping(int segment_id);
 
+/**
+ *
+ */
 Mat getSegmentImage(Mat& gs, map<uint, vector<Point> >& points);
 
+/**
+ *
+ */
 void printImage(String folder, int idx, String name, Mat img);
 
+/**
+ *
+ */
 Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour, int type);
 
+/**
+ *
+ */
 void maintaintHistory(vocount& voc, framed& f);
+
+/**
+ *
+ */
 set<int32_t> getIgnoreSegments(Rect roi, Mat segments);
-//void mapKeyPoints(framed& f);
+
+/**
+ *
+ */
 void mapClusters(vector<int>& labels, map_kp& clusterKeyPoints, map_t& clusterKeypointIdx, vector<KeyPoint>& keypoints);
+
+/**
+ *
+ */
 void getCount(framed& f);
+
+/**
+ *
+ */
 void runSegmentation(vocount& vcount, framed& f, Ptr<GraphSegmentation> graphSegmenter, Ptr<DenseOpticalFlow> flowAlgorithm);
+
+/**
+ *
+ */
 void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out);
+
+/**
+ *
+ */
 uint getDataset(vocount& vcount, framed& f);
 
+/**
+ *
+ */
 void matchByBruteForce(vocount& vcount, framed& f);
-vector<KeyPoint> getAllMatchedKeypoints(framed& f);
-void findROIFeature(framed& f);
-bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
 
+/**
+ *
+ */
+vector<KeyPoint> getAllMatchedKeypoints(framed& f);
+
+/**
+ *
+ */
+void findROIFeature(framed& f, selection_t& csel);
+
+/**
+ *
+ */
+bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
 
 /**
  *
@@ -169,5 +245,10 @@ int analyseStats(map<String, double> stats);
  *
  */
 Mat getSelected(Mat desc, vector<int> indices);
+
+/**
+ *
+ */
+selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPoint> keypoints);
 
 #endif /* PROCESS_FRAME_HPP_ */

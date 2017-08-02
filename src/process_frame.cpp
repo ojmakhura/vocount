@@ -347,14 +347,16 @@ uint getDataset(vocount& vcount, framed& f){
 				dataset.push_back(fx.descriptors);
 			}
 		}
-
 	}
-	f.ogsize = dataset.rows;
 
+	f.ogsize = dataset.rows;
 	f.dataset = dataset;
 	return f.ogsize;
 }
 
+/**
+ *
+ */
 double calcDistanceL1(Point2f f1, Point2f f2){
 	double diff = f1.x - f2.x;
 	double sum = diff * diff;
@@ -368,7 +370,7 @@ double calcDistanceL1(Point2f f1, Point2f f2){
 /**
  * Find the roi features and at the same time find the central feature.
  */
-void findROIFeature(framed& f){
+void findROIFeature(framed& f, selection_t& sel){
 	Rect2d r = f.roi;
 
 	Point2f p;
@@ -378,7 +380,8 @@ void findROIFeature(framed& f){
 	double distance;
 
 	for(uint i = 0; i < f.keypoints.size(); ++i){
-		if(f.hasRoi && f.roi.contains(f.keypoints[i].pt)){
+		bool selected = sel.minPts == -1 || (sel.minPts != -1 && std::find(sel.selectedPtsIdx.begin(),	sel.selectedPtsIdx.end(), i));
+		if(f.hasRoi && f.roi.contains(f.keypoints[i].pt) && selected){
 			f.roiFeatures.push_back(i);
 
 			// find the center feature index
@@ -392,7 +395,6 @@ void findROIFeature(framed& f){
 					distance = d1;
 					f.centerFeature = i;
 				}
-
 			}
 
 			// create the roi descriptor
@@ -935,4 +937,81 @@ Mat getSelected(Mat desc, vector<int> indices){
 	}
 
 	return m;
+}
+
+/**
+ *
+ */
+selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPoint> keypoints){
+	int mpts;
+	printf("Detecting minPts value for colour clustering.\n");
+	map<int, map<String, double>> stats;
+	Mat dataset = getColourDataset(frame, keypoints);
+	size_t size = 0;
+	map<int, int> choices;
+	int chosenCount = 1, currentCount = 1;
+	map_t clusterKeypointIdxMap;
+	map_kp clusterKeyPointsMap;
+	selection_t colourSelection;
+	colourSelection.minPts = 2;
+
+	for(int i = 3; i < 30; i++){
+
+		printf("\n\n >>>>>>>>>>>>>>>>>>>>>>>>> Clustering for minPts = %d\n", i);
+		map_kp clusterKeyPoints;
+		map_t clusterKeypointIdx;
+
+		hdbscan<float> scanc(_EUCLIDEAN, i);
+		scanc.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
+		vector<int> labels = scanc.getClusterLabels();
+		set<int> lsetkps(labels.begin(), labels.end());
+		double* corecl = scanc.getCoreDistances();
+		mapClusters(labels, clusterKeyPoints, clusterKeypointIdx, keypoints);
+		map_d disMapCl = getMinMaxDistances(clusterKeypointIdx, scanc, corecl);
+		double cr[disMapCl.size()];
+		double dr[disMapCl.size()];
+		stats[i] = getStatistics(disMapCl, cr, dr);
+		//int v = analyseStats(stats[i]);
+
+		if(disMapCl.size() != size){
+			size = disMapCl.size();
+			mpts = i;
+			currentCount = 1;
+		} else{
+			currentCount++;
+			if(currentCount > chosenCount){
+				chosenCount = currentCount;
+				colourSelection.minPts = mpts;
+				clusterKeypointIdxMap = clusterKeypointIdx;
+				clusterKeyPointsMap = clusterKeyPoints;
+			}
+		}
+
+	}
+	printf(">>>>>>>> VALID CHOICE OF minPts IS %d <<<<<<<<<\n", colourSelection.minPts);
+	printStatistics(stats, "./");
+	for(map_t::iterator it = clusterKeypointIdxMap.begin(); it != clusterKeypointIdxMap.end(); ++it){
+
+		Mat m = drawKeyPoints(frame, clusterKeyPointsMap[it->first], Scalar(0, 0, 255), -1);
+		display("choose", m);
+		// Listen for a key pressed
+		char c = ' ';
+		while(true){
+			if (c == 'a') {
+				Mat xx = getSelected(descriptors, it->second);
+				colourSelection.selectedPts.insert(colourSelection.selectedPts.end(), clusterKeyPointsMap[it->first].begin(), clusterKeyPointsMap[it->first].end());
+				colourSelection.selectedPtsIdx.insert(colourSelection.selectedPtsIdx.end(), clusterKeypointIdxMap[it->first].begin(), clusterKeypointIdxMap[it->first].end());
+				if(colourSelection.selectedDesc.empty()){
+					colourSelection.selectedDesc = xx.clone();
+				} else{
+					colourSelection.selectedDesc.push_back(xx);
+				}
+				break;
+			} else if (c == 'q'){
+				break;
+			}
+			c = (char) waitKey(20);
+		}
+	}
+	return colourSelection;
 }
