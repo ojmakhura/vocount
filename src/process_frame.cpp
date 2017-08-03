@@ -272,7 +272,7 @@ void getCount(framed& f){
 		f.selectedFeatures += it->second.size();
 
 		if(it->second.size() > f.lsize){
-			f.largest = it->first;
+			//f.largest = it->first;
 			f.lsize = it->second.size();
 		}
 

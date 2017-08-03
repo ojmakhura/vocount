@@ -53,6 +53,16 @@ typedef struct FRAMED{
 		dataset;													/// hdbscan cluster
 	map<String, Mat> keyPointImages;										/// images with cluster by cluster keypoints drawn
 	vector<KeyPoint> keypoints; 									/// Frame keypoints
+	double lsize = 0;
+	double total = 0;
+	int32_t selectedFeatures = 0;
+	Rect2d roi;														/// region of interest rectangle
+	vector<int> roiFeatures;										/// indices of the features inside the roi
+	int centerFeature = -1;											/// index of the roi central feature
+	Mat roiDesc;													/// region of interest descriptors
+	bool hasRoi = false;
+
+	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
     map_kp clusterKeyPoints;					/// maps labels to their keypoints
     map_t clusterKeypointIdx; 						/// maps labels to the keypoint indices
     map_t roiClusterPoints;						/// cluster labels for the region of interest mapped to the roi points in the cluster
@@ -60,19 +70,11 @@ typedef struct FRAMED{
     																/// index to all closest descriptor points indices
 	vector<int32_t> odata;											/// Output data
     vector<int> labels;												/// hdbscan cluster labels
-	uint largest = 0;
-	double lsize = 0;
-	double total = 0;
-	int32_t selectedFeatures = 0;
-	vector<int32_t> cest;
-	Rect2d roi;														/// region of interest rectangle
-	vector<int> roiFeatures;										/// indices of the features inside the roi
-	int centerFeature = -1;											/// index of the roi central feature
-	Mat roiDesc;													/// region of interest descriptors
+
 	graph roiStructure;												/// structure of the
 	vector<graph> objStructures;
 	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
-	bool hasRoi = false;
+	vector<int32_t> cest;
 } framed;
 
 typedef struct VOCOUNT{
@@ -90,6 +92,8 @@ typedef struct VOCOUNT{
 } vocount;
 
 typedef struct {
+	vector<KeyPoint> keypoints;
+	void* data;
 	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
     map_kp clusterKeyPoints;					/// maps labels to their keypoints
     map_t clusterKeypointIdx; 						/// maps labels to the keypoint indices
@@ -99,7 +103,11 @@ typedef struct {
 	vector<int32_t> odata;											/// Output data
     vector<int> labels;												/// hdbscan cluster labels
 
-} results_c;
+	graph roiStructure;												/// structure of the
+	vector<graph> objStructures;
+	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
+	vector<int32_t> cest;
+} results_t;
 
 /**
  *
