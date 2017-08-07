@@ -24,7 +24,7 @@ typedef map<int, vector<KeyPoint>> map_kp;
 typedef set<int> set_t;
 
 typedef struct {
-	int minPts;
+	int minPts = -1;
 	vector<int> selectedPtsIdx;
 	vector<KeyPoint> selectedPts;
 	Mat selectedDesc;
@@ -62,7 +62,6 @@ typedef struct FRAMED{
 	Mat roiDesc;													/// region of interest descriptors
 	bool hasRoi = false;
 
-	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
     map_kp clusterKeyPoints;					/// maps labels to their keypoints
     map_t clusterKeypointIdx; 						/// maps labels to the keypoint indices
     map_t roiClusterPoints;						/// cluster labels for the region of interest mapped to the roi points in the cluster
@@ -94,7 +93,6 @@ typedef struct VOCOUNT{
 typedef struct {
 	vector<KeyPoint> keypoints;
 	void* data;
-	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
     map_kp clusterKeyPoints;					/// maps labels to their keypoints
     map_t clusterKeypointIdx; 						/// maps labels to the keypoint indices
     map_t roiClusterPoints;						/// cluster labels for the region of interest mapped to the roi points in the cluster
@@ -255,8 +253,16 @@ int analyseStats(map<String, double> stats);
 Mat getSelected(Mat desc, vector<int> indices);
 
 /**
- *
+ * Detect the optimum minPts value for colour clustering.
  */
 selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPoint> keypoints);
 
+/**
+ * Given a list of keypoints, we find the 2D locations of the keypoints and
+ * return them as an aray of size 2*points.size
+ *
+ * @param points - a vector of KeyPoint objects
+ * @return an array of floats for the positions of the keypoints
+ */
+void getPointDataset(vector<KeyPoint> point, float* data);
 #endif /* PROCESS_FRAME_HPP_ */

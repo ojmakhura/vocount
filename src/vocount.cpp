@@ -47,6 +47,7 @@ int main(int argc, char** argv) {
     //BoxExtractor box;
     vocount vcount;
     selection_t colourSel;
+    colourSel.minPts = -1;
 
     Ptr<Feature2D> detector = SURF::create(500);
 	Ptr<Tracker> tracker;
@@ -92,6 +93,12 @@ int main(int argc, char** argv) {
 
 		cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
 		detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
+
+		if(colourSel.minPts == -1 && (parser.has("c") || parser.has("i"))){
+			printf("Finding proper value of minPts\n");
+			colourSel = detectColourSelectionMinPts(frame, f.descriptors, f.keypoints);
+			printf("Finding value of minPts = %d\n", colourSel.minPts);
+		}
 
 		// Listen for a key pressed
 		char c = (char) waitKey(20);
@@ -152,31 +159,51 @@ int main(int argc, char** argv) {
 			boxStructure(f);
 
 			//cout << "Cluster " << f.largest << " is the largest" << endl;
-			printf("f.descriptors.rows is %d and label size is %u\n", f.descriptors.rows, scan.getClusterLabels().size());
+			printf("f.descriptors.rows is %d and label size is %lu\n", f.descriptors.rows, scan.getClusterLabels().size());
 
-			printf("f.keyPointImages.size() = %u\n", f.keyPointImages.size());
+			printf("f.keyPointImages.size() = %lu\n", f.keyPointImages.size());
 			printData(vcount, f);
 
-			if(vcount.frameHistory.size() >= 2){
+			if(vcount.frameHistory.size() > 0){
 
 				// Do index based clustering
 				if (parser.has("i")) {
-					if(colourSel.minPts == -1){
-						colourSel = detectColourSelectionMinPts(frame, f.descriptors, f.keypoints);
+					if(colourSel.minPts != -1){
+						//colourSel = detectColourSelectionMinPts(frame, f.descriptors, f.keypoints);
+						printf("Index clustering\n");
+						framed ff = vcount.frameHistory[vcount.frameHistory.size()-1];
+						Mat ds = colourSel.selectedDesc.clone();
+						vector<KeyPoint> keyp(colourSel.selectedPts.begin(), colourSel.selectedPts.end());
+
+						ds.push_back(f.descriptors);
+						ds = ds.clone();
+						keyp.insert(keyp.end(), f.keypoints.begin(), f.keypoints.end());
+
+						Mat dataset = getColourDataset(frame, keyp);
+
+						hdbscan<float> scanis(_EUCLIDEAN, 2*colourSel.minPts);
+						scanis.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
+
+						vector<int> f_labels(scanis.getClusterLabels().begin() + colourSel.selectedPts.size(), scanis.getClusterLabels().end());
+						set<int> cselclusters(scanis.getClusterLabels().begin(), scanis.getClusterLabels().begin() + colourSel.selectedPts.size());
+						//new keypoint and descriptors
+						results_t rs;
+						for(size_t i = 0; i < f_labels.size(); i++){
+							if(cselclusters.find(f_labels[i]) != cselclusters.end()){
+								rs.keypoints.push_back(f.keypoints[i]);
+							}
+						}
+
+						float data[rs.keypoints.size() * 2];
+						getPointDataset(rs.keypoints, data);
+						hdbscan<float> sc(_EUCLIDEAN, 3);
+						sc.run(data, rs.keypoints.size(), 2, true);
+						rs.labels = sc.getClusterLabels();
+						set<int> ss(rs.labels.begin(), rs.labels.end());
+						printf("-------------- We found %d objects by index points clustering.\n", ss.size() - 1);
+						//mapClusters(labeldid, )
+
 					}
-
-					framed ff = vcount.frameHistory[vcount.frameHistory.size()-1];
-					Mat ds = ff.descriptors.clone();
-					vector<KeyPoint> keyp(ff.keypoints.begin(), ff.keypoints.end());
-
-					ds.push_back(f.descriptors);
-					ds = ds.clone();
-
-					keyp.insert(keyp.end(), f.keypoints.begin(), f.keypoints.end());
-
-					hdbscan<float> scanis(_EUCLIDEAN, 2*colourSel.minPts);
-					scanis.run(ds.ptr<float>(), ds.rows, ds.cols, true);
-
 				}
 			}
 		}

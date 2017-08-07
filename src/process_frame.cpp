@@ -187,7 +187,7 @@ void countPrint(framed& f){
 			f.selectedFeatures += f.clusterKeyPoints[it->first].size();
 
 			if (f.clusterKeyPoints[it->first].size() > f.lsize) {
-				f.largest = it->first;
+				//f.largest = it->first;
 				f.lsize = f.clusterKeyPoints[it->first].size();
 			}
 		}
@@ -380,7 +380,7 @@ void findROIFeature(framed& f, selection_t& sel){
 	double distance;
 
 	for(uint i = 0; i < f.keypoints.size(); ++i){
-		bool selected = sel.minPts == -1 || (sel.minPts != -1 && std::find(sel.selectedPtsIdx.begin(),	sel.selectedPtsIdx.end(), i));
+		bool selected = sel.minPts == -1 || (sel.minPts != -1 && std::find(sel.selectedPtsIdx.begin(),	sel.selectedPtsIdx.end(), i) != sel.selectedPtsIdx.end());
 		if(f.hasRoi && f.roi.contains(f.keypoints[i].pt) && selected){
 			f.roiFeatures.push_back(i);
 
@@ -989,7 +989,7 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 
 	}
 	printf(">>>>>>>> VALID CHOICE OF minPts IS %d <<<<<<<<<\n", colourSelection.minPts);
-	printStatistics(stats, "./");
+	//printStatistics(stats, "./");
 	for(map_t::iterator it = clusterKeypointIdxMap.begin(); it != clusterKeypointIdxMap.end(); ++it){
 
 		Mat m = drawKeyPoints(frame, clusterKeyPointsMap[it->first], Scalar(0, 0, 255), -1);
@@ -1014,4 +1014,15 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 		}
 	}
 	return colourSelection;
+}
+
+
+void getPointDataset(vector<KeyPoint> point, float *data){
+
+	for(size_t i = 0; i < point.size(); i++){
+		int idx = i *2;
+		data[idx] = point[i].pt.x;
+		data[idx+1] = point[i].pt.y;
+	}
+
 }
