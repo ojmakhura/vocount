@@ -104,6 +104,8 @@ public:
 	void removeEdge(int va, int vb);
 
 	void print();
+
+	void clean();
 };
 
 } /* namespace clustering */

@@ -118,6 +118,8 @@ public:
 	 bool hasKids();
 
 	 bool operator==(Cluster* another);
+
+	 void clean();
 };
 
 namespace Exception{

@@ -263,6 +263,11 @@ bool Cluster::operator==(Cluster* another){
 	return false;
 }
 
+void Cluster::clean(){
+	this->propagatedDescendants.clear();
+	this->virtualChildCluster.clear();
+}
+
 namespace Exception{
 IllegalStateException::IllegalStateException(char* error){
 	this->error = error;

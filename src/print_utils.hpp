@@ -25,4 +25,14 @@ void printData(vocount& vcount, framed& f);
  */
 void printStatistics(map<int, map<String, double>> stats, String folder);
 
+/**
+ *
+ */
+String createDirectory(String& mainFolder, String subfolder);
+
+/**
+ *
+ */
+void printImages(String folder, map<String, Mat> images, int count);
+
 #endif /* PRINT_UTILS_HPP_ */

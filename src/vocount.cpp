@@ -48,6 +48,10 @@ int main(int argc, char** argv) {
     vocount vcount;
     selection_t colourSel;
     colourSel.minPts = -1;
+	String colourDir;
+	String indexDir;
+	String keypointsDir;
+	String selectedDir;
 
     Ptr<Feature2D> detector = SURF::create(500);
 	Ptr<Tracker> tracker;
@@ -77,9 +81,31 @@ int main(int argc, char** argv) {
     	return -1;
     }
 
+	//Create the output directories
+    if(parser.has("o")){
+		createDirectory(vcount.destFolder, "");
+
+		colourDir = createDirectory(vcount.destFolder, "colour");
+		indexDir = createDirectory(vcount.destFolder, "index");
+		keypointsDir = createDirectory(vcount.destFolder, "keypoints");
+		selectedDir = createDirectory(vcount.destFolder, "selected");
+    }
+
     while(cap.read(frame))
     {
 		vcount.frameCount++;
+    	String colourFrameDir;
+    	String indexFrameDir;
+    	String keypointsFrameDir;
+    	String selectedFrameDir;
+
+        if(parser.has("o")){
+    		colourFrameDir = createDirectory(colourDir, to_string(vcount.frameCount));
+    		indexFrameDir = createDirectory(indexDir, to_string(vcount.frameCount));
+    		keypointsFrameDir = createDirectory(keypointsDir, to_string(vcount.frameCount));
+    		selectedFrameDir = createDirectory(selectedDir, to_string(vcount.frameCount));
+        }
+
 		framed f, index_f, sel_f;
 		bool clusterInspect = false;
 
@@ -114,6 +140,7 @@ int main(int argc, char** argv) {
 
 			Mat f2 = frame.clone();
 			f.roi = selectROI("Select ROI", f2);
+			destroyWindow("Select ROI");
 
 			//initializes the tracker
 			if (!tracker->init(frame, f.roi)) {
@@ -162,7 +189,12 @@ int main(int argc, char** argv) {
 			printf("f.descriptors.rows is %d and label size is %lu\n", f.descriptors.rows, scan.getClusterLabels().size());
 
 			printf("f.keyPointImages.size() = %lu\n", f.keyPointImages.size());
-			printData(vcount, f);
+			//printData(vcount, f);
+			if(parser.has("o")){
+				printImages(keypointsFrameDir, f.keyPointImages, vcount.frameCount);
+			}
+
+			scan.clean();
 
 			if(vcount.frameHistory.size() > 0){
 
@@ -175,8 +207,8 @@ int main(int argc, char** argv) {
 						Mat ds = colourSel.selectedDesc.clone();
 						vector<KeyPoint> keyp(colourSel.selectedPts.begin(), colourSel.selectedPts.end());
 
-						ds.push_back(f.descriptors);
-						ds = ds.clone();
+						//ds.push_back(f.descriptors);
+						//ds = ds.clone();
 						keyp.insert(keyp.end(), f.keypoints.begin(), f.keypoints.end());
 
 						Mat dataset = getColourDataset(frame, keyp);
@@ -188,9 +220,12 @@ int main(int argc, char** argv) {
 						set<int> cselclusters(scanis.getClusterLabels().begin(), scanis.getClusterLabels().begin() + colourSel.selectedPts.size());
 						//new keypoint and descriptors
 						results_t rs;
+						vector<int> selectedPtsIdx;
 						for(size_t i = 0; i < f_labels.size(); i++){
 							if(cselclusters.find(f_labels[i]) != cselclusters.end()){
 								rs.keypoints.push_back(f.keypoints[i]);
+								ds.push_back(f.descriptors.row(i));
+								selectedPtsIdx.push_back(i);
 							}
 						}
 
@@ -203,7 +238,24 @@ int main(int argc, char** argv) {
 						printf("-------------- We found %d objects by index points clustering.\n", ss.size() - 1);
 						//mapClusters(labeldid, )
 
+						ds = ds.clone();
+
+						results_t sel_r;
+						sel_r.keypoints = rs.keypoints;
+						hdbscan<float> sel_scan(_EUCLIDEAN, 3);
+						sel_scan.run(ds.ptr<float>(), ds.rows, ds.cols, true);
+						rs.labels.insert(rs.labels.begin(), sel_scan.getClusterLabels().begin() + colourSel.selectedPts.size(), sel_scan.getClusterLabels().end());
+						mapClusters(rs.labels, rs.clusterKeyPoints, rs.clusterKeypointIdx, rs.keypoints);
+
+						// update the colour selection so that for every new frame, colourSel is based on the previous frame.
+						colourSel.selectedPtsIdx = selectedPtsIdx;
+						colourSel.selectedPts = rs.keypoints;
+						colourSel.selectedDesc = ds;
+						scanis.clean();
+						sel_scan.clean();
 					}
+
+
 				}
 			}
 		}

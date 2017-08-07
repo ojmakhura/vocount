@@ -122,4 +122,29 @@ void printStatistics(map<int, map<String, double>> stats, String folder){
 
 }
 
+String createDirectory(String& mainFolder, String subfolder){
+	String sokp = mainFolder;
+	sokp += "/";
+	sokp += subfolder;
+
+	String command = "mkdir \'";
+	command += sokp;
+	command += "\'";
+	printf(command.c_str());
+	printf("\n");
+	const int dir_err2 = system(command.c_str());
+	if (-1 == dir_err2) {
+		printf("Error creating directory!n");
+		exit(1);
+	}
+
+	return sokp;
+
+}
+
+void printImages(String folder, map<String, Mat> images, int count){
+	for(map<String, Mat>::iterator it = images.begin(); it != images.end(); ++it){
+		printImage(folder, count, it->first, it->second);
+	}
+}
 

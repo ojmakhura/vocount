@@ -62,14 +62,14 @@ hdbscan<T1>::hdbscan(calculator cal, uint minPoints) {
 template <class T1>
 hdbscan<T1>::~hdbscan() {
 
-
-	for (uint i = 0; i < constraints.size(); ++i) {
+	this->clean();
+	/*for (uint i = 0; i < constraints.size(); ++i) {
 		delete constraints[i];
 	}
 
 	for(uint i = 0; i < clusters.size(); ++i){
 		delete clusters[i];
-	}
+	}*/
 
 	/*for(map<long, vector<int>* >::iterator it = hierarchy.begin(); it != hierarchy.end(); ++it){
 		delete it->second;
@@ -1002,8 +1002,25 @@ double hdbscan<T1>::getDistance(uint i, uint j){
 
 template <class T1>
 void hdbscan<T1>::clean(){
+	this->clusterLabels.clear();
+	this->clusterStabilities.clear();
+	//this->distanceFunction.clean();
+	this->hierarchy.clear();
+	this->mst.clean();
+	this->outlierScores.clear();
 
+	for (uint i = 0; i < constraints.size(); ++i) {
+		delete constraints[i];
+	}
+
+	for(uint i = 0; i < clusters.size(); ++i){
+		delete clusters[i];
+	}
+
+	this->clusters.clear();
+	this->constraints.clear();
 }
+
 template class hdbscan<float>;
 template class hdbscan<double>;
 template class hdbscan<int>;

@@ -48,6 +48,7 @@ public:
     double getDistance(uint row, uint col);
 
 	void setCalculator(calculator cal);
+    void clean();
 
 private:
 	double* distance, *coreDistances;
@@ -96,6 +97,7 @@ private:
 	void addDistance(uint i, uint j, T distance);
     double getElement(void* dataset, int index, bool isVector);
     void setDimenstions(int rows, int cols);
+
 };
 
 

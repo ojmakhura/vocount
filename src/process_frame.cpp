@@ -1012,6 +1012,7 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 			}
 			c = (char) waitKey(20);
 		}
+		destroyWindow("choose");
 	}
 	return colourSelection;
 }

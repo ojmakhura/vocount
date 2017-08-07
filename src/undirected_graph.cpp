@@ -288,4 +288,11 @@ void UndirectedGraph::print() {
 	}
 }
 
+void UndirectedGraph::clean(){
+	this->edgeWeights.clear();
+	this->edges.clear();
+	this->verticesA.clear();
+	this->verticesB.clear();
+}
+
 } /* namespace clustering */

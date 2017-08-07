@@ -16,13 +16,14 @@ namespace distance {
 template <class T>
 DistanceCalculator<T>::~DistanceCalculator(){
 
-	if(distance != NULL){
+	/*if(distance != NULL){
 		delete [] distance;
 	}
 
 	if (coreDistances != NULL) {
 		delete [] coreDistances;
-	}
+	}*/
+	this->clean();
 }
 
 template <class T>
@@ -356,6 +357,18 @@ double DistanceCalculator<T>::getDistance(uint row, uint col){
 	}
 
 	return distance[idx];
+}
+
+template <class T>
+void DistanceCalculator<T>::clean(){
+
+	if(distance != NULL){
+		delete [] distance;
+	}
+
+	if (coreDistances != NULL) {
+		delete [] coreDistances;
+	}
 }
 
 template class DistanceCalculator<float>;
