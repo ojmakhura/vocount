@@ -18,7 +18,8 @@ void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstima
 /***
  *
  */
-void printData(vocount& vcount, framed& f);
+//void printData(vocount& vcount, framed& f);
+void printData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<int>& roiFeatures, results_t& res, int i);
 
 /**
  *

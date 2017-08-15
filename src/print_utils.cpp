@@ -148,3 +148,50 @@ void printImages(String folder, map<String, Mat> images, int count){
 	}
 }
 
+void printData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<int>& roiFeatures, results_t& res, int i){
+	if (vcount.print && !res.roiClusterPoints.empty()) {
+
+		printImage(vcount.destFolder, vcount.frameCount, "frame", frame);
+
+		Mat ff = drawKeyPoints(frame, keypoints, Scalar(0, 0, 255), -1);
+		printImage(vcount.destFolder, vcount.frameCount, "frame_kp", ff);
+
+		for(map<String, Mat>::iterator it = res.keyPointImages.begin(); it != res.keyPointImages.end(); ++it){
+			printImage(vcount.destFolder, vcount.frameCount, it->first, it->second);
+		}
+
+		res.odata.push_back(roiFeatures.size());
+
+		int selSampleSize = 0;
+
+		for (map<int, vector<int>>::iterator it = res.roiClusterPoints.begin();
+				it != res.roiClusterPoints.end(); ++it) {
+			selSampleSize += it->second.size();
+		}
+
+		res.odata.push_back(selSampleSize);
+		res.odata.push_back(res.ogsize);
+		res.odata.push_back(res.selectedFeatures);
+		res.odata.push_back(res.keyPointImages.size());
+		res.odata.push_back(res.total);
+		int32_t avg = res.total / res.keyPointImages.size();
+		res.odata.push_back(avg);
+		res.odata.push_back(res.boxStructures.size());
+
+		map<int, int>::iterator it = vcount.truth.find(i);
+
+		if(it == vcount.truth.end()){
+			res.odata.push_back(0);
+		} else{
+			res.odata.push_back(it->second);
+		}
+		pair<int32_t, vector<int32_t> > pp(vcount.frameCount, res.odata);
+		vcount.stats.insert(pp);
+		res.cest.push_back(res.boxStructures.size());
+		res.cest.push_back(avg);
+		res.cest.push_back(res.total);
+		pair<int32_t, vector<int32_t> > cpp(vcount.frameCount, res.cest);
+		vcount.clusterEstimates.insert(cpp);
+	}
+}
+

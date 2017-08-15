@@ -45,23 +45,10 @@ typedef struct GRAPH{
 	vector<edge> edgeList;
 } graph;
 
-typedef struct FRAMED{
-	int i, ogsize;
-	Mat descriptors,  												/// Frame descriptors
-		frame,														/// The frame
-		gray,														/// gray scale image
-		dataset;													/// hdbscan cluster
-	map<String, Mat> keyPointImages;										/// images with cluster by cluster keypoints drawn
-	vector<KeyPoint> keypoints; 									/// Frame keypoints
-	double lsize = 0;
-	double total = 0;
-	int32_t selectedFeatures = 0;
-	Rect2d roi;														/// region of interest rectangle
-	vector<int> roiFeatures;										/// indices of the features inside the roi
-	int centerFeature = -1;											/// index of the roi central feature
-	Mat roiDesc;													/// region of interest descriptors
-	bool hasRoi = false;
-
+typedef struct {
+	vector<KeyPoint> keypoints;
+	Mat dataset;
+	//int length, widhth;
     map_kp clusterKeyPoints;					/// maps labels to their keypoints
     map_t clusterKeypointIdx; 						/// maps labels to the keypoint indices
     map_t roiClusterPoints;						/// cluster labels for the region of interest mapped to the roi points in the cluster
@@ -69,11 +56,30 @@ typedef struct FRAMED{
     																/// index to all closest descriptor points indices
 	vector<int32_t> odata;											/// Output data
     vector<int> labels;												/// hdbscan cluster labels
-
 	graph roiStructure;												/// structure of the
 	vector<graph> objStructures;
 	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
 	vector<int32_t> cest;
+	map<String, Mat> keyPointImages;										/// images with cluster by cluster keypoints drawn
+	double lsize = 0;
+	double total = 0;
+	int32_t selectedFeatures = 0;
+	int ogsize;
+} results_t;
+
+typedef struct FRAMED{
+	int i;
+	Mat descriptors,  												/// Frame descriptors
+		frame,														/// The frame
+		gray;													/// hdbscan cluster
+	vector<KeyPoint> keypoints; 									/// Frame keypoints
+	Rect2d roi;														/// region of interest rectangle
+	vector<int> roiFeatures;										/// indices of the features inside the roi
+	int centerFeature = -1;											/// index of the roi central feature
+	Mat roiDesc;													/// region of interest descriptors
+	bool hasRoi = false;
+
+	map<String, results_t> results;
 } framed;
 
 typedef struct VOCOUNT{
@@ -90,23 +96,6 @@ typedef struct VOCOUNT{
     map<int, int> truth;
 } vocount;
 
-typedef struct {
-	vector<KeyPoint> keypoints;
-	void* data;
-    map_kp clusterKeyPoints;					/// maps labels to their keypoints
-    map_t clusterKeypointIdx; 						/// maps labels to the keypoint indices
-    map_t roiClusterPoints;						/// cluster labels for the region of interest mapped to the roi points in the cluster
-    map_kp finalPointClusters;					/// for clusters where there is more than one roi point in the cluster. Maps the roi point
-    																/// index to all closest descriptor points indices
-	vector<int32_t> odata;											/// Output data
-    vector<int> labels;												/// hdbscan cluster labels
-
-	graph roiStructure;												/// structure of the
-	vector<graph> objStructures;
-	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
-	vector<int32_t> cest;
-	map<String, Mat> keyPointImages;										/// images with cluster by cluster keypoints drawn
-} results_t;
 
 /**
  *
@@ -156,8 +145,7 @@ void mapClusters(vector<int>& labels, map_kp& clusterKeyPoints, map_t& clusterKe
 /**
  *
  */
-//void getCount(framed& f);
-void getCount(Mat frame, map_kp& finalPointClusters, map<String, Mat>& keyPointImages, vector<int32_t>& cest, double& total, double& lsize, int32_t& selectedFeatures);
+void generateClusterImages(Mat frame, map_kp& finalPointClusters, map<String, Mat>& keyPointImages, vector<int32_t>& cest, double& total, double& lsize, int32_t& selectedFeatures);
 
 /**
  *
@@ -177,7 +165,7 @@ void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out);
 /**
  *
  */
-uint getDataset(vocount& vcount, framed& f);
+void getDataset(vocount& vcount, results_t& res, Mat descriptors);
 
 /**
  *
@@ -272,5 +260,5 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
  * @param points - a vector of KeyPoint objects
  * @return an array of floats for the positions of the keypoints
  */
-void getPointDataset(vector<KeyPoint> point, float* data);
+Mat getPointDataset(vector<KeyPoint> keypoint);
 #endif /* PROCESS_FRAME_HPP_ */

@@ -167,10 +167,10 @@ Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour, int type){
 	return x;
 }
 
-vector<KeyPoint> getAllMatchedKeypoints(framed& f){
+vector<KeyPoint> getAllMatchedKeypoints( map_kp& finalPointClusters){
 	vector<KeyPoint> kp;
 
-	for(map<int, vector<KeyPoint> >::iterator it = f.finalPointClusters.begin(); it != f.finalPointClusters.end(); ++it){
+	for(map<int, vector<KeyPoint> >::iterator it = finalPointClusters.begin(); it != finalPointClusters.end(); ++it){
 		kp.insert(kp.end(), it->second.begin(), it->second.end());
 	}
 	return kp;
@@ -262,7 +262,7 @@ map_t mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int>& labels){
 /**
  *
  */
-void getCount(Mat frame, map_kp& finalPointClusters, map<String, Mat>& keyPointImages, vector<int32_t>& cest, double& total, double& lsize, int32_t& selectedFeatures){
+void generateClusterImages(Mat frame, map_kp& finalPointClusters, map<String, Mat>& keyPointImages, vector<int32_t>& cest, double& total, double& lsize, int32_t& selectedFeatures){
 
 	vector<KeyPoint> kp;
 	for(map<int, vector<KeyPoint> >::iterator it = finalPointClusters.begin(); it != finalPointClusters.end(); ++it){
@@ -336,8 +336,8 @@ void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out) {
 	}
 }
 
-uint getDataset(vocount& vcount, framed& f){
-	Mat dataset = f.descriptors.clone();
+void getDataset(vocount& vcount, results_t& res, Mat descriptors){
+	Mat dataset = descriptors.clone();
 
 	if (!vcount.frameHistory.empty()) {
 		for (int j = 1; j < vcount.step; ++j) {
@@ -349,9 +349,10 @@ uint getDataset(vocount& vcount, framed& f){
 		}
 	}
 
-	f.ogsize = dataset.rows;
-	f.dataset = dataset;
-	return f.ogsize;
+	res.ogsize = dataset.rows;
+	res.dataset = dataset;
+	///res.length = res.dataset.
+	//return res.ogsize;
 }
 
 /**
@@ -441,53 +442,6 @@ bool processOptions(vocount& vcount, CommandLineParser& parser, VideoCapture& ca
 	return true;
 }
 
-void printData(vocount& vcount, framed& f){
-	if (vcount.print && !f.roiClusterPoints.empty()) {
-
-		printImage(vcount.destFolder, vcount.frameCount, "frame", f.frame);
-
-		Mat ff = drawKeyPoints(f.frame, f.keypoints, Scalar(0, 0, 255), -1);
-		printImage(vcount.destFolder, vcount.frameCount, "frame_kp", ff);
-
-		for(map<String, Mat>::iterator it = f.keyPointImages.begin(); it != f.keyPointImages.end(); ++it){
-			printImage(vcount.destFolder, vcount.frameCount, it->first, it->second);
-		}
-
-		f.odata.push_back(f.roiFeatures.size());
-
-		int selSampleSize = 0;
-
-		for (map<int, vector<int>>::iterator it = f.roiClusterPoints.begin();
-				it != f.roiClusterPoints.end(); ++it) {
-			selSampleSize += it->second.size();
-		}
-
-		f.odata.push_back(selSampleSize);
-		f.odata.push_back(f.ogsize);
-		f.odata.push_back(f.selectedFeatures);
-		f.odata.push_back(f.keyPointImages.size());
-		f.odata.push_back(f.total);
-		int32_t avg = f.total / f.keyPointImages.size();
-		f.odata.push_back(avg);
-		f.odata.push_back(f.boxStructures.size());
-
-		map<int, int>::iterator it = vcount.truth.find(f.i);
-
-		if(it == vcount.truth.end()){
-			f.odata.push_back(0);
-		} else{
-			f.odata.push_back(it->second);
-		}
-		pair<int32_t, vector<int32_t> > pp(vcount.frameCount, f.odata);
-		vcount.stats.insert(pp);
-		f.cest.push_back(f.boxStructures.size());
-		f.cest.push_back(avg);
-		f.cest.push_back(f.total);
-		pair<int32_t, vector<int32_t> > cpp(vcount.frameCount, f.cest);
-		vcount.clusterEstimates.insert(cpp);
-	}
-}
-
 int rectExist(vector<box_structure> structures, Rect& r){
 
 	double maxIntersect = 0.0;
@@ -564,7 +518,7 @@ void boxStructure(map_kp& finalPointClusters, vector<KeyPoint>& keypoints, Rect2
 	keyPointImages[ss] = img_bounds;
 }
 
-map<int, int> addDescriptors(framed& f, framed& f1, int cluster, vector<int> roipts){
+map<int, int> addDescriptors(results_t& f, results_t& f1, int cluster, vector<int> roipts){
 
 	vector<int> crois = f.clusterKeypointIdx[cluster];
 	map<int, int> newMap;
@@ -572,7 +526,7 @@ map<int, int> addDescriptors(framed& f, framed& f1, int cluster, vector<int> roi
 	for(uint i = 0; i < crois.size(); i++){
 		int rp = crois[i];
 
-		f1.dataset.push_back(f.descriptors.row(rp));
+		/*f1.dataset.push_back(f.descriptors.row(rp));
 		f1.keypoints.push_back(f.keypoints[rp]);
 		newMap[f1.dataset.rows-1] = rp;
 
@@ -585,7 +539,7 @@ map<int, int> addDescriptors(framed& f, framed& f1, int cluster, vector<int> roi
 					f1.roiDesc.push_back(f.descriptors.row(rp));
 				}
 			}
-		}
+		}*/
 	}
 
 	return newMap;
@@ -599,7 +553,7 @@ map<int, int> splitROIPoints(framed& f, framed& f1){
 	f1.hasRoi = f.hasRoi;
 
 	bool run = false;
-	for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it){
+	/*for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it){
 		if (it->second.size() > 1 && it->first != 0) {
 
 			run = true;
@@ -609,10 +563,10 @@ map<int, int> splitROIPoints(framed& f, framed& f1){
 	}
 
 	cout << "f.roiClusterPoints[0].size() " << f.roiClusterPoints[0].size() << endl;
-	/**
+	*
 	 * If there code above did not need reclustering, we check if the noise cluster has
 	 * more roi features, in which case we add it to the reclustering data.
-	 */
+
 	if(!run && f.roiClusterPoints[0].size() > 0 && f1.dataset.rows == 0){
 
 		run = true;
@@ -633,7 +587,7 @@ map<int, int> splitROIPoints(framed& f, framed& f1){
 		//mapKeyPoints(f1);
 		mapClusters(f.labels, f.clusterKeyPoints, f.clusterKeypointIdx, f.keypoints);
 		return fToF1;
-	}
+	}*/
 
 	return map<int, int>();
 }
@@ -1018,12 +972,13 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 }
 
 
-void getPointDataset(vector<KeyPoint> point, float *data){
-
-	for(size_t i = 0; i < point.size(); i++){
+Mat getPointDataset(vector<KeyPoint> keypoints){
+	Mat m(keypoints.size(), 2, CV_32FC1);
+	float *data = m.ptr<float>(0);
+	for(size_t i = 0; i < keypoints.size(); i++){
 		int idx = i *2;
-		data[idx] = point[i].pt.x;
-		data[idx+1] = point[i].pt.y;
+		data[idx] = keypoints[i].pt.x;
+		data[idx+1] = keypoints[i].pt.y;
 	}
-
+	return m;
 }
