@@ -105,6 +105,7 @@ typedef struct {
 	vector<graph> objStructures;
 	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
 	vector<int32_t> cest;
+	map<String, Mat> keyPointImages;										/// images with cluster by cluster keypoints drawn
 } results_t;
 
 /**
@@ -155,7 +156,13 @@ void mapClusters(vector<int>& labels, map_kp& clusterKeyPoints, map_t& clusterKe
 /**
  *
  */
-void getCount(framed& f);
+//void getCount(framed& f);
+void getCount(Mat frame, map_kp& finalPointClusters, map<String, Mat>& keyPointImages, vector<int32_t>& cest, double& total, double& lsize, int32_t& selectedFeatures);
+
+/**
+ *
+ */
+double countPrint(map_t& roiClusterPoints, map_kp& clusterKeyPoints, vector<int32_t>& cest, int32_t& selectedFeatures, double& lsize);
 
 /**
  *
@@ -195,12 +202,13 @@ bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
 /**
  *
  */
-void boxStructure(framed& f);
+//void boxStructure(framed& f);
+void boxStructure(map_kp& finalPointClusters, vector<KeyPoint>& keypoints, Rect2d& roi, vector<box_structure>& boxStructures, map<String, Mat>& keyPointImages);
 
 /**
  *
  */
-void generateFinalPointClusters(framed& f);
+void generateFinalPointClusters(map_kp& finalPointClusters, map_t& roiClusterPoints, map_kp& clusterKeyPoints);
 
 /**
  *
@@ -250,7 +258,7 @@ int analyseStats(map<String, double> stats);
 /***
  *
  */
-Mat getSelected(Mat desc, vector<int> indices);
+Mat getSelectedKeypointsDescriptors(Mat desc, vector<int> indices);
 
 /**
  * Detect the optimum minPts value for colour clustering.
