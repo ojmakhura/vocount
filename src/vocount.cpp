@@ -234,7 +234,6 @@ int main(int argc, char** argv) {
 							}
 						}
 
-						//float data[rs.keypoints.size() * 2];
 						rs.dataset = getPointDataset(rs.keypoints);
 						hdbscan<float> sc(_EUCLIDEAN, 3);
 						sc.run(rs.dataset.ptr<float>(), rs.keypoints.size(), 2, true);
