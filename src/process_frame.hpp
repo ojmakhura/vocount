@@ -25,9 +25,13 @@ typedef set<int> set_t;
 
 typedef struct {
 	int minPts = -1;
-	vector<int> selectedPtsIdx;
-	vector<KeyPoint> selectedPts;
+    map_kp clusterKeyPoints;					/// maps labels to their keypoints
+    map_t clusterKeypointIdx; 						/// maps labels to the keypoint indices
+	vector<int> roiFeatures;
+	//vector<int> selectedPtsIdx;
+	//vector<KeyPoint> selectedPts;
 	Mat selectedDesc;
+	vector<int> selectedClusters;
 } selection_t;
 
 typedef struct _box_structure{
@@ -54,6 +58,8 @@ typedef struct {
     map_t roiClusterPoints;						/// cluster labels for the region of interest mapped to the roi points in the cluster
     map_kp finalPointClusters;					/// for clusters where there is more than one roi point in the cluster. Maps the roi point
     																/// index to all closest descriptor points indices
+    map<String, double> stats;
+    map_d distancesMap;
 	vector<int32_t> odata;											/// Output data
     vector<int> labels;												/// hdbscan cluster labels
 	graph roiStructure;												/// structure of the
@@ -65,6 +71,7 @@ typedef struct {
 	double total = 0;
 	int32_t selectedFeatures = 0;
 	int ogsize;
+	int validity = -1;
 } results_t;
 
 typedef struct FRAMED{
@@ -165,7 +172,7 @@ void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out);
 /**
  *
  */
-void getDataset(vocount& vcount, results_t& res, Mat descriptors);
+Mat getDescriptorDataset(vector<framed>& frameHistory, int step, results_t& res, Mat descriptors);
 
 /**
  *
@@ -236,7 +243,7 @@ map_d getMinMaxDistances(map_t mp, hdbscan<float>& sc, double* core);
 /**
  * Get the statistics for the core distance and intra cluster distances
  */
-map<String, double> getStatistics(map_d distances, double* cr, double* dr);
+map<String, double> getStatistics(map_d distances);
 
 /**
  *
@@ -261,4 +268,8 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
  * @return an array of floats for the positions of the keypoints
  */
 Mat getPointDataset(vector<KeyPoint> keypoint);
-#endif /* PROCESS_FRAME_HPP_ */
+
+/**
+ *
+ */
+results_t cluster(Mat dataset, int minPts, bool mapDistances);

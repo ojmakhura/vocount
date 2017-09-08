@@ -268,7 +268,6 @@ void generateClusterImages(Mat frame, map_kp& finalPointClusters, map<String, Ma
 	for(map<int, vector<KeyPoint> >::iterator it = finalPointClusters.begin(); it != finalPointClusters.end(); ++it){
 		cest.push_back(it->second.size());
 		total += it->second.size();
-		printf("Point %d has %lu objects\n", it->first, it->second.size());
 		selectedFeatures += it->second.size();
 
 		if(it->second.size() > lsize){
@@ -336,23 +335,20 @@ void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out) {
 	}
 }
 
-void getDataset(vocount& vcount, results_t& res, Mat descriptors){
+Mat getDescriptorDataset(vector<framed>& frameHistory, int step, Mat descriptors){
 	Mat dataset = descriptors.clone();
 
-	if (!vcount.frameHistory.empty()) {
-		for (int j = 1; j < vcount.step; ++j) {
-			int ix = vcount.frameHistory.size() - j;
+	if (!frameHistory.empty()) {
+		for (int j = 1; j < step; ++j) {
+			int ix = frameHistory.size() - j;
 			if (ix >= 0) {
-				framed fx = vcount.frameHistory[ix];
+				framed fx = frameHistory[ix];
 				dataset.push_back(fx.descriptors);
 			}
 		}
 	}
 
-	res.ogsize = dataset.rows;
-	res.dataset = dataset;
-	///res.length = res.dataset.
-	//return res.ogsize;
+	return dataset;
 }
 
 /**
@@ -381,7 +377,15 @@ void findROIFeature(framed& f, selection_t& sel){
 	double distance;
 
 	for(uint i = 0; i < f.keypoints.size(); ++i){
-		bool selected = sel.minPts == -1 || (sel.minPts != -1 && std::find(sel.selectedPtsIdx.begin(),	sel.selectedPtsIdx.end(), i) != sel.selectedPtsIdx.end());
+		vector<int> selPtsIdx;
+
+		for(uint j = 0; j < sel.selectedClusters.size(); j++){
+			int cluster = sel.selectedClusters[j];
+			vector<int> ptsIdx = sel.clusterKeypointIdx[cluster];
+			selPtsIdx.insert(selPtsIdx.end(), ptsIdx.begin(), ptsIdx.end());
+		}
+
+		bool selected = sel.minPts == -1 || (sel.minPts != -1 && std::find(selPtsIdx.begin(), selPtsIdx.end(), i) != selPtsIdx.end());
 		if(f.hasRoi && f.roi.contains(f.keypoints[i].pt) && selected){
 			f.roiFeatures.push_back(i);
 
@@ -773,46 +777,19 @@ map_d getMinMaxDistances(map_t mp, hdbscan<float>& sc, double* core){
 	return pm;
 }
 
-map<String, double> getStatistics(map_d distances, double* cr, double* dr){
+map<String, double> getStatistics(map_d distances){
+	double cr[distances.size()];
+	double dr[distances.size()];
 
 	map<String, double> stats;
-	//double cr[distances.size()];
-	//double dr[distances.size()];
-
 	int c = 0;
 	for(map_d::iterator it = distances.begin(); it != distances.end(); ++it){
 
 		cr[c] = it->second[1]/it->second[0];
 
-		/*if(it->second[0] == 0.0){
-			cr[c] = numeric_limits<double>::max();
-		}*/
-
-		/*if(cr[c] != cr[c]){
-			printf("**********cr[c] is nan\n");
-		}*/
-
 		dr[c] = it->second[3]/it->second[2];
-		/*if(it->second[2] == 0.0){
-			dr[c] = numeric_limits<double>::max();
-		}*/
-		/*if(dr[c] != dr[c]){
-			printf("**********dr[c] is nan\n");
-		}
-
-
-		printf("cr : [%4f/%4f = %4f] | dr : [%4f/%4f = %4f]\n", it->second[1], it->second[0], cr[c], it->second[3], it->second[2], dr[c]);*/
 		c++;
 	}
-	/*printf("cr = [");
-	for(int i = 0; i < distances.size(); i++){
-		printf("%.4f, ", cr[i]);
-	}
-	printf("] \n\ndr = [");
-	for(int i = 0; i < distances.size(); i++){
-		printf("%.4f, ", dr[i]);
-	}
-	printf("]\n\n");*/
 
 	// Calculating core distance statistics
 	stats["mean_cr"] = gsl_stats_mean(cr, 1, c);
@@ -829,27 +806,6 @@ map<String, double> getStatistics(map_d distances, double* cr, double* dr){
 	stats["kurtosis_dr"] = gsl_stats_kurtosis(dr, 1, c);
 	stats["skew_dr"] = gsl_stats_skew(dr, 1, c);
 	stats["count"] = c;
-
-	/*printf("stats[\"mean_cr\"] = %f\n", stats["mean_cr"]);
-	printf("stats[\"sd_cr\"] = %f\n", stats["sd_cr"]);
-	printf("stats[\"variance_cr\"] = %f\n", stats["variance_cr"]);
-	printf("stats[\"max_cr\"] = %f\n", stats["max_cr"]);
-	printf("stats[\"kurtosis_cr\"] = %f\n", stats["kurtosis_cr"]);
-	printf("stats[\"skew_cr\"] = %f\n", stats["skew_cr"]);
-
-	// Calculating distance statistics
-	printf("\n\n******************\nstats[\"mean_dr\"] = %f\n", stats["mean_dr"]);
-	printf("stats[\"sd_dr\"] = %f\n", stats["sd_dr"]);
-	printf("stats[\"variance_dr\"] = %f\n", stats["variance_dr"]);
-	printf("stats[\"max_dr\"] = %f\n", stats["max_dr"]);
-	printf("stats[\"kurtosis_dr\"] = %f\n", stats["kurtosis_dr"]);
-	printf("stats[\"skew_dr\"] = %f\n", stats["skew_dr"]);
-
-	printf("\nstats[\"count\"] = %f\n", stats["count"]);*/
-
-	//int validity = analyseStats(stats);
-
-	//printf("valididty -----> %d\n", validity);
 
 	return stats;
 }
@@ -911,24 +867,23 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 
 	for(int i = 3; i < 30; i++){
 
-		printf("\n\n >>>>>>>>>>>>>>>>>>>>>>>>> Clustering for minPts = %d\n", i);
-		map_kp clusterKeyPoints;
-		map_t clusterKeypointIdx;
-
-		hdbscan<float> scanc(_EUCLIDEAN, i);
-		scanc.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
-		vector<int> labels = scanc.getClusterLabels();
-		set<int> lsetkps(labels.begin(), labels.end());
-		double* corecl = scanc.getCoreDistances();
-		mapClusters(labels, clusterKeyPoints, clusterKeypointIdx, keypoints);
-		map_d disMapCl = getMinMaxDistances(clusterKeypointIdx, scanc, corecl);
-		double cr[disMapCl.size()];
-		double dr[disMapCl.size()];
-		stats[i] = getStatistics(disMapCl, cr, dr);
+		printf("\n\n >>>>>>>>>>>> Clustering for minPts = %d\n", i);
+		//map_kp clusterKeyPoints;
+		//map_t clusterKeypointIdx;
+		results_t res = cluster(dataset, i, true);
+		//hdbscan<float> scanc(_EUCLIDEAN, i);
+		//scanc.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
+		//vector<int> labels = scanc.getClusterLabels();
+		set<int> lsetkps(res.labels.begin(), res.labels.end());
+		//double* corecl = scanc.getCoreDistances();
+		//mapClusters(labels, clusterKeyPoints, clusterKeypointIdx, keypoints);
+		//map_d disMapCl = getMinMaxDistances(clusterKeypointIdx, scanc, corecl);
+		res.stats = getStatistics(res.distancesMap);
+		stats[i] = res.stats;
 		//int v = analyseStats(stats[i]);
 
-		if(disMapCl.size() != size){
-			size = disMapCl.size();
+		if(res.distancesMap.size() != size){
+			size = res.distancesMap.size();
 			mpts = i;
 			currentCount = 1;
 		} else{
@@ -936,12 +891,14 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 			if(currentCount > chosenCount){
 				chosenCount = currentCount;
 				colourSelection.minPts = mpts;
-				clusterKeypointIdxMap = clusterKeypointIdx;
-				clusterKeyPointsMap = clusterKeyPoints;
+				clusterKeypointIdxMap = res.clusterKeypointIdx;
+				clusterKeyPointsMap = res.clusterKeyPoints;
 			}
 		}
 
 	}
+	colourSelection.clusterKeyPoints = clusterKeyPointsMap;
+	colourSelection.clusterKeypointIdx = clusterKeypointIdxMap;
 	printf(">>>>>>>> VALID CHOICE OF minPts IS %d <<<<<<<<<\n", colourSelection.minPts);
 	//printStatistics(stats, "./");
 	for(map_t::iterator it = clusterKeypointIdxMap.begin(); it != clusterKeypointIdxMap.end(); ++it){
@@ -953,8 +910,7 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 		while(true){
 			if (c == 'a') {
 				Mat xx = getSelectedKeypointsDescriptors(descriptors, it->second);
-				colourSelection.selectedPts.insert(colourSelection.selectedPts.end(), clusterKeyPointsMap[it->first].begin(), clusterKeyPointsMap[it->first].end());
-				colourSelection.selectedPtsIdx.insert(colourSelection.selectedPtsIdx.end(), clusterKeypointIdxMap[it->first].begin(), clusterKeypointIdxMap[it->first].end());
+				colourSelection.selectedClusters.push_back(it->first);
 				if(colourSelection.selectedDesc.empty()){
 					colourSelection.selectedDesc = xx.clone();
 				} else{
@@ -982,3 +938,23 @@ Mat getPointDataset(vector<KeyPoint> keypoints){
 	}
 	return m;
 }
+
+results_t cluster(Mat dataset, int minPts, bool analyse){
+	results_t res;
+	res.dataset = dataset.clone();
+	hdbscan<float> scan(_EUCLIDEAN, minPts);
+	scan.run(res.dataset.ptr<float>(), res.dataset.rows, res.dataset.cols, true);
+	res.labels = scan.getClusterLabels();
+	mapClusters(res.labels, res.clusterKeyPoints, res.clusterKeypointIdx, res.keypoints);
+
+	if(analyse){
+		double* core = scan.getCoreDistances();
+		res.distancesMap = getMinMaxDistances(res.clusterKeypointIdx, scan, core);
+		res.stats = getStatistics(res.distancesMap);
+		res.validity = analyseStats(res.stats);
+	}
+
+	scan.clean();
+	return res;
+}
+
