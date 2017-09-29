@@ -172,7 +172,7 @@ void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out);
 /**
  *
  */
-Mat getDescriptorDataset(vector<framed>& frameHistory, int step, results_t& res, Mat descriptors);
+Mat getDescriptorDataset(vector<framed>& frameHistory, int step, Mat descriptors);
 
 /**
  *
@@ -273,3 +273,4 @@ Mat getPointDataset(vector<KeyPoint> keypoint);
  *
  */
 results_t cluster(Mat dataset, int minPts, bool mapDistances);
+#endif

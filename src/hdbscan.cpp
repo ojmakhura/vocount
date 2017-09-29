@@ -346,8 +346,7 @@ bool hdbscan<T1>::propagateTree() {
 		Cluster* cluster = clusters[i];
 		if (cluster != NULL && !cluster->hasKids()) {
 			//if()
-			clustersToExamine.insert(
-					pair<int, Cluster*>(cluster->getLabel(), cluster));
+			clustersToExamine.insert(pair<int, Cluster*>(cluster->getLabel(), cluster));
 			addedToExaminationList[cluster->getLabel()] = true;
 		}
 	}
@@ -367,8 +366,7 @@ bool hdbscan<T1>::propagateTree() {
 			Cluster* parent = currentCluster->getParent();
 
 			if (!addedToExaminationList[parent->getLabel()]) {
-				clustersToExamine.insert(
-						pair<int, Cluster*>(parent->getLabel(), parent));
+				clustersToExamine.insert(pair<int, Cluster*>(parent->getLabel(), parent));
 				addedToExaminationList[parent->getLabel()] = true;
 			}
 		}
@@ -392,42 +390,15 @@ bool hdbscan<T1>::propagateTree() {
  * @param infiniteStability true if there are any clusters with infinite stability, false otherwise
  */
 template <class T1>
-void hdbscan<T1>::calculateOutlierScores(vector<double>* pointNoiseLevels,
-		vector<int>* pointLastClusters, bool infiniteStability) {
+void hdbscan<T1>::calculateOutlierScores(vector<double>* pointNoiseLevels, vector<int>* pointLastClusters, bool infiniteStability) {
 
 	double* coreDistances = distanceFunction.getCoreDistances();
 	int numPoints = pointNoiseLevels->size();
-	//printf("Creating outlierScores\n");
-	//outlierScores = new vector<OutlierScore*>();
 	outlierScores.reserve(numPoints);
-	//printf("Created outlierScores\n");
-	//Iterate through each point, calculating its outlier score:
-
-	/*int i = 0;
-
-	for(vector<Cluster*>::iterator it = clusters->begin(); it != clusters->end(); ++it){
-		Cluster* c = *it;
-		double epsilon_max = c->getPropagatedLowestChildDeathLevel();
-		//printf("hey too\n");
-		double epsilon = (*pointNoiseLevels)[i];
-
-		double score = 0;
-		if (epsilon != 0) {
-			score = 1 - (epsilon_max / epsilon);
-		}
-		//printf("3333333333 %d of %d outlierScores size %d\n", i, numPoints, outlierScores->size(), coreDistances);
-		outlierScores->push_back(new OutlierScore(score, coreDistances[i], i));
-		//printf("Finishes createing and pushing outlier\n");
-		++i;
-	}*/
-
 	for (int i = 0; i < numPoints; i++) {
-
 		int tmp = (*pointLastClusters)[i];
 
-		//printf("heyxxxxxxxxxxx\n");
 		Cluster* c = clusters[tmp];
-		//printf("fffffffffffffffffffffffffff %d\n", c);
 		double epsilon_max =
 				c->getPropagatedLowestChildDeathLevel();
 		//printf("hey too\n");
@@ -633,14 +604,14 @@ void hdbscan<T1>::computeHierarchyAndClusterTree(bool compactHierarchy, vector<d
 		//delete clusterOne;
 	}
 
-	//
-
 	//Sets for the clusters and vertices that are affected by the edge(s) being removed:
 	set<int> affectedClusterLabels;
 	set<int> affectedVertices;
 
+	clock_t begin1 = clock();
+	int32_t lo = 0;
 	while (currentEdgeIndex >= 0) {
-
+		clock_t begin = clock();
 		double currentEdgeWeight = mst.getEdgeWeightAtIndex(currentEdgeIndex);
 		vector<Cluster*> newClusters;
 		//Remove all edges tied with the current edge weight, and store relevant clusters and vertices:
@@ -662,7 +633,11 @@ void hdbscan<T1>::computeHierarchyAndClusterTree(bool compactHierarchy, vector<d
 
 			currentEdgeIndex--;
 		}
+		clock_t end = clock();
+		double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+		printf("%d : computeHierarchyAndClusterTree: Point 1 in %f seconds\n", lo, time_spent);
 
+		begin = clock();
 		//Check each cluster affected for a possible split:
 		while (!affectedClusterLabels.empty()) {
 			set<int>::reverse_iterator it = affectedClusterLabels.rbegin();
@@ -710,6 +685,7 @@ void hdbscan<T1>::computeHierarchyAndClusterTree(bool compactHierarchy, vector<d
 				examinedVertices.erase(rootVertex);
 
 				//Explore this potential child cluster as long as there are unexplored points:
+				clock_t step = clock();
 				while (!unexploredSubClusterPoints.empty()) {
 					int vertexToExplore = *(unexploredSubClusterPoints.begin());
 					unexploredSubClusterPoints.erase(
@@ -742,6 +718,8 @@ void hdbscan<T1>::computeHierarchyAndClusterTree(bool compactHierarchy, vector<d
 						}
 					}
 				}
+				time_spent = (double)(clock() - step) / CLOCKS_PER_SEC;
+				printf("hdbscan_compute_hierarchy_and_cluster_tree: Point 2.1.1 in %f seconds\n", time_spent);
 
 				//If there could be a split, and this child cluster is valid:
 				if (numChildClusters >= 2
@@ -794,18 +772,14 @@ void hdbscan<T1>::computeHierarchyAndClusterTree(bool compactHierarchy, vector<d
 							== examinedClusterLabel) {
 
 				while (!unexploredFirstChildClusterPoints.empty()) {
-					vector<int>::iterator it =
-							unexploredFirstChildClusterPoints.begin();
+					vector<int>::iterator it = unexploredFirstChildClusterPoints.begin();
 					int vertexToExplore = *it;
-					unexploredFirstChildClusterPoints.erase(
-							unexploredFirstChildClusterPoints.begin());
+					unexploredFirstChildClusterPoints.erase(unexploredFirstChildClusterPoints.begin());
 					vector<int>* v = mst.getEdgeListForVertex(vertexToExplore);
 
-					for (vector<int>::iterator itr = v->begin();
-							itr != v->end(); ++itr) {
+					for (vector<int>::iterator itr = v->begin(); itr != v->end(); ++itr) {
 						int neighbor = *itr;
-						std::pair<std::set<int>::iterator, bool> p =
-								firstChildCluster.insert(neighbor);
+						std::pair<std::set<int>::iterator, bool> p = firstChildCluster.insert(neighbor);
 						if (p.second) {
 							unexploredFirstChildClusterPoints.push_back(neighbor);
 						}
@@ -823,15 +797,25 @@ void hdbscan<T1>::computeHierarchyAndClusterTree(bool compactHierarchy, vector<d
 			}
 		}
 
+		end = clock();
+		time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+		printf("%d : computeHierarchyAndClusterTree: Point 2 in %f seconds\n", lo, time_spent);
+
+		begin = clock();
 		if (!compactHierarchy || nextLevelSignificant || !newClusters.empty()) {
 
 			lineCount++;
 
 			hierarchy.insert(pair<long, vector<int>>(lineCount, vector<int>(previousClusterLabels.begin(), previousClusterLabels.end())));
 		}
+		end = clock();
+		time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+		printf("%d : computeHierarchyAndClusterTree: Point 3 in %f seconds\n", lo, time_spent);
 
 		// Assign file offsets and calculate the number of constraints
 					// satisfied:
+
+		begin = clock();
 		set<int> newClusterLabels;
 		for (vector<Cluster*>::iterator itr = newClusters.begin(); itr != newClusters.end(); ++itr) {
 			Cluster* newCluster = *itr;
@@ -853,8 +837,18 @@ void hdbscan<T1>::computeHierarchyAndClusterTree(bool compactHierarchy, vector<d
 		} else{
 			nextLevelSignificant = true;
 		}
+		end = clock();
+		time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+		printf("%d : computeHierarchyAndClusterTree: Point 4 in %f seconds\n", lo, time_spent);
+		lo++;
 
 	}
+
+	clock_t end = clock();
+	double time_spent = (double)(end - begin1) / CLOCKS_PER_SEC;
+	printf("computeHierarchyAndClusterTree: Point 0 in %f seconds\n", time_spent);
+
+	begin1 = clock();
 
 	vector<int> labels;
 	// Write out the final level of the hierarchy (all points noise):
@@ -864,6 +858,9 @@ void hdbscan<T1>::computeHierarchyAndClusterTree(bool compactHierarchy, vector<d
 	labels.push_back(0);
 	hierarchy.insert(pair<long, vector<int>>(0, labels));
 	lineCount++;
+	end = clock();
+	time_spent = (double)(end - begin1) / CLOCKS_PER_SEC;
+	printf("computeHierarchyAndClusterTree: Point 5 in %f seconds\n", time_spent);
 
 	//mst.print();
 
@@ -896,7 +893,11 @@ void hdbscan<T1>::run(T1* dataset, int size){
 template <class T1>
 void hdbscan<T1>::run(T1* dataset, int rows, int cols, bool rowwise){
     numPoints = getDatasetSize(rows, cols, rowwise);
+	clock_t begin = clock();
     this->distanceFunction.computeDistance(dataset, rows, cols, true, minPoints-1);
+	clock_t end = clock();
+	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+	printf("hdbscan_run: distance calculated in %f seconds\n", time_spent);
     this->run();
 }
 
@@ -904,13 +905,36 @@ void hdbscan<T1>::run(T1* dataset, int rows, int cols, bool rowwise){
 template <class T1>
 void hdbscan<T1>::run() {
 
+	clock_t begin = clock();
 	constructMST();
+	clock_t end = clock();
+	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+	printf("hdbscan_run: minimum spanning tree created in %f seconds\n", time_spent);
+
+	begin = clock();
 	mst.quicksortByEdgeWeight();
+	end = clock();
+	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+	printf("hdbscan_run: weights sorted in %f seconds\n", time_spent);
+
 	vector<double> pointNoiseLevels (numPoints);
 	vector<int> pointLastClusters(numPoints);
+	begin = clock();
 	computeHierarchyAndClusterTree(false, &pointNoiseLevels, &pointLastClusters);
+	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+	printf("hdbscan_run: hierarchy and cluster tree computed in %f seconds\n", time_spent);
+
+	begin = clock();
 	bool infiniteStability = propagateTree();
+	end = clock();
+	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+	printf("hdbscan_run: tree propagated in %f seconds\n", time_spent);
+
+	begin = clock();
 	findProminentClusters(infiniteStability);
+	end = clock();
+	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+	printf("hdbscan_run: prominent clusters found in %f seconds\n", time_spent);
 }
 
 template <class T1>

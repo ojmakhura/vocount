@@ -100,6 +100,7 @@ void Cluster::propagate() {
 		if (this->propagatedLowestChildDeathLevel == numeric_limits<float>::max()){
 			this->propagatedLowestChildDeathLevel = this->deathLevel;
 		}
+
 		if (this->propagatedLowestChildDeathLevel < this->parent->propagatedLowestChildDeathLevel){
 			this->parent->propagatedLowestChildDeathLevel = this->propagatedLowestChildDeathLevel;
 		}
@@ -138,7 +139,6 @@ void Cluster::propagate() {
 			else {
 				this->parent->propagatedNumConstraintsSatisfied+= this->propagatedNumConstraintsSatisfied;
 				this->parent->propagatedStability+= this->propagatedStability;
-				//this->parent->propagatedDescendants->insert(parent->propagatedDescendants->end(), this->propagatedDescendants->begin(), this->propagatedDescendants->end());
 				vector<Cluster*>* parentDescendants =
 						this->parent->getPropagatedDescendants();
 
