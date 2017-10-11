@@ -202,20 +202,18 @@ int main(int argc, char** argv) {
 			myfile << "};\n#endif" << endl;
 			myfile.close();
 
-			//results_t res1 = do_cluster(dset, vcount.step*3, TRUE);
-			//hdbscan<float> scan(_EUCLIDEAN, vcount.step*3);
-			//scan.run(res1.dataset.ptr<float>(), res1.dataset.rows, res1.dataset.cols, true);
+			results_t res1 = do_cluster(dset, f.keypoints, vcount.step*3, TRUE);
 			//vector<Cluster*> clusters = scan.getClusters();
 			// Only labels from the first n indices where n is the number of features found in f.frame
 			//res1.labels.insert(res1.labels.begin(), scan.getClusterLabels().begin(), scan.getClusterLabels().begin()+f.descriptors.rows);
 
-			//mapClusters(res1.labels, res1.clusterKeyPoints, res1.clusterKeypointIdx, f.keypoints);
-			//res1.roiClusterPoints = mapSampleFeatureClusters(f.roiFeatures, res1.labels);
-			//generateFinalPointClusters(res1.finalPointClusters, res1.roiClusterPoints, res1.clusterKeyPoints);
-			//cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-			//res1.total = countPrint(res1.roiClusterPoints, res1.clusterKeyPoints, res1.cest, res1.selectedFeatures, res1.lsize);
-			//cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-			//cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+			//mapClusters(res1.labels, res1.clusterKeyPoints, res1.clusterKeypointIdx, res1.keypoints);
+			res1.roiClusterPoints = mapSampleFeatureClusters(f.roiFeatures, res1.labels);
+			generateFinalPointClusters(res1.finalPointClusters, res1.roiClusterPoints, res1.clusterKeyPoints);
+			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+			res1.total = countPrint(res1.roiClusterPoints, res1.clusterKeyPoints, res1.cest, res1.selectedFeatures, res1.lsize);
+			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 
 			//generateClusterImages(f.frame, res1.finalPointClusters, res1.keyPointImages, res1.cest, res1.total, res1.lsize, res1.selectedFeatures);
 			//boxStructure(res1.finalPointClusters, f.keypoints, f.roi, res1.boxStructures, res1.keyPointImages);

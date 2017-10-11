@@ -275,5 +275,5 @@ Mat getPointDataset(vector<KeyPoint> keypoint);
 /**
  *
  */
-results_t do_cluster(Mat dataset, int minPts, bool mapDistances);
+results_t do_cluster(Mat dataset, vector<KeyPoint> keypoints, int minPts, bool mapDistances);
 #endif
