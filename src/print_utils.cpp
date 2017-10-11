@@ -4,7 +4,7 @@
  *  Created on: 1 Aug 2017
  *      Author: ojmakh
  */
-#include "print_utils.hpp"
+#include "vocount/print_utils.hpp"
 #include <fstream>
 
 void printImage(String folder, int idx, String name, Mat img) {

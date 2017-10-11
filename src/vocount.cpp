@@ -15,8 +15,8 @@
 #include <opencv2/ximgproc/segmentation.hpp>
 #include <ctime>
 #include <string>
-#include "process_frame.hpp"
-#include "print_utils.hpp"
+#include "vocount/process_frame.hpp"
+#include "vocount/print_utils.hpp"
 
 using namespace std;
 using namespace cv;
@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
 			myfile << "};\n#endif" << endl;
 			myfile.close();
 
-			results_t res1 = cluster(dset, vcount.step*3, true);
+			//results_t res1 = do_cluster(dset, vcount.step*3, TRUE);
 			//hdbscan<float> scan(_EUCLIDEAN, vcount.step*3);
 			//scan.run(res1.dataset.ptr<float>(), res1.dataset.rows, res1.dataset.cols, true);
 			//vector<Cluster*> clusters = scan.getClusters();

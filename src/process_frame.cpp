@@ -5,7 +5,7 @@
  *      Author: ojmakh
  */
 
-#include "process_frame.hpp"
+#include "vocount/process_frame.hpp"
 #include <fstream>
 #include <opencv/cv.hpp>
 #include <dirent.h>
@@ -238,12 +238,16 @@ void generateFinalPointClusters(map_kp& finalPointClusters, map_t& roiClusterPoi
 }
 
 void mapClusters(vector<int>& labels, map_kp& clusterKeyPoints, map_t& clusterKeypointIdx, vector<KeyPoint>& keypoints){
-
+	printf("labels has %d size\n", labels.size());
 	// Map cluster labels to the indices of the points
 	for(uint i = 0; i < labels.size(); i++){
+		printf("1");
 		int l = labels[i];
-		clusterKeyPoints[l].push_back(keypoints[i]);
+		printf("2");
+		//clusterKeyPoints[l].push_back(keypoints[i]);
+		printf("3");
 		clusterKeypointIdx[l].push_back(i);
+		printf("4");
 	}
 }
 
@@ -726,7 +730,7 @@ Mat getColourDataset(Mat f, vector<KeyPoint> pts){
 	return m;
 }
 
-map_d getMinMaxDistances(map_t mp, hdbscan<float>& sc, double* core){
+map_d getMinMaxDistances(map_t mp, hdbscan& sc, double* core){
 
 	map_d pm;
 	double zero = 0.00000000000;
@@ -754,7 +758,7 @@ map_d getMinMaxDistances(map_t mp, hdbscan<float>& sc, double* core){
 
 			// Calculating min and max distances
 			for(size_t j = i+1; j < idc.size(); j++){
-				double d = sc.getDistance(i, j);
+				double d = distance_get(&sc.distanceFunction, i, j);
 
 				if(pm[it->first].size() == 2){
 					pm[it->first].push_back(d);
@@ -870,7 +874,7 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 		printf("\n\n >>>>>>>>>>>> Clustering for minPts = %d\n", i);
 		//map_kp clusterKeyPoints;
 		//map_t clusterKeypointIdx;
-		results_t res = cluster(dataset, i, true);
+		results_t res = do_cluster(dataset, i, true);
 		//hdbscan<float> scanc(_EUCLIDEAN, i);
 		//scanc.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
 		//vector<int> labels = scanc.getClusterLabels();
@@ -939,16 +943,50 @@ Mat getPointDataset(vector<KeyPoint> keypoints){
 	return m;
 }
 
-results_t cluster(Mat dataset, int minPts, bool analyse){
+results_t do_cluster(Mat dataset, int minPts, bool analyse){
 	results_t res;
 	res.dataset = dataset.clone();
-	hdbscan<float> scan(_EUCLIDEAN, minPts);
-	scan.run(res.dataset.ptr<float>(), res.dataset.rows, res.dataset.cols, true);
-	res.labels = scan.getClusterLabels();
-	mapClusters(res.labels, res.clusterKeyPoints, res.clusterKeypointIdx, res.keypoints);
+	hdbscan scan(minPts, DATATYPE_FLOAT);
+	scan.run(res.dataset.ptr<float>(), res.dataset.rows, res.dataset.cols, TRUE);
+	//scan.createClusterTable();
+	
+	/*printf("***********************************************************************************\n");
+			
+	GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	g_hash_table_iter_init (&iter, scan.clusterTable);
 
+	while (g_hash_table_iter_next (&iter, &key, &value)){
+		int32_t label = *((int32_t *)key);
+		IntArrayList* clusterList = (IntArrayList*)value;
+		printf("%d -> [", label);
+				
+		for(int j = 0; j < clusterList->size; j++){
+			int32_t *dpointer = int_array_list_data(clusterList, j);
+			printf("%d ", *dpointer);
+		}
+		printf("]\n");
+	}
+				
+	printf("\n\nCluster labels = [");
+	for(uint i = 0; i < scan.numPoints; i++){
+		printf("%d ", scan.clusterLabels[i]);
+	}
+	printf("]\n\n");
+	printf("***********************************************************************************\n");
+	*/
+	printf("Size of data is %d\n", scan.numPoints);
+	res.labels.insert(res.labels.begin(), scan.clusterLabels, scan.clusterLabels+scan.numPoints);
+	//for(int i = 0; i < scan.numPoints; i++){
+		//printf("inserting %d: %d\n", i, res.labels[i]);
+		//res.labels.push_back(scan.clusterLabels[i]);
+	//}
+	printf("Inserting done\n");
+	mapClusters(res.labels, res.clusterKeyPoints, res.clusterKeypointIdx, res.keypoints);
+	printf("Clusters mapped\n");
 	if(analyse){
-		double* core = scan.getCoreDistances();
+		double* core = scan.distanceFunction.coreDistances;
 		res.distancesMap = getMinMaxDistances(res.clusterKeypointIdx, scan, core);
 		res.stats = getStatistics(res.distancesMap);
 		res.validity = analyseStats(res.stats);

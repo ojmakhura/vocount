@@ -7,16 +7,19 @@
 
 #ifndef PROCESS_FRAME_HPP_
 #define PROCESS_FRAME_HPP_
-#include "hdbscan.hpp"
+#include <hdbscan/hdbscan.hpp>
 #include <opencv/cv.hpp>
 #include <opencv2/ximgproc/segmentation.hpp>
 #include <vector>
+#include <map>
+#include <set>
 #include <cstdlib>
 #include <iostream>
 
 using namespace cv;
 using namespace std;
 using namespace cv::ximgproc::segmentation;
+using namespace clustering;
 
 typedef map<int, vector<int>> map_t;
 typedef map<int, vector<double>> map_d;
@@ -238,7 +241,7 @@ Mat getColourDataset(Mat f, vector<KeyPoint> pts);
 /**
  * Find the minimum and maximum core distances and intra cluster distances
  */
-map_d getMinMaxDistances(map_t mp, hdbscan<float>& sc, double* core);
+map_d getMinMaxDistances(map_t mp, hdbscan& sc, double* core);
 
 /**
  * Get the statistics for the core distance and intra cluster distances
@@ -272,5 +275,5 @@ Mat getPointDataset(vector<KeyPoint> keypoint);
 /**
  *
  */
-results_t cluster(Mat dataset, int minPts, bool mapDistances);
+results_t do_cluster(Mat dataset, int minPts, bool mapDistances);
 #endif
