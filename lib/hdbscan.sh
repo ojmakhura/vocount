@@ -1,17 +1,21 @@
 #!/bin/bash
-cd ..
+echo "Cloning hdbscan library ...."
 git clone https://github.com/ojmakhura/hdbscan.git
-
 cd hdbscan
+
+echo "Creating the build directory ...."
 mkdir build
 cd build
-mkdir ../../lib
-cmake -DCMAKE_INSTALL_PREFIX=../../lib ..
+
+echo "Buiding hdbscan ...."
+cmake -DCMAKE_INSTALL_PREFIX=../.. ..
 make
+
+echo "installing hdbdscan ...."
 make install
 cd ../../
-
-cp -rf hdbscan/modules/gnulib/include lib
-cp -rf hdbscan/include/hdbscan lib/include
-cp -rf hdbscan/modules/listlib/include/listlib lib/include
+pwd
+cp -rf hdbscan/modules/gnulib/include .
+cp -rf hdbscan/include/hdbscan ./include
+cp -rf hdbscan/modules/listlib/include/listlib ./include
 rm -rf hdbscan

@@ -202,34 +202,25 @@ int main(int argc, char** argv) {
 			myfile << "};\n#endif" << endl;
 			myfile.close();
 
-			results_t res1 = do_cluster(dset, f.keypoints, vcount.step*3, TRUE);
-			//vector<Cluster*> clusters = scan.getClusters();
-			// Only labels from the first n indices where n is the number of features found in f.frame
-			//res1.labels.insert(res1.labels.begin(), scan.getClusterLabels().begin(), scan.getClusterLabels().begin()+f.descriptors.rows);
-
-			//mapClusters(res1.labels, res1.clusterKeyPoints, res1.clusterKeypointIdx, res1.keypoints);
+			results_t res1 = do_cluster(dset, f.keypoints, vcount.step, 3, TRUE);
 			res1.roiClusterPoints = mapSampleFeatureClusters(f.roiFeatures, res1.labels);
 			generateFinalPointClusters(res1.finalPointClusters, res1.roiClusterPoints, res1.clusterKeyPoints);
+			
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 			res1.total = countPrint(res1.roiClusterPoints, res1.clusterKeyPoints, res1.cest, res1.selectedFeatures, res1.lsize);
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 
-			//generateClusterImages(f.frame, res1.finalPointClusters, res1.keyPointImages, res1.cest, res1.total, res1.lsize, res1.selectedFeatures);
-			//boxStructure(res1.finalPointClusters, f.keypoints, f.roi, res1.boxStructures, res1.keyPointImages);
+			generateClusterImages(f.frame, res1.finalPointClusters, res1.keyPointImages, res1.cest, res1.total, res1.lsize, res1.selectedFeatures);
+			boxStructure(res1.finalPointClusters, f.keypoints, f.roi, res1.boxStructures, res1.keyPointImages);
 
+			f.results[""] = res1;
+			printData(vcount, f.frame, 	f.keypoints, f.roiFeatures, res1, f.i);
+			if(parser.has("o")){
+				printImages(keypointsFrameDir, res1.keyPointImages, vcount.frameCount);
+			}
 
-			//cout << "Cluster " << f.largest << " is the largest" << endl;
-
-			//f.results[""] = res1;
-			//printData(vcount, f);
-			//if(parser.has("o")){
-			//	printImages(keypointsFrameDir, res1.keyPointImages, vcount.frameCount);
-			//}
-
-			//scan.clean();
-/*
-			if(vcount.frameHistory.size() > 0){
+			/*if(vcount.frameHistory.size() > 0){
 
 				// Do index based clustering
 				if (parser.has("i")) {
@@ -267,7 +258,7 @@ int main(int argc, char** argv) {
 							Mat mm = drawKeyPoints(frame, it->second, Scalar(0, 0, 255), -1);
 							String s1 = to_string(it->first);
 							display(s1.c_str(), mm);
-						}*/
+						}
 						/****************************************************************************************************/
 
 						//Mat mm1 = drawKeyPoints(frame, ssP, Scalar(0, 0, 255), -1);
@@ -295,7 +286,7 @@ int main(int argc, char** argv) {
 							}
 						}
 
-						/*vector<KeyPoint> selPts;
+						vector<KeyPoint> selPts;
 
 						for (uint j = 0; j < colourSel.selectedClusters.size(); j++) {
 							int cluster = colourSel.selectedClusters[j];

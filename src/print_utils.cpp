@@ -156,9 +156,9 @@ void printData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<
 		Mat ff = drawKeyPoints(frame, keypoints, Scalar(0, 0, 255), -1);
 		printImage(vcount.destFolder, vcount.frameCount, "frame_kp", ff);
 
-		for(map<String, Mat>::iterator it = res.keyPointImages.begin(); it != res.keyPointImages.end(); ++it){
+		/*for(map<String, Mat>::iterator it = res.keyPointImages.begin(); it != res.keyPointImages.end(); ++it){
 			printImage(vcount.destFolder, vcount.frameCount, it->first, it->second);
-		}
+		}*/
 
 		res.odata.push_back(roiFeatures.size());
 

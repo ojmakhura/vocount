@@ -474,7 +474,7 @@ int rectExist(vector<box_structure> structures, Rect& r){
 	return -1;
 }
 
-void boxStructure(map_kp& finalPointClusters, vector<KeyPoint>& keypoints, Rect2d& roi, vector<box_structure>& boxStructures, map<String, Mat>& keyPointImages){// framed& f){
+void boxStructure(map_kp& finalPointClusters, vector<KeyPoint>& keypoints, Rect2d& roi, vector<box_structure>& boxStructures, map<String, Mat>& keyPointImages){
 	box_structure mbs;
 	mbs.box = roi;
 
@@ -484,8 +484,7 @@ void boxStructure(map_kp& finalPointClusters, vector<KeyPoint>& keypoints, Rect2
 		mbs.points.push_back(roi_p);
 
 		for(uint j = 0; j < c_points.size(); j++){
-			//int pointIndex = c_points[j];
-
+			
 			KeyPoint point = c_points[j];
 			if(point.pt != roi_p.pt){ // roi points have their own structure "mbs"
 				Point2f pshift;
@@ -521,7 +520,9 @@ void boxStructure(map_kp& finalPointClusters, vector<KeyPoint>& keypoints, Rect2
 		RNG rng(12345);
 		Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
 				rng.uniform(0, 255));
-		rectangle(img_bounds, b.box, value, 2, 8, 0);
+		//rectangle(img_bounds, b.box, value, 2, 8, 0);
+		Point center = (b.box.br() + b.box.tl())/2;
+		circle(img_bounds, center, 4, Scalar(255, 255, 255), CV_FILLED, 10, 0);
 	}
 	keyPointImages[ss] = img_bounds;
 }
@@ -874,7 +875,7 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 		printf("\n\n >>>>>>>>>>>> Clustering for minPts = %d\n", i);
 		//map_kp clusterKeyPoints;
 		//map_t clusterKeypointIdx;
-		results_t res = do_cluster(dataset, keypoints, i, true);
+		results_t res = do_cluster(dataset, keypoints, 1, i, true);
 		set<int> lsetkps(res.labels.begin(), res.labels.end());
 		res.stats = getStatistics(res.distancesMap);
 		stats[i] = res.stats;
@@ -937,49 +938,40 @@ Mat getPointDataset(vector<KeyPoint> keypoints){
 	return m;
 }
 
-results_t do_cluster(Mat dataset, vector<KeyPoint> keypoints, int minPts, bool analyse){
-	results_t res;
-	res.dataset = dataset.clone();
-	res.keypoints = keypoints;
-	hdbscan scan(minPts, DATATYPE_FLOAT);
-	scan.run(res.dataset.ptr<float>(), res.dataset.rows, res.dataset.cols, TRUE);
-	//scan.createClusterTable();
+results_t do_cluster(Mat dataset, vector<KeyPoint> keypoints, int step, int f_minPts, bool analyse){
 	
-	/*printf("***********************************************************************************\n");
-			
-	GHashTableIter iter;
-	gpointer key;
-	gpointer value;
-	g_hash_table_iter_init (&iter, scan.clusterTable);
-
-	while (g_hash_table_iter_next (&iter, &key, &value)){
-		int32_t label = *((int32_t *)key);
-		IntArrayList* clusterList = (IntArrayList*)value;
-		printf("%d -> [", label);
-				
-		for(int j = 0; j < clusterList->size; j++){
-			int32_t *dpointer = int_array_list_data(clusterList, j);
-			printf("%d ", *dpointer);
+	results_t rt;
+	
+	int minPts = step * f_minPts;
+	int max = 0, maxSize = 0;
+	
+	for(int i = 0; i < 6; i++){
+		results_t res;
+		res.dataset = dataset.clone();
+		res.keypoints = keypoints;
+		minPts = (f_minPts + i) * step;
+		hdbscan scan(minPts, DATATYPE_FLOAT);
+		scan.run(res.dataset.ptr<float>(), res.dataset.rows, res.dataset.cols, TRUE);
+		
+		res.labels.insert(res.labels.begin(), scan.clusterLabels, scan.clusterLabels+scan.numPoints);		
+		set<int> lset(res.labels.begin(), res.labels.end());
+		printf("Clustering: minPts = %d and found %d clusters\n", minPts, lset.size());
+		
+		mapClusters(res.labels, res.clusterKeyPoints, res.clusterKeypointIdx, res.keypoints);
+		if(analyse){
+			double* core = scan.distanceFunction.coreDistances;
+			res.distancesMap = getMinMaxDistances(res.clusterKeypointIdx, scan, core);
+			res.stats = getStatistics(res.distancesMap);
+			res.validity = analyseStats(res.stats);
 		}
-		printf("]\n");
-	}
-				
-	printf("\n\nCluster labels = [");
-	for(uint i = 0; i < scan.numPoints; i++){
-		printf("%d ", scan.clusterLabels[i]);
-	}
-	printf("]\n\n");
-	printf("***********************************************************************************\n");
-	*/
-	res.labels.insert(res.labels.begin(), scan.clusterLabels, scan.clusterLabels+scan.numPoints);
-	mapClusters(res.labels, res.clusterKeyPoints, res.clusterKeypointIdx, res.keypoints);
-	if(analyse){
-		double* core = scan.distanceFunction.coreDistances;
-		res.distancesMap = getMinMaxDistances(res.clusterKeypointIdx, scan, core);
-		res.stats = getStatistics(res.distancesMap);
-		res.validity = analyseStats(res.stats);
-	}
+		if(lset.size() > maxSize){
+			max = res.clusterKeypointIdx.size();
+			maxSize = lset.size();
+			rt = res;
+		}
+	}	
 
-	return res;
+	printf("------- Selected max clustering size = %d\n", maxSize);
+	return rt;
 }
 
