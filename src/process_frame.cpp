@@ -945,7 +945,7 @@ results_t do_cluster(Mat dataset, vector<KeyPoint> keypoints, int step, int f_mi
 	int minPts = step * f_minPts;
 	int max = 0, maxSize = 0;
 	
-	for(int i = 0; i < 6; i++){
+	for(int i = 0; i < 3; i++){
 		results_t res;
 		res.dataset = dataset.clone();
 		res.keypoints = keypoints;
