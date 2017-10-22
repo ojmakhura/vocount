@@ -940,17 +940,17 @@ Mat getPointDataset(vector<KeyPoint> keypoints){
 
 results_t do_cluster(Mat dataset, vector<KeyPoint> keypoints, int step, int f_minPts, bool analyse){
 	
-	results_t rt;
+	results_t res;
 	
-	int minPts = step * f_minPts;
+	res.minPts = step * f_minPts;
 	int max = 0, maxSize = 0;
+	int i = 0;
 	
-	for(int i = 0; i < 3; i++){
-		results_t res;
+	while(res.validity <= 2){
 		res.dataset = dataset.clone();
 		res.keypoints = keypoints;
-		minPts = (f_minPts + i) * step;
-		hdbscan scan(minPts, DATATYPE_FLOAT);
+		res.minPts = (f_minPts + i) * step;
+		hdbscan scan(res.minPts, DATATYPE_FLOAT);
 		scan.run(res.dataset.ptr<float>(), res.dataset.rows, res.dataset.cols, TRUE);
 		
 		res.labels.insert(res.labels.begin(), scan.clusterLabels, scan.clusterLabels+scan.numPoints);		
@@ -964,11 +964,8 @@ results_t do_cluster(Mat dataset, vector<KeyPoint> keypoints, int step, int f_mi
 			res.stats = getStatistics(res.distancesMap);
 			res.validity = analyseStats(res.stats);
 		}
-		if(lset.size() > maxSize){
-			max = res.clusterKeypointIdx.size();
-			maxSize = lset.size();
-			rt = res;
-		}
+		
+		i++;
 	}	
 
 	printf("------- Selected max clustering size = %d\n", maxSize);

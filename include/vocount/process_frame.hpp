@@ -31,8 +31,6 @@ typedef struct {
     map_kp clusterKeyPoints;					/// maps labels to their keypoints
     map_t clusterKeypointIdx; 						/// maps labels to the keypoint indices
 	vector<int> roiFeatures;
-	//vector<int> selectedPtsIdx;
-	//vector<KeyPoint> selectedPts;
 	Mat selectedDesc;
 	vector<int> selectedClusters;
 } selection_t;
@@ -42,31 +40,19 @@ typedef struct _box_structure{
 	vector<KeyPoint> points;
 } box_structure;
 
-typedef struct EDGE{
-	float anglediff;
-	float distance;
-	int idxa, idxb;
-} edge;
-
-typedef struct GRAPH{
-	vector<edge> edgeList;
-} graph;
-
 typedef struct {
 	vector<KeyPoint> keypoints;
 	Mat dataset;
 	//int length, widhth;
     map_kp clusterKeyPoints;					/// maps labels to their keypoints
-    map_t clusterKeypointIdx; 						/// maps labels to the keypoint indices
-    map_t roiClusterPoints;						/// cluster labels for the region of interest mapped to the roi points in the cluster
+    IntIntListMap* clusterKeypointIdx; 						/// maps labels to the keypoint indices
+    IntIntListMap* roiClusterPoints;						/// cluster labels for the region of interest mapped to the roi points in the cluster
     map_kp finalPointClusters;					/// for clusters where there is more than one roi point in the cluster. Maps the roi point
     																/// index to all closest descriptor points indices
-    map<String, double> stats;
-    map_d distancesMap;
+    StringDoubleMap* stats;
+    IntDoubleListMap* distancesMap;
 	vector<int32_t> odata;											/// Output data
     vector<int> labels;												/// hdbscan cluster labels
-	graph roiStructure;												/// structure of the
-	vector<graph> objStructures;
 	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
 	vector<int32_t> cest;
 	map<String, Mat> keyPointImages;										/// images with cluster by cluster keypoints drawn
@@ -75,6 +61,7 @@ typedef struct {
 	int32_t selectedFeatures = 0;
 	int ogsize;
 	int validity = -1;
+	int minPts = 3;
 } results_t;
 
 typedef struct FRAMED{
@@ -231,7 +218,7 @@ Mat getDistanceDataset(vector<int>roiIdx, Mat descriptors);
 /**
  * map sample features to their clusters
  */
-map_t mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int>& labels);
+IntDoubleListMap* mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int>& labels);
 
 /**
  * Given the descriptors and their keypoints, find the Mat object representing the colour values
@@ -241,7 +228,7 @@ Mat getColourDataset(Mat f, vector<KeyPoint> pts);
 /**
  * Find the minimum and maximum core distances and intra cluster distances
  */
-map_d getMinMaxDistances(map_t mp, hdbscan& sc, double* core);
+IntDoubleListMap* getMinMaxDistances(map_t mp, hdbscan& sc, double* core);
 
 /**
  * Get the statistics for the core distance and intra cluster distances
