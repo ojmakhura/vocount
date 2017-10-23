@@ -43,14 +43,10 @@ typedef struct _box_structure{
 typedef struct {
 	vector<KeyPoint> keypoints;
 	Mat dataset;
-	//int length, widhth;
-    map_kp clusterKeyPoints;					/// maps labels to their keypoints
-    IntIntListMap* clusterKeypointIdx; 						/// maps labels to the keypoint indices
-    IntIntListMap* roiClusterPoints;						/// cluster labels for the region of interest mapped to the roi points in the cluster
-    map_kp finalPointClusters;					/// for clusters where there is more than one roi point in the cluster. Maps the roi point
-    																/// index to all closest descriptor points indices
-    StringDoubleMap* stats;
-    IntDoubleListMap* distancesMap;
+    IntIntListMap* clusterKeypointIdx; 								/// maps labels to the keypoint indices
+    IntIntListMap* roiClusterPoints;								/// cluster labels for the region of interest mapped to the roi points in the cluster
+    StringDoubleMap* stats;											/// Statistical values for the clusters
+    IntDoubleListMap* distancesMap;									/// Min and Max distance table for each cluster
 	vector<int32_t> odata;											/// Output data
     vector<int> labels;												/// hdbscan cluster labels
 	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
