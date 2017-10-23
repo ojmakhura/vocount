@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
 
 			dset = f.descriptors.clone();
 
-			String filename = "dataset.h";
+			/*String filename = "dataset.h";
 
 			ofstream myfile;
 			myfile.open(filename.c_str());
@@ -200,14 +200,15 @@ int main(int argc, char** argv) {
 			}
 
 			myfile << "};\n#endif" << endl;
-			myfile.close();
+			myfile.close();*/
 
 			results_t res1 = do_cluster(dset, f.keypoints, vcount.step, 3, TRUE);
 			res1.roiClusterPoints = mapSampleFeatureClusters(f.roiFeatures, res1.labels);
-			generateFinalPointClusters(res1.finalPointClusters, res1.roiClusterPoints, res1.clusterKeyPoints);
+			map_kp kpMap = getKeypointMap(res1.roiClusterPoints, res1.keypoints);
+			generateFinalPointClusters(res1.finalPointClusters, res1.roiClusterPoints, kpMap);
 			
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-			res1.total = countPrint(res1.roiClusterPoints, res1.clusterKeyPoints, res1.cest, res1.selectedFeatures, res1.lsize);
+			res1.total = countPrint(res1.roiClusterPoints, kpMap, res1.cest, res1.selectedFeatures, res1.lsize);
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 

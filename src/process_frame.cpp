@@ -176,9 +176,34 @@ vector<KeyPoint> getAllMatchedKeypoints( map_kp& finalPointClusters){
 	return kp;
 }
 
-double countPrint(map_t& roiClusterPoints, map_kp& clusterKeyPoints, vector<int32_t>& cest, int32_t& selectedFeatures, double& lsize){
+double countPrint(IntIntListMap* roiClusterPoints, map_kp& clusterKeyPoints, vector<int32_t>& cest, int32_t& selectedFeatures, double& lsize){
 	double total = 0;
-	for (map<int, vector<int>>::iterator it = roiClusterPoints.begin(); it != roiClusterPoints.end(); ++it) {
+	
+	GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	g_hash_table_iter_init (&iter, roiClusterPoints);
+
+	while (g_hash_table_iter_next (&iter, &key, &value)){
+		
+		int32_t* kk = (int32_t *)key;
+		IntArrayList* list = (IntArrayList *)value;
+		if(*kk != 0){
+			int32_t n = clusterKeyPoints[*kk].size() / list->size;
+			cest.push_back(n);
+			total += n;
+			printf("%d has %lu and total is %lu :: Approx Num of objects: %d\n\n", *kk, list->size,
+					clusterKeyPoints[*kk].size(), n);
+			selectedFeatures += clusterKeyPoints[*kk].size();
+
+			if (clusterKeyPoints[*kk].size() > lsize) {
+				//f.largest = it->first;
+				lsize = clusterKeyPoints[*kk].size();
+			}
+		}		
+	}
+	
+	/*for (map<int, vector<int>>::iterator it = roiClusterPoints.begin(); it != roiClusterPoints.end(); ++it) {
 		if(it->first != 0){
 			int32_t n = clusterKeyPoints[it->first].size() / it->second.size();
 			cest.push_back(n);
@@ -192,72 +217,61 @@ double countPrint(map_t& roiClusterPoints, map_kp& clusterKeyPoints, vector<int3
 				lsize = clusterKeyPoints[it->first].size();
 			}
 		}
-	}
+	}*/
 	return total;
 }
 
-void generateFinalPointClusters(map_kp& finalPointClusters, map_t& roiClusterPoints, map_kp& clusterKeyPoints){
-//framed  generateFinalPointClusters(framed& f, map<int, int> pointsMap){
-	//framed f1;
-	//map<int, int> pointsMap = splitROIPoints(f, f1);
+void generateFinalPointClusters(map_kp& finalPointClusters, IntIntListMap* roiClusterPoints, map_kp& clusterKeyPoints){
+	
+	GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	g_hash_table_iter_init (&iter, roiClusterPoints);
 
-	for(map<int, vector<int>>::iterator it = roiClusterPoints.begin(); it != roiClusterPoints.end(); ++it) {
-		if (it->first != 0 && it->second.size() == 1) {
-			int ptIdx = it->second[0];
-			finalPointClusters[ptIdx] = clusterKeyPoints[it->first];
+	while (g_hash_table_iter_next (&iter, &key, &value)){
+		int32_t* kk = (int32_t *)key;
+		IntArrayList* list = (IntArrayList *)value;
+		if (*kk != 0 && list->size == 1) {
+			int32_t* dd = (int32_t *)list->data;
+			int ptIdx = dd[0];
+			finalPointClusters[ptIdx] = clusterKeyPoints[*kk];
 		}
 	}
-
-	/*for(map<int, vector<int>>::iterator it = f1.roiClusterPoints.begin(); it != f1.roiClusterPoints.end(); ++it) {
-		if(it->first != 0 && it->second.size() == 1){
-			int nptIdx = it->second[0];
-			int optIdx = pointsMap[nptIdx];
-			f.finalPointClusters[optIdx] = f1.clusterKeyPoints[it->first];
-		}
-	}*/
-
+	
 	if(finalPointClusters.size() == 0){
 
-		for(map<int, vector<int>>::iterator it = roiClusterPoints.begin(); it != roiClusterPoints.end(); ++it) {
-			if (it->first != 0) {
-				int ptIdx = it->second[0];
-				finalPointClusters[ptIdx] = clusterKeyPoints[it->first];
+		g_hash_table_iter_init (&iter, roiClusterPoints);
+
+		//for(map<int, vector<int>>::iterator it = roiClusterPoints.begin(); it != roiClusterPoints.end(); ++it) {
+		while (g_hash_table_iter_next (&iter, &key, &value)){
+			int32_t* kk = (int32_t *)key;
+			IntArrayList* list = (IntArrayList *)value;
+			if (*kk != 0) {
+				int32_t* dd = (int32_t *)list->data;
+				int ptIdx = dd[0];
+				finalPointClusters[ptIdx] = clusterKeyPoints[*kk];
 			}
 		}
-
-		/*for(map<int, vector<int>>::iterator it = f1.roiClusterPoints.begin(); it != f1.roiClusterPoints.end(); ++it) {
-			if(it->first != 0){
-				int nptIdx = it->second[0];
-				int optIdx = pointsMap[nptIdx];
-				f.finalPointClusters[optIdx] = f1.clusterKeyPoints[it->first];
-			}
-		}*/
-	}
-
-	//return f1;
-}
-
-void mapClusters(vector<int>& labels, map_kp& clusterKeyPoints, map_t& clusterKeypointIdx, vector<KeyPoint>& keypoints){
-	//printf("labels has %d size\n", labels.size());
-	// Map cluster labels to the indices of the points
-	for(uint i = 0; i < labels.size(); i++){
-		///printf("1");
-		int l = labels[i];
-		///printf("2");
-		clusterKeyPoints[l].push_back(keypoints[i]);
-		///printf("3");
-		clusterKeypointIdx[l].push_back(i);
-		///printf("4");
 	}
 }
 
-map_t mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int>& labels){
+IntIntListMap* mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int>& labels){
 
-	map_t rcp;
+	IntIntListMap* rcp = g_hash_table_new(g_int_hash, g_int_equal);;
 	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
 	for (vector<int>::iterator it = roiFeatures.begin(); it != roiFeatures.end(); ++it) {
-		int key = labels[*it];
-		rcp[key].push_back(*it);
+		int *key = &(labels[*it]);
+		IntArrayList* list = (IntArrayList *)g_hash_table_lookup(rcp, key);
+		
+		if(list == NULL){
+			key = (int *)malloc(sizeof(int));
+			*key = labels[*it];
+			list = int_array_list_init_size(roiFeatures.size());
+			g_hash_table_insert(rcp, key, list);
+		}
+		
+		//rcp[key].push_back(*it);
+		int_array_list_append(list, *it);
 	}
 	return rcp;
 }
@@ -385,8 +399,9 @@ void findROIFeature(framed& f, selection_t& sel){
 
 		for(uint j = 0; j < sel.selectedClusters.size(); j++){
 			int cluster = sel.selectedClusters[j];
-			vector<int> ptsIdx = sel.clusterKeypointIdx[cluster];
-			selPtsIdx.insert(selPtsIdx.end(), ptsIdx.begin(), ptsIdx.end());
+			IntArrayList* ptsIdx = (IntArrayList *)g_hash_table_lookup(sel.clusterKeypointIdx, &cluster); //sel.clusterKeypointIdx[cluster];
+			int32_t* dt = (int32_t *)ptsIdx->data;
+			selPtsIdx.insert(selPtsIdx.end(), dt, dt + ptsIdx->size);
 		}
 
 		bool selected = sel.minPts == -1 || (sel.minPts != -1 && std::find(selPtsIdx.begin(), selPtsIdx.end(), i) != selPtsIdx.end());
@@ -529,11 +544,11 @@ void boxStructure(map_kp& finalPointClusters, vector<KeyPoint>& keypoints, Rect2
 
 map<int, int> addDescriptors(results_t& f, results_t& f1, int cluster, vector<int> roipts){
 
-	vector<int> crois = f.clusterKeypointIdx[cluster];
+	IntArrayList* crois = (IntArrayList *)g_hash_table_lookup(f.clusterMap, &cluster); //f.clusterKeypointIdx[cluster];
 	map<int, int> newMap;
 
-	for(uint i = 0; i < crois.size(); i++){
-		int rp = crois[i];
+	for(uint i = 0; i < crois->size; i++){
+		//int rp = crois[i];
 
 		/*f1.dataset.push_back(f.descriptors.row(rp));
 		f1.keypoints.push_back(f.keypoints[rp]);
@@ -731,7 +746,7 @@ Mat getColourDataset(Mat f, vector<KeyPoint> pts){
 	return m;
 }
 
-map_d getMinMaxDistances(map_t mp, hdbscan& sc, double* core){
+/*map_d getMinMaxDistances(map_t mp, hdbscan& sc, double* core){
 
 	map_d pm;
 	double zero = 0.00000000000;
@@ -780,9 +795,9 @@ map_d getMinMaxDistances(map_t mp, hdbscan& sc, double* core){
 	}
 
 	return pm;
-}
+}/*
 
-map<String, double> getStatistics(map_d distances){
+/*map<String, double> getStatistics(map_d distances){
 	double cr[distances.size()];
 	double dr[distances.size()];
 
@@ -813,9 +828,9 @@ map<String, double> getStatistics(map_d distances){
 	stats["count"] = c;
 
 	return stats;
-}
+}*/
 
-int analyseStats(map<String, double> stats){
+/*int analyseStats(map<String, double> stats){
 	 int validity = -1;
 	if((stats["skew_dr"] > 0.0 || stats["skew_dr"] != stats["skew_dr"]) && (stats["kurtosis_dr"] > 0.0 || stats["kurtosis_dr"] != stats["kurtosis_dr"])){
 		validity = 2;
@@ -838,20 +853,53 @@ int analyseStats(map<String, double> stats){
 	}
 
 	return validity;
-}
+}*/
 
-Mat getSelectedKeypointsDescriptors(Mat desc, vector<int> indices){
+Mat getSelectedKeypointsDescriptors(Mat desc, IntArrayList* indices){
 	Mat m;
-	for(size_t i = 0; i < indices.size(); i++){
+	int32_t *dt = (int32_t *)indices->data;
+	for(size_t i = 0; i < indices->size; i++){
 		if(m.empty()){
-			m = desc.row(indices[i]);
+			m = desc.row(dt[i]);
 
 		} else{
-			m.push_back(desc.row(indices[i]));
+			m.push_back(desc.row(dt[i]));
 		}
 	}
 
 	return m;
+}
+
+map_kp getKeypointMap(IntIntListMap* listMap, vector<KeyPoint> keypoints){
+	map_kp mp;
+	
+	GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	g_hash_table_iter_init (&iter, listMap);
+
+	while (g_hash_table_iter_next (&iter, &key, &value)){
+		IntArrayList* clusterLabels = (IntArrayList*)value;
+		int32_t* idxList = (int32_t* )clusterLabels->data;
+		int32_t *key = (int32_t *) key;
+		for(int i = 0; i < clusterLabels->size; i++){
+			int idx = idxList[i];
+			mp[*key].push_back(keypoints[idx]);
+		}
+	}
+	
+	return mp;
+}
+
+vector<KeyPoint> getListKeypoints(vector<KeyPoint> keypoints, IntArrayList* list){
+	vector<KeyPoint> kps;
+	int32_t* dt = (int32_t *)list->data;
+	for(int i = 0; i < list->size; i++){
+		int32_t idx = dt[i];
+		kps.push_back(keypoints[idx]);
+	}
+	
+	return kps;
 }
 
 /**
@@ -860,13 +908,13 @@ Mat getSelectedKeypointsDescriptors(Mat desc, vector<int> indices){
 selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPoint> keypoints){
 	int mpts;
 	printf("Detecting minPts value for colour clustering.\n");
-	map<int, map<String, double>> stats;
+	map<int, StringDoubleMap*> stats;
 	Mat dataset = getColourDataset(frame, keypoints);
 	size_t size = 0;
 	map<int, int> choices;
 	int chosenCount = 1, currentCount = 1;
-	map_t clusterKeypointIdxMap;
-	map_kp clusterKeyPointsMap;
+	IntIntListMap* clusterKeypointIdxMap;
+	//map_kp clusterKeyPointsMap;
 	selection_t colourSelection;
 	colourSelection.minPts = 2;
 
@@ -877,12 +925,12 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 		//map_t clusterKeypointIdx;
 		results_t res = do_cluster(dataset, keypoints, 1, i, true);
 		set<int> lsetkps(res.labels.begin(), res.labels.end());
-		res.stats = getStatistics(res.distancesMap);
+		res.stats = hdbscan_calculate_stats(res.distancesMap);
 		stats[i] = res.stats;
 		//int v = analyseStats(stats[i]);
 
-		if(res.distancesMap.size() != size){
-			size = res.distancesMap.size();
+		if(g_hash_table_size(res.distancesMap) != size){
+			size = g_hash_table_size(res.distancesMap);
 			mpts = i;
 			currentCount = 1;
 		} else{
@@ -890,17 +938,49 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 			if(currentCount > chosenCount){
 				chosenCount = currentCount;
 				colourSelection.minPts = mpts;
-				clusterKeypointIdxMap = res.clusterKeypointIdx;
-				clusterKeyPointsMap = res.clusterKeyPoints;
+				clusterKeypointIdxMap = res.clusterMap;
+				//clusterKeyPointsMap = getKeypointMap(clusterKeypointIdxMap, keypoints); //res.clusterKeyPoints;
 			}
 		}
 
 	}
-	colourSelection.clusterKeyPoints = clusterKeyPointsMap;
+	//colourSelection.clusterKeyPoints = clusterKeyPointsMap;
 	colourSelection.clusterKeypointIdx = clusterKeypointIdxMap;
 	printf(">>>>>>>> VALID CHOICE OF minPts IS %d <<<<<<<<<\n", colourSelection.minPts);
 	//printStatistics(stats, "./");
-	for(map_t::iterator it = clusterKeypointIdxMap.begin(); it != clusterKeypointIdxMap.end(); ++it){
+	GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	g_hash_table_iter_init (&iter, clusterKeypointIdxMap);
+
+	while (g_hash_table_iter_next (&iter, &key, &value)){
+		IntArrayList* list = (IntArrayList*)value;
+		int32_t* k = (int32_t *)key;
+		vector<KeyPoint> kps = getListKeypoints(keypoints, list);
+		Mat m = drawKeyPoints(frame, kps, Scalar(0, 0, 255), -1);
+		display("choose", m);
+		
+		// Listen for a key pressed
+		char c = ' ';
+		while(true){
+			if (c == 'a') {
+				Mat xx = getSelectedKeypointsDescriptors(descriptors, list);
+				colourSelection.selectedClusters.push_back(*k);
+				if(colourSelection.selectedDesc.empty()){
+					colourSelection.selectedDesc = xx.clone();
+				} else{
+					colourSelection.selectedDesc.push_back(xx);
+				}
+				break;
+			} else if (c == 'q'){
+				break;
+			}
+			c = (char) waitKey(20);
+		}
+		destroyWindow("choose");
+	}
+	
+	/*for(map_t::iterator it = clusterKeypointIdxMap.begin(); it != clusterKeypointIdxMap.end(); ++it){
 
 		Mat m = drawKeyPoints(frame, clusterKeyPointsMap[it->first], Scalar(0, 0, 255), -1);
 		display("choose", m);
@@ -922,7 +1002,7 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 			c = (char) waitKey(20);
 		}
 		destroyWindow("choose");
-	}
+	}*/
 	return colourSelection;
 }
 
@@ -945,30 +1025,31 @@ results_t do_cluster(Mat dataset, vector<KeyPoint> keypoints, int step, int f_mi
 	res.minPts = step * f_minPts;
 	int max = 0, maxSize = 0;
 	int i = 0;
+	res.dataset = dataset.clone();
+	res.keypoints = keypoints;
 	
 	while(res.validity <= 2){
-		res.dataset = dataset.clone();
-		res.keypoints = keypoints;
 		res.minPts = (f_minPts + i) * step;
 		hdbscan scan(res.minPts, DATATYPE_FLOAT);
 		scan.run(res.dataset.ptr<float>(), res.dataset.rows, res.dataset.cols, TRUE);
 		
 		res.labels.insert(res.labels.begin(), scan.clusterLabels, scan.clusterLabels+scan.numPoints);		
 		set<int> lset(res.labels.begin(), res.labels.end());
-		printf("Clustering: minPts = %d and found %d clusters\n", minPts, lset.size());
+		printf("Clustering: minPts = %d and found %d clusters\n", res.minPts, lset.size());
 		
-		mapClusters(res.labels, res.clusterKeyPoints, res.clusterKeypointIdx, res.keypoints);
+		//mapClusters(res.labels, res.clusterKeyPoints, res.clusterKeypointIdx, res.keypoints);
+		res.clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, scan.numPoints);
 		if(analyse){
 			double* core = scan.distanceFunction.coreDistances;
-			res.distancesMap = getMinMaxDistances(res.clusterKeypointIdx, scan, core);
-			res.stats = getStatistics(res.distancesMap);
-			res.validity = analyseStats(res.stats);
+			res.distancesMap = hdbscan_get_min_max_distances(&scan, res.clusterMap);
+			res.stats = hdbscan_calculate_stats(res.distancesMap);
+			res.validity = hdbscan_analyse_stats(res.stats);
 		}
 		
 		i++;
 	}	
 
 	printf("------- Selected max clustering size = %d\n", maxSize);
-	return rt;
+	return res;
 }
 

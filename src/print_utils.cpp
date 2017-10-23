@@ -149,7 +149,7 @@ void printImages(String folder, map<String, Mat> images, int count){
 }
 
 void printData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<int>& roiFeatures, results_t& res, int i){
-	if (vcount.print && !res.roiClusterPoints.empty()) {
+	if (vcount.print && g_hash_table_size(res.roiClusterPoints) > 0) {
 
 		printImage(vcount.destFolder, vcount.frameCount, "frame", frame);
 
@@ -164,10 +164,20 @@ void printData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<
 
 		int selSampleSize = 0;
 
-		for (map<int, vector<int>>::iterator it = res.roiClusterPoints.begin();
+		GHashTableIter iter;
+		gpointer key;
+		gpointer value;
+		g_hash_table_iter_init (&iter, res.roiClusterPoints);
+		
+		while (g_hash_table_iter_next (&iter, &key, &value)){
+			IntArrayList* list = (IntArrayList*)value;
+			selSampleSize += list->size;
+			
+		}
+		/*for (map<int, vector<int>>::iterator it = res.roiClusterPoints.begin();
 				it != res.roiClusterPoints.end(); ++it) {
 			selSampleSize += it->second.size();
-		}
+		}*/
 
 		res.odata.push_back(selSampleSize);
 		res.odata.push_back(res.ogsize);

@@ -28,8 +28,8 @@ typedef set<int> set_t;
 
 typedef struct {
 	int minPts = -1;
-    map_kp clusterKeyPoints;					/// maps labels to their keypoints
-    map_t clusterKeypointIdx; 						/// maps labels to the keypoint indices
+    //map_kp clusterKeyPoints;					/// maps labels to their keypoints
+    IntIntListMap* clusterKeypointIdx; 						/// maps labels to the keypoint indices
 	vector<int> roiFeatures;
 	Mat selectedDesc;
 	vector<int> selectedClusters;
@@ -43,12 +43,13 @@ typedef struct _box_structure{
 typedef struct {
 	vector<KeyPoint> keypoints;
 	Mat dataset;
-    IntIntListMap* clusterKeypointIdx; 								/// maps labels to the keypoint indices
+    IntIntListMap* clusterMap;		 								/// maps labels to the keypoint indices
     IntIntListMap* roiClusterPoints;								/// cluster labels for the region of interest mapped to the roi points in the cluster
     StringDoubleMap* stats;											/// Statistical values for the clusters
     IntDoubleListMap* distancesMap;									/// Min and Max distance table for each cluster
+	map_kp finalPointClusters;
 	vector<int32_t> odata;											/// Output data
-    vector<int> labels;												/// hdbscan cluster labels
+    vector<int32_t> labels;												/// hdbscan cluster labels
 	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
 	vector<int32_t> cest;
 	map<String, Mat> keyPointImages;										/// images with cluster by cluster keypoints drawn
@@ -133,7 +134,7 @@ set<int32_t> getIgnoreSegments(Rect roi, Mat segments);
 /**
  *
  */
-void mapClusters(vector<int>& labels, map_kp& clusterKeyPoints, map_t& clusterKeypointIdx, vector<KeyPoint>& keypoints);
+//void mapClusters(vector<int>& labels, map_kp& clusterKeyPoints, map_t& clusterKeypointIdx, vector<KeyPoint>& keypoints);
 
 /**
  *
@@ -143,7 +144,7 @@ void generateClusterImages(Mat frame, map_kp& finalPointClusters, map<String, Ma
 /**
  *
  */
-double countPrint(map_t& roiClusterPoints, map_kp& clusterKeyPoints, vector<int32_t>& cest, int32_t& selectedFeatures, double& lsize);
+double countPrint(IntIntListMap* roiClusterPoints, map_kp& clusterKeyPoints, vector<int32_t>& cest, int32_t& selectedFeatures, double& lsize);
 
 /**
  *
@@ -189,7 +190,7 @@ void boxStructure(map_kp& finalPointClusters, vector<KeyPoint>& keypoints, Rect2
 /**
  *
  */
-void generateFinalPointClusters(map_kp& finalPointClusters, map_t& roiClusterPoints, map_kp& clusterKeyPoints);
+void generateFinalPointClusters(map_kp& finalPointClusters, IntIntListMap* roiClusterPoints, map_kp& clusterKeyPoints);
 
 /**
  *
@@ -214,7 +215,7 @@ Mat getDistanceDataset(vector<int>roiIdx, Mat descriptors);
 /**
  * map sample features to their clusters
  */
-IntDoubleListMap* mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int>& labels);
+IntIntListMap* mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int>& labels);
 
 /**
  * Given the descriptors and their keypoints, find the Mat object representing the colour values
@@ -224,22 +225,22 @@ Mat getColourDataset(Mat f, vector<KeyPoint> pts);
 /**
  * Find the minimum and maximum core distances and intra cluster distances
  */
-IntDoubleListMap* getMinMaxDistances(map_t mp, hdbscan& sc, double* core);
+//IntDoubleListMap* getMinMaxDistances(map_t mp, hdbscan& sc, double* core);
 
 /**
  * Get the statistics for the core distance and intra cluster distances
  */
-map<String, double> getStatistics(map_d distances);
+//map<String, double> getStatistics(map_d distances);
 
 /**
  *
  */
-int analyseStats(map<String, double> stats);
+//int analyseStats(map<String, double> stats);
 
 /***
  *
  */
-Mat getSelectedKeypointsDescriptors(Mat desc, vector<int> indices);
+Mat getSelectedKeypointsDescriptors(Mat desc, IntArrayList* indices);
 
 /**
  * Detect the optimum minPts value for colour clustering.
@@ -259,4 +260,17 @@ Mat getPointDataset(vector<KeyPoint> keypoint);
  *
  */
 results_t do_cluster(Mat dataset, vector<KeyPoint> keypoints, int step, int f_minPts, bool mapDistances);
+
+/**
+ * Takes a hash table of cluster point indices anc creates a map
+ * of cluster KeyPoint. The hash table is a GHashTable while the
+ * returned map is a C++ std::map<int, vector<KeyPoint>> 
+ * 
+ */ 
+map_kp getKeypointMap(IntIntListMap* listMap, vector<KeyPoint> keypoints);
+
+/**
+ * Create a vector of KeyPoint's from a lsit of keypoint indices.
+ */ 
+vector<KeyPoint> getListKeypoints(vector<KeyPoint> keypoints, IntArrayList* list);
 #endif
