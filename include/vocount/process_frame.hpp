@@ -21,10 +21,10 @@ using namespace std;
 using namespace cv::ximgproc::segmentation;
 using namespace clustering;
 
-typedef map<int, vector<int>> map_t;
-typedef map<int, vector<double>> map_d;
+//typedef map<int, vector<int>> map_t;
+//typedef map<int, vector<double>> map_d;
 typedef map<int, vector<KeyPoint>> map_kp;
-typedef set<int> set_t;
+//typedef set<int> set_t;
 
 typedef struct {
 	int minPts = -1;
@@ -43,10 +43,10 @@ typedef struct _box_structure{
 typedef struct {
 	vector<KeyPoint> keypoints;
 	Mat dataset;
-    IntIntListMap* clusterMap;		 								/// maps labels to the keypoint indices
-    IntIntListMap* roiClusterPoints;								/// cluster labels for the region of interest mapped to the roi points in the cluster
-    StringDoubleMap* stats;											/// Statistical values for the clusters
-    IntDoubleListMap* distancesMap;									/// Min and Max distance table for each cluster
+    IntIntListMap* clusterMap = NULL;		 								/// maps labels to the keypoint indices
+    IntIntListMap* roiClusterPoints = NULL;								/// cluster labels for the region of interest mapped to the roi points in the cluster
+    StringDoubleMap* stats = NULL;											/// Statistical values for the clusters
+    IntDoubleListMap* distancesMap = NULL;									/// Min and Max distance table for each cluster
 	map_kp finalPointClusters;
 	vector<int32_t> odata;											/// Output data
     vector<int32_t> labels;												/// hdbscan cluster labels
@@ -215,7 +215,7 @@ Mat getDistanceDataset(vector<int>roiIdx, Mat descriptors);
 /**
  * map sample features to their clusters
  */
-IntIntListMap* mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int>& labels);
+IntIntListMap* mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int32_t>& labels);
 
 /**
  * Given the descriptors and their keypoints, find the Mat object representing the colour values
@@ -259,7 +259,7 @@ Mat getPointDataset(vector<KeyPoint> keypoint);
 /**
  *
  */
-results_t do_cluster(Mat dataset, vector<KeyPoint> keypoints, int step, int f_minPts, bool mapDistances);
+results_t do_cluster(Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_minPts, bool mapDistances);
 
 /**
  * Takes a hash table of cluster point indices anc creates a map

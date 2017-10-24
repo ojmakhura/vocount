@@ -255,9 +255,10 @@ void generateFinalPointClusters(map_kp& finalPointClusters, IntIntListMap* roiCl
 	}
 }
 
-IntIntListMap* mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int>& labels){
+IntIntListMap* mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int32_t>& labels){
 
-	IntIntListMap* rcp = g_hash_table_new(g_int_hash, g_int_equal);;
+	IntIntListMap* rcp = g_hash_table_new(g_int_hash, g_int_equal);
+	map_t kk;
 	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
 	for (vector<int>::iterator it = roiFeatures.begin(); it != roiFeatures.end(); ++it) {
 		int *key = &(labels[*it]);
@@ -267,12 +268,18 @@ IntIntListMap* mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int>& l
 			key = (int *)malloc(sizeof(int));
 			*key = labels[*it];
 			list = int_array_list_init_size(roiFeatures.size());
-			g_hash_table_insert(rcp, key, list);
 		}
 		
 		//rcp[key].push_back(*it);
 		int_array_list_append(list, *it);
+		g_hash_table_insert(rcp, key, list);
+		kk[*key].push_back(*it);
 	}
+	
+	for(map_t::iterator it = kk.begin(); it != kk.end(); ++it){
+		
+	}
+	
 	return rcp;
 }
 
@@ -746,115 +753,6 @@ Mat getColourDataset(Mat f, vector<KeyPoint> pts){
 	return m;
 }
 
-/*map_d getMinMaxDistances(map_t mp, hdbscan& sc, double* core){
-
-	map_d pm;
-	double zero = 0.00000000000;
-
-	for(map_t::iterator it = mp.begin(); it != mp.end(); ++it){
-		vector<int> idc = it->second;
-
-		for(size_t i = 0; i < idc.size(); i++){
-
-			// min and max core distances
-			if(pm[it->first].size() == 0){
-				pm[it->first].push_back(core[idc[i]]);
-				pm[it->first].push_back(core[idc[i]]);
-			} else{
-				// min core distance
-				if(pm[it->first][0] > core[idc[i]] && (core[idc[i]] < zero || core[idc[i]] > zero)){
-					pm[it->first][0] = core[idc[i]];
-				}
-
-				//max core distance
-				if(pm[it->first][1] < core[idc[i]]){
-					pm[it->first][1] = core[idc[i]];
-				}
-			}
-
-			// Calculating min and max distances
-			for(size_t j = i+1; j < idc.size(); j++){
-				double d = distance_get(&sc.distanceFunction, i, j);
-
-				if(pm[it->first].size() == 2){
-					pm[it->first].push_back(d);
-					pm[it->first].push_back(d);
-				} else{
-					// min distance
-					if(pm[it->first][2] > d && (d < zero || d > zero)){
-						pm[it->first][2] = d;
-					}
-
-					// max distance
-					if(pm[it->first][3] < d){
-						pm[it->first][3] = d;
-					}
-				}
-			}
-		}
-	}
-
-	return pm;
-}/*
-
-/*map<String, double> getStatistics(map_d distances){
-	double cr[distances.size()];
-	double dr[distances.size()];
-
-	map<String, double> stats;
-	int c = 0;
-	for(map_d::iterator it = distances.begin(); it != distances.end(); ++it){
-
-		cr[c] = it->second[1]/it->second[0];
-
-		dr[c] = it->second[3]/it->second[2];
-		c++;
-	}
-
-	// Calculating core distance statistics
-	stats["mean_cr"] = gsl_stats_mean(cr, 1, c);
-	stats["sd_cr"] = gsl_stats_sd(cr, 1, c);
-	stats["variance_cr"] = gsl_stats_variance(cr, 1, c);
-	stats["max_cr"] = gsl_stats_max(cr, 1, c);
-	stats["kurtosis_cr"] = gsl_stats_kurtosis(cr, 1, c);
-	stats["skew_cr"] = gsl_stats_skew(cr, 1, c);
-
-	stats["mean_dr"] = gsl_stats_mean(dr, 1, c);
-	stats["sd_dr"] = gsl_stats_sd(dr, 1, c);
-	stats["variance_dr"] = gsl_stats_variance(dr, 1, c);
-	stats["max_dr"] = gsl_stats_max(dr, 1, c);
-	stats["kurtosis_dr"] = gsl_stats_kurtosis(dr, 1, c);
-	stats["skew_dr"] = gsl_stats_skew(dr, 1, c);
-	stats["count"] = c;
-
-	return stats;
-}*/
-
-/*int analyseStats(map<String, double> stats){
-	 int validity = -1;
-	if((stats["skew_dr"] > 0.0 || stats["skew_dr"] != stats["skew_dr"]) && (stats["kurtosis_dr"] > 0.0 || stats["kurtosis_dr"] != stats["kurtosis_dr"])){
-		validity = 2;
-	} else if(stats["skew_dr"] < 0.0 && stats["kurtosis_dr"] > 0.0){
-		validity = 1;
-	} else if(stats["skew_dr"] > 0.0 && stats["kurtosis_dr"] < 0.0){
-		validity = 0;
-	} else{
-		validity = -1;
-	}
-
-	if((stats["skew_cr"] > 0.0 || stats["skew_cr"] != stats["skew_cr"]) && (stats["kurtosis_cr"] > 0.0 || stats["kurtosis_cr"] != stats["kurtosis_cr"])){
-		validity += 2;
-	} else if(stats["skew_cr"] < 0.0 && stats["kurtosis_cr"] > 0.0){
-		validity += 1;
-	} else if(stats["skew_cr"] > 0.0 && stats["kurtosis_cr"] < 0.0){
-		validity += 0;
-	} else{
-		validity += -1;
-	}
-
-	return validity;
-}*/
-
 Mat getSelectedKeypointsDescriptors(Mat desc, IntArrayList* indices){
 	Mat m;
 	int32_t *dt = (int32_t *)indices->data;
@@ -881,10 +779,10 @@ map_kp getKeypointMap(IntIntListMap* listMap, vector<KeyPoint> keypoints){
 	while (g_hash_table_iter_next (&iter, &key, &value)){
 		IntArrayList* clusterLabels = (IntArrayList*)value;
 		int32_t* idxList = (int32_t* )clusterLabels->data;
-		int32_t *key = (int32_t *) key;
+		int32_t k = *((int32_t *) key);
 		for(int i = 0; i < clusterLabels->size; i++){
 			int idx = idxList[i];
-			mp[*key].push_back(keypoints[idx]);
+			mp[k].push_back(keypoints[idx]);
 		}
 	}
 	
@@ -1018,7 +916,7 @@ Mat getPointDataset(vector<KeyPoint> keypoints){
 	return m;
 }
 
-results_t do_cluster(Mat dataset, vector<KeyPoint> keypoints, int step, int f_minPts, bool analyse){
+results_t do_cluster(Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_minPts, bool analyse){
 	
 	results_t res;
 	
@@ -1028,7 +926,20 @@ results_t do_cluster(Mat dataset, vector<KeyPoint> keypoints, int step, int f_mi
 	res.dataset = dataset.clone();
 	res.keypoints = keypoints;
 	
-	while(res.validity <= 2){
+	//while(res.validity <= 0 && i < 5){
+		
+		if(res.clusterMap != NULL){
+			hdbscan_destroy_cluster_table(res.clusterMap);
+		}
+		
+		if(res.stats != NULL){
+			hdbscan_destroy_stats_map(res.stats);
+		}
+		
+		if(res.distancesMap != NULL){
+			hdbscan_destroy_distance_map_table(res.distancesMap);
+		}
+				
 		res.minPts = (f_minPts + i) * step;
 		hdbscan scan(res.minPts, DATATYPE_FLOAT);
 		scan.run(res.dataset.ptr<float>(), res.dataset.rows, res.dataset.cols, TRUE);
@@ -1039,15 +950,17 @@ results_t do_cluster(Mat dataset, vector<KeyPoint> keypoints, int step, int f_mi
 		
 		//mapClusters(res.labels, res.clusterKeyPoints, res.clusterKeypointIdx, res.keypoints);
 		res.clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, scan.numPoints);
+		
 		if(analyse){
 			double* core = scan.distanceFunction.coreDistances;
 			res.distancesMap = hdbscan_get_min_max_distances(&scan, res.clusterMap);
 			res.stats = hdbscan_calculate_stats(res.distancesMap);
 			res.validity = hdbscan_analyse_stats(res.stats);
+			printf("res.validity = %d\n", res.validity);
 		}
-		
+		res.labels.clear();
 		i++;
-	}	
+	//}	
 
 	printf("------- Selected max clustering size = %d\n", maxSize);
 	return res;

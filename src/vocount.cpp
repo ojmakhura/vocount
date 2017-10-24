@@ -120,11 +120,11 @@ int main(int argc, char** argv) {
 		cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
 		detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
 
-		if(colourSel.minPts == -1 && (parser.has("c") || parser.has("i"))){
+		/*if(colourSel.minPts == -1 && (parser.has("c") || parser.has("i"))){
 			printf("Finding proper value of minPts\n");
 			colourSel = detectColourSelectionMinPts(frame, f.descriptors, f.keypoints);
 			printf("Finding value of minPts = %d with colourSel.selectedPts as %lu from %lu\n", colourSel.minPts, colourSel.selectedDesc.rows, f.keypoints.size());
-		}
+		}*/
 
 		// Listen for a key pressed
 		char c = (char) waitKey(20);
@@ -202,9 +202,13 @@ int main(int argc, char** argv) {
 			myfile << "};\n#endif" << endl;
 			myfile.close();*/
 
-			results_t res1 = do_cluster(dset, f.keypoints, vcount.step, 3, TRUE);
+			results_t res1 = do_cluster(dset, f.keypoints, vcount.step, 3, true);
+			printf("clusterMap size = %d\n", g_hash_table_size(res1.clusterMap));
 			res1.roiClusterPoints = mapSampleFeatureClusters(f.roiFeatures, res1.labels);
+			hdbscan_print_cluster_table(res1.roiClusterPoints);
+			printf("f.roiFeatures size = %d and res1.roiClusterPoints size = %d\n", f.roiFeatures.size(), g_hash_table_size(res1.roiClusterPoints));
 			map_kp kpMap = getKeypointMap(res1.roiClusterPoints, res1.keypoints);
+			printf("kpMap size = %d\n", kpMap.size());
 			generateFinalPointClusters(res1.finalPointClusters, res1.roiClusterPoints, kpMap);
 			
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
