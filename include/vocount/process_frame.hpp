@@ -273,4 +273,10 @@ map_kp getKeypointMap(IntIntListMap* listMap, vector<KeyPoint> keypoints);
  * Create a vector of KeyPoint's from a lsit of keypoint indices.
  */ 
 vector<KeyPoint> getListKeypoints(vector<KeyPoint> keypoints, IntArrayList* list);
+
+/**
+ * Clean the glib hash tables and any other memory that was dynamically allocated
+ * 
+ */ 
+void cleanResult(results_t& res);
 #endif

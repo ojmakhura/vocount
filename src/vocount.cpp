@@ -120,11 +120,11 @@ int main(int argc, char** argv) {
 		cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
 		detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
 
-		/*if(colourSel.minPts == -1 && (parser.has("c") || parser.has("i"))){
+		if(colourSel.minPts == -1 && (parser.has("c") || parser.has("i"))){
 			printf("Finding proper value of minPts\n");
 			colourSel = detectColourSelectionMinPts(frame, f.descriptors, f.keypoints);
 			printf("Finding value of minPts = %d with colourSel.selectedPts as %lu from %lu\n", colourSel.minPts, colourSel.selectedDesc.rows, f.keypoints.size());
-		}*/
+		}
 
 		// Listen for a key pressed
 		char c = (char) waitKey(20);
@@ -174,40 +174,12 @@ int main(int argc, char** argv) {
 			findROIFeature(f, colourSel);
 			Mat dset = getDescriptorDataset(vcount.frameHistory, vcount.step, f.descriptors);
 
-			dset = f.descriptors.clone();
-
-			/*String filename = "dataset.h";
-
-			ofstream myfile;
-			myfile.open(filename.c_str());
-
-			myfile << "#ifndef DATASET_H_ \n#define DATASET_H_" << endl;
-			myfile << "int rows = " << dset.rows << ";" << endl;
-			myfile << "int cols = " << dset.cols << ";" << endl;
-			myfile << "double dataset ["  << dset.rows * dset.rows << "] = {" << endl;
-			printf("Dataset has %d rows and %d cols\n", dset.rows, dset.cols);
-			for(int i = 0; i < dset.rows; i++){
-				for(int j = 0; j < dset.cols; j++){
-					//printf("Printing for (%d, %d) = %f\n", i, j, dset.at<float>(i, j));
-					if(i == dset.rows-1 && j == dset.cols-1){
-						myfile << dset.at<float>(i, j);
-					} else{
-						myfile << dset.at<float>(i, j) << ",";
-
-					}
-				}
-				myfile << endl;
-			}
-
-			myfile << "};\n#endif" << endl;
-			myfile.close();*/
-
-			results_t res1 = do_cluster(dset, f.keypoints, vcount.step, 3, true);
+			//dset = f.descriptors.clone();
+			results_t res1 = do_cluster(f.descriptors, f.keypoints, vcount.step, 3, true);
 			printf("clusterMap size = %d\n", g_hash_table_size(res1.clusterMap));
 			res1.roiClusterPoints = mapSampleFeatureClusters(f.roiFeatures, res1.labels);
-			hdbscan_print_cluster_table(res1.roiClusterPoints);
 			printf("f.roiFeatures size = %d and res1.roiClusterPoints size = %d\n", f.roiFeatures.size(), g_hash_table_size(res1.roiClusterPoints));
-			map_kp kpMap = getKeypointMap(res1.roiClusterPoints, res1.keypoints);
+			map_kp kpMap = getKeypointMap(res1.clusterMap, res1.keypoints);
 			printf("kpMap size = %d\n", kpMap.size());
 			generateFinalPointClusters(res1.finalPointClusters, res1.roiClusterPoints, kpMap);
 			
@@ -219,7 +191,7 @@ int main(int argc, char** argv) {
 			generateClusterImages(f.frame, res1.finalPointClusters, res1.keyPointImages, res1.cest, res1.total, res1.lsize, res1.selectedFeatures);
 			boxStructure(res1.finalPointClusters, f.keypoints, f.roi, res1.boxStructures, res1.keyPointImages);
 
-			f.results[""] = res1;
+			f.results["res1"] = res1;
 			printData(vcount, f.frame, 	f.keypoints, f.roiFeatures, res1, f.i);
 			if(parser.has("o")){
 				printImages(keypointsFrameDir, res1.keyPointImages, vcount.frameCount);

@@ -252,6 +252,8 @@ void generateFinalPointClusters(map_kp& finalPointClusters, IntIntListMap* roiCl
 				finalPointClusters[ptIdx] = clusterKeyPoints[*kk];
 			}
 		}
+	} else{
+		
 	}
 }
 
@@ -328,6 +330,12 @@ void generateClusterImages(Mat frame, map_kp& finalPointClusters, map<String, Ma
 void maintaintHistory(vocount& voc, framed& f){
 	voc.frameHistory.push_back(f);
 	if(voc.frameHistory.size() > 10){
+		framed& f1 = voc.frameHistory.front();
+		
+		for(map<String, results_t>::iterator it = f1.results.begin(); it != f1.results.end(); ++it){
+			cleanResult(it->second);
+		}
+		
 		voc.frameHistory.erase(voc.frameHistory.begin());
 	}
 }
@@ -796,14 +804,14 @@ map_kp getKeypointMap(IntIntListMap* listMap, vector<KeyPoint> keypoints){
 		}
 	}
 	
-	for(map_kp::iterator it = mp.begin(); it != mp.end(); ++it){
+	/*for(map_kp::iterator it = mp.begin(); it != mp.end(); ++it){
 		printf("%d -> [", it->first);
 		for(size_t i = 0; i < it->second.size(); i++){
 			KeyPoint kp = (it->second)[i];
 			printf(" (%f, %f); ", kp.pt.x, kp.pt.y);
 		}
 		printf("]\n");
-	}
+	}*/
 	
 	return mp;
 }
@@ -825,29 +833,32 @@ vector<KeyPoint> getListKeypoints(vector<KeyPoint> keypoints, IntArrayList* list
 selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPoint> keypoints){
 	int mpts;
 	printf("Detecting minPts value for colour clustering.\n");
-	map<int, StringDoubleMap*> stats;
+	//map<int, StringDoubleMap*> stats;
 	Mat dataset = getColourDataset(frame, keypoints);
 	size_t size = 0;
 	map<int, int> choices;
 	int chosenCount = 1, currentCount = 1;
-	IntIntListMap* clusterKeypointIdxMap;
-	//map_kp clusterKeyPointsMap;
+	IntIntListMap* clusterKeypointIdxMap = NULL;
+	map_kp clusterKeyPointsMap;
 	selection_t colourSelection;
 	colourSelection.minPts = 2;
 
 	for(int i = 3; i < 30; i++){
 
 		printf("\n\n >>>>>>>>>>>> Clustering for minPts = %d\n", i);
-		//map_kp clusterKeyPoints;
-		//map_t clusterKeypointIdx;
-		results_t res = do_cluster(dataset, keypoints, 1, i, true);
-		set<int> lsetkps(res.labels.begin(), res.labels.end());
-		res.stats = hdbscan_calculate_stats(res.distancesMap);
-		stats[i] = res.stats;
+		hdbscan scan(i, DATATYPE_FLOAT);
+		scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);		
+		set<int> lsetkps(scan.clusterLabels, scan.clusterLabels + scan.numPoints);	
+			
+		IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, scan.numPoints);
+		double* core = scan.distanceFunction.coreDistances;
+		IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scan, clusterMap);
+		//StringDoubleMap* stats = hdbscan_calculate_stats(distancesMap);
+		//stats[i] = stats;
 		//int v = analyseStats(stats[i]);
 
-		if(g_hash_table_size(res.distancesMap) != size){
-			size = g_hash_table_size(res.distancesMap);
+		if(g_hash_table_size(distancesMap) != size){
+			size = g_hash_table_size(distancesMap);
 			mpts = i;
 			currentCount = 1;
 		} else{
@@ -855,13 +866,19 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 			if(currentCount > chosenCount){
 				chosenCount = currentCount;
 				colourSelection.minPts = mpts;
-				clusterKeypointIdxMap = res.clusterMap;
-				//clusterKeyPointsMap = getKeypointMap(clusterKeypointIdxMap, keypoints); //res.clusterKeyPoints;
+				
+				if(clusterKeypointIdxMap != NULL){
+					hdbscan_destroy_cluster_table(clusterKeypointIdxMap);
+				}
+				
+				clusterKeypointIdxMap = clusterMap;
 			}
 		}
+		hdbscan_destroy_distance_map_table(distancesMap);
 
 	}
-	//colourSelection.clusterKeyPoints = clusterKeyPointsMap;
+	
+	//colourSelection.clusterKeyPoints = getKeypointMap(clusterKeypointIdxMap, keypoints);
 	colourSelection.clusterKeypointIdx = clusterKeypointIdxMap;
 	printf(">>>>>>>> VALID CHOICE OF minPts IS %d <<<<<<<<<\n", colourSelection.minPts);
 	//printStatistics(stats, "./");
@@ -897,29 +914,6 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 		destroyWindow("choose");
 	}
 	
-	/*for(map_t::iterator it = clusterKeypointIdxMap.begin(); it != clusterKeypointIdxMap.end(); ++it){
-
-		Mat m = drawKeyPoints(frame, clusterKeyPointsMap[it->first], Scalar(0, 0, 255), -1);
-		display("choose", m);
-		// Listen for a key pressed
-		char c = ' ';
-		while(true){
-			if (c == 'a') {
-				Mat xx = getSelectedKeypointsDescriptors(descriptors, it->second);
-				colourSelection.selectedClusters.push_back(it->first);
-				if(colourSelection.selectedDesc.empty()){
-					colourSelection.selectedDesc = xx.clone();
-				} else{
-					colourSelection.selectedDesc.push_back(xx);
-				}
-				break;
-			} else if (c == 'q'){
-				break;
-			}
-			c = (char) waitKey(20);
-		}
-		destroyWindow("choose");
-	}*/
 	return colourSelection;
 }
 
@@ -945,7 +939,7 @@ results_t do_cluster(Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_
 	res.dataset = dataset.clone();
 	res.keypoints = keypoints;
 	
-	//while(res.validity <= 0 && i < 5){
+	while(res.validity <= 2 && i < 5){
 		
 		if(res.clusterMap != NULL){
 			hdbscan_destroy_cluster_table(res.clusterMap);
@@ -965,9 +959,6 @@ results_t do_cluster(Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_
 		
 		res.labels.insert(res.labels.begin(), scan.clusterLabels, scan.clusterLabels+scan.numPoints);		
 		set<int> lset(res.labels.begin(), res.labels.end());
-		printf("Clustering: minPts = %d and found %d clusters\n", res.minPts, lset.size());
-		
-		//mapClusters(res.labels, res.clusterKeyPoints, res.clusterKeypointIdx, res.keypoints);
 		res.clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, scan.numPoints);
 		
 		if(analyse){
@@ -975,13 +966,29 @@ results_t do_cluster(Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_
 			res.distancesMap = hdbscan_get_min_max_distances(&scan, res.clusterMap);
 			res.stats = hdbscan_calculate_stats(res.distancesMap);
 			res.validity = hdbscan_analyse_stats(res.stats);
-			printf("res.validity = %d\n", res.validity);
+			//printf("res.validity = %d\n", res.validity);
 		}
 		res.labels.clear();
 		i++;
-	//}	
+	}	
 
-	printf("------- Selected max clustering size = %d\n", maxSize);
+	printf("------- Selected max clustering size = %d\n", res.minPts);
 	return res;
 }
 
+void cleanResult(results_t& res){
+	if(res.clusterMap != NULL){
+		hdbscan_destroy_cluster_table(res.clusterMap);
+		res.clusterMap = NULL;
+	}
+	
+	if(res.stats != NULL){
+		hdbscan_destroy_stats_map(res.stats);
+		res.stats = NULL;
+	}
+	
+	if(res.distancesMap != NULL){
+		hdbscan_destroy_distance_map_table(res.distancesMap);
+		res.distancesMap = NULL;
+	}
+}

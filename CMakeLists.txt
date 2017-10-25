@@ -32,13 +32,13 @@ IF(USE_OpenMP)
   ENDIF()
 ENDIF()
 
+SET(CMAKE_C_FLAGS "-g3 -Wall -fmessage-length=0 -fPIC")
+SET(CMAKE_CXX_FLAGS "-g3 -Wall -fmessage-length=0 -fPIC")
+
 # find the OpenCV libraries
 find_package( OpenCV REQUIRED )
 find_package( Hdbscan REQUIRED )
 find_package(GSL REQUIRED) 
-
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
 add_subdirectory(src)
  
