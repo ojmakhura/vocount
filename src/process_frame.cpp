@@ -258,7 +258,6 @@ void generateFinalPointClusters(map_kp& finalPointClusters, IntIntListMap* roiCl
 IntIntListMap* mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int32_t>& labels){
 
 	IntIntListMap* rcp = g_hash_table_new(g_int_hash, g_int_equal);
-	map_t kk;
 	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
 	for (vector<int>::iterator it = roiFeatures.begin(); it != roiFeatures.end(); ++it) {
 		int *key = &(labels[*it]);
@@ -273,12 +272,23 @@ IntIntListMap* mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int32_t
 		//rcp[key].push_back(*it);
 		int_array_list_append(list, *it);
 		g_hash_table_insert(rcp, key, list);
-		kk[*key].push_back(*it);
+		//kk[*key].push_back(*it);
 	}
 	
-	for(map_t::iterator it = kk.begin(); it != kk.end(); ++it){
-		
+	/*map_t kk;
+	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
+	for (vector<int>::iterator it = roiFeatures.begin(); it != roiFeatures.end(); ++it) {
+		int key = labels[*it];
+		kk[key].push_back(*it);
 	}
+	
+	for (map_t::iterator it = kk.begin(); it != kk.end(); ++it) {
+		printf("%d -> [", it->first);
+		for(int i = 0; i < it->second.size(); i++){
+			printf("%d ", (it->second)[i]);
+		}
+		printf("]\n");
+	}*/
 	
 	return rcp;
 }
@@ -784,6 +794,15 @@ map_kp getKeypointMap(IntIntListMap* listMap, vector<KeyPoint> keypoints){
 			int idx = idxList[i];
 			mp[k].push_back(keypoints[idx]);
 		}
+	}
+	
+	for(map_kp::iterator it = mp.begin(); it != mp.end(); ++it){
+		printf("%d -> [", it->first);
+		for(size_t i = 0; i < it->second.size(); i++){
+			KeyPoint kp = (it->second)[i];
+			printf(" (%f, %f); ", kp.pt.x, kp.pt.y);
+		}
+		printf("]\n");
 	}
 	
 	return mp;
