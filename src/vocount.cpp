@@ -186,8 +186,10 @@ int main(int argc, char** argv) {
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 
 			generateClusterImages(f.frame, res1->finalPointClusters, res1->keyPointImages, res1->cest, res1->total, res1->lsize, res1->selectedFeatures);
-			boxStructure(res1->finalPointClusters, f.keypoints, f.roi, res1->boxStructures, res1->keyPointImages);
-
+			boxStructure(res1->finalPointClusters, f.keypoints, f.roi, res1->boxStructures);
+			extendBoxClusters(res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap);
+			createBoxStructureImages(res1->boxStructures, res1->keyPointImages);
+			
 			f.results["res1"] = res1;
 			printData(vcount, f.frame, 	f.keypoints, f.roiFeatures, *res1, f.i);
 			if(parser.has("o")){

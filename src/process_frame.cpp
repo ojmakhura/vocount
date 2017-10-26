@@ -202,22 +202,6 @@ double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vec
 			}
 		}		
 	}
-	
-	/*for (map<int, vector<int>>::iterator it = roiClusterPoints.begin(); it != roiClusterPoints.end(); ++it) {
-		if(it->first != 0){
-			int32_t n = clusterKeyPoints[it->first].size() / it->second.size();
-			cest.push_back(n);
-			total += n;
-			printf("%d has %lu and total is %lu :: Approx Num of objects: %d\n\n", it->first, it->second.size(),
-					clusterKeyPoints[it->first].size(), n);
-			selectedFeatures += clusterKeyPoints[it->first].size();
-
-			if (clusterKeyPoints[it->first].size() > lsize) {
-				//f.largest = it->first;
-				lsize = clusterKeyPoints[it->first].size();
-			}
-		}
-	}*/
 	return total;
 }
 
@@ -260,7 +244,6 @@ IntIntListMap* mapSampleFeatureClusters(vector<int>* roiFeatures, vector<int32_t
 
 	IntIntListMap* rcp = g_hash_table_new(g_int_hash, g_int_equal);
 	vector<int32_t>& lbs = *labels;
-	printf("labels->size() = %d\n", labels->size());
 	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
 	for (vector<int>::iterator it = roiFeatures->begin(); it != roiFeatures->end(); ++it) {
 		int* key;
@@ -277,23 +260,123 @@ IntIntListMap* mapSampleFeatureClusters(vector<int>* roiFeatures, vector<int32_t
 		int_array_list_append(list, *it);
 		g_hash_table_insert(rcp, key, list);
 	}
+		
+	return rcp;
+}
+
+int rectExist(vector<box_structure>& structures, Rect& r){
+
+	double maxIntersect = 0.0;
+	//Rect maxRec(0, 0, 0, 0);
+	int maxIndex = -1;
+
+	for(uint i = 0; i < structures.size(); i++){
+		Rect r2 = r & structures[i].box;
+		double sect = ((double)r2.area()/r.area()) * 100;
+		if(sect > maxIntersect){
+			maxIndex = i;
+			//maxRec = r2;
+			maxIntersect = sect;
+		}
+	}
+
+
+	if(maxIntersect > 50.0){
+		return maxIndex;
+	}
+
+	return -1;
+}
+
+void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_points, KeyPoint first_p, Rect2d& rect){
 	
-	/*map_t kk;
-	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
-	for (vector<int>::iterator it = roiFeatures.begin(); it != roiFeatures.end(); ++it) {
-		int key = labels[*it];
-		kk[key].push_back(*it);
+	for(uint j = 0; j < c_points.size(); j++){
+			
+		KeyPoint point = c_points[j];
+		if(point.pt != first_p.pt){ // roi points have their own structure "mbs"
+			Point2f pshift;
+			pshift.x = point.pt.x - first_p.pt.x;
+			pshift.y = point.pt.y - first_p.pt.y;
+
+			// shift the roi to get roi for a possible new object
+			Rect nr = rect;
+
+			Point pp = pshift;
+			nr = nr + pp;
+			// check that the rect does not already exist
+			int idx = rectExist(*boxStructures, nr);
+			if(idx == -1){
+				box_structure bst;
+				bst.box = nr;
+				bst.points.push_back(point);
+				boxStructures->push_back(bst);
+			} else{
+				(*boxStructures)[idx].points.push_back(point);
+			}
+		}
+	}
+}
+
+/**
+ * Find clusters that have points inside one of the bounding boxes
+ * 
+ */ 
+void extendBoxClusters(vector<box_structure>* boxStructures, vector<KeyPoint>& keypoints, map_kp* finalPointClusters, IntIntListMap* clusterMap){
+	set<int32_t> freeClusters;
+	set<int32_t> toExamine;
+	
+	GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	g_hash_table_iter_init (&iter, clusterMap);
+
+	while (g_hash_table_iter_next (&iter, &key, &value)){
+		int32_t* kk = (int32_t *)key;
+		if(*kk != 0 && finalPointClusters->find(*kk) == finalPointClusters->end()){
+			freeClusters.insert(*kk);
+			IntArrayList* list = (IntArrayList *)value;
+			int32_t* dt = (int32_t*)list->data;
+			bool found = false;
+			KeyPoint kp;
+			vector<box_structure>::iterator it = boxStructures->begin();
+			int i = 0;
+			while(i < list->size){
+				kp = keypoints[i];
+				while(it != boxStructures->end()){
+					box_structure bs = *it;
+					if(it->box.contains(kp.pt)){
+						toExamine.insert(*kk);
+						found = true;
+						break;
+					}
+					++it;
+				}
+				
+				if(found){
+					break;
+				}
+				
+				i++;
+			}
+			
+			if(found){
+				printf("Cluster %d intersects with one of the box_structures\n", *kk);
+				//vector<KeyPoint> c_points = getListKeypoints(keypoints, list);
+				//Rect2d r(it->box);
+				//addToBoxStructure(boxStructures, c_points, kp, r);
+				//printf("boxStructures now has size %d \n", boxStructures->size());
+			} else{
+				printf("************** Cluster %d does not intersect with any of the box_structures\n", *kk);
+			}
+		}
 	}
 	
-	for (map_t::iterator it = kk.begin(); it != kk.end(); ++it) {
-		printf("%d -> [", it->first);
-		for(int i = 0; i < it->second.size(); i++){
-			printf("%d ", (it->second)[i]);
-		}
-		printf("]\n");
-	}*/
+	/*for(set<int32_t>::iterator it = toExamine.begin(); it != toExamine.end(); ++it){
+		int32_t label = *it;
+		IntArrayList* list = (IntArrayList *)g_hash_table_lookup(clusterMap, &label);
+		printf("Found new cluster %d with %d items\n", label, list->size);
+	}*/	
 	
-	return rcp;
 }
 
 
@@ -491,67 +574,28 @@ bool processOptions(vocount& vcount, CommandLineParser& parser, VideoCapture& ca
 	return true;
 }
 
-int rectExist(vector<box_structure>& structures, Rect& r){
-
-	double maxIntersect = 0.0;
-	//Rect maxRec(0, 0, 0, 0);
-	int maxIndex = -1;
-
-	for(uint i = 0; i < structures.size(); i++){
-		Rect r2 = r & structures[i].box;
-		double sect = ((double)r2.area()/r.area()) * 100;
-		if(sect > maxIntersect){
-			maxIndex = i;
-			//maxRec = r2;
-			maxIntersect = sect;
-		}
-	}
-
-
-	if(maxIntersect > 50.0){
-		return maxIndex;
-	}
-
-	return -1;
-}
-
-void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, Rect2d& roi, vector<box_structure>* boxStructures, map<String, Mat>* keyPointImages){
+/**
+ * Creates box_structure objects from final point clusters
+ * 
+ */ 
+void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, Rect2d& roi, vector<box_structure>* boxStructures){
 	box_structure mbs;
 	mbs.box = roi;
 
 	for(map<int, vector<KeyPoint>>::iterator it = finalPointClusters->begin(); it != finalPointClusters->end(); ++it){
-		vector<KeyPoint> c_points = it->second;
-		KeyPoint roi_p = keypoints[it->first];
-		mbs.points.push_back(roi_p);
-
-		for(uint j = 0; j < c_points.size(); j++){
-			
-			KeyPoint point = c_points[j];
-			if(point.pt != roi_p.pt){ // roi points have their own structure "mbs"
-				Point2f pshift;
-				pshift.x = point.pt.x - roi_p.pt.x;
-				pshift.y = point.pt.y - roi_p.pt.y;
-
-				// shift the roi to get roi for a possible new object
-				Rect nr = roi;
-
-				Point pp = pshift;
-				nr = nr + pp;
-				// check that the rect does not already exist
-				int idx = rectExist(*boxStructures, nr);
-				if(idx == -1){
-					box_structure bst;
-					bst.box = nr;
-					bst.points.push_back(point);
-					boxStructures->push_back(bst);
-				} else{
-					(*boxStructures)[idx].points.push_back(point);
-				}
-			}
-		}
+		mbs.points.push_back(keypoints[it->first]);
+		addToBoxStructure(boxStructures, it->second, keypoints[it->first], roi);
 	}
 
 	boxStructures->push_back(mbs);
+}
+
+/**
+ * Given a vector of box structures, the function draws the rectangles around the identified object locations
+ * 
+ */ 
+void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, Mat>* keyPointImages){
+	
 	printf("boxStructure found %lu objects\n\n", boxStructures->size());
 	String ss = "img_bounds";
 
@@ -603,41 +647,6 @@ map<int, int> splitROIPoints(framed& f, framed& f1){
 	f1.hasRoi = f.hasRoi;
 
 	bool run = false;
-	/*for(map<int, vector<int>>::iterator it = f.roiClusterPoints.begin(); it != f.roiClusterPoints.end(); ++it){
-		if (it->second.size() > 1 && it->first != 0) {
-
-			run = true;
-			map<int, int> fm = addDescriptors(f, f1, it->first, it->second);
-			fToF1.insert(fm.begin(), fm.end());
-		}
-	}
-
-	cout << "f.roiClusterPoints[0].size() " << f.roiClusterPoints[0].size() << endl;
-	*
-	 * If there code above did not need reclustering, we check if the noise cluster has
-	 * more roi features, in which case we add it to the reclustering data.
-
-	if(!run && f.roiClusterPoints[0].size() > 0 && f1.dataset.rows == 0){
-
-		run = true;
-		map<int, int> fm = addDescriptors(f, f1, 0, f.roiClusterPoints[0]);
-
-		fToF1.insert(fm.begin(), fm.end());
-	}
-
-	if(run){
-		f1.dataset = f1.dataset.clone();
-		f1.descriptors = f1.dataset.clone();
-		f1.ogsize = f1.dataset.rows;
-		f1.hasRoi = f.hasRoi;
-
-		hdbscan<float> sc(_EUCLIDEAN, 4);
-		sc.run(f1.dataset.ptr<float>(), f1.dataset.rows, f1.dataset.cols, true);
-		f1.labels = sc.getClusterLabels();
-		//mapKeyPoints(f1);
-		mapClusters(f.labels, f.clusterKeyPoints, f.clusterKeypointIdx, f.keypoints);
-		return fToF1;
-	}*/
 
 	return map<int, int>();
 }
@@ -1024,6 +1033,17 @@ void cleanResult(results_t* res){
 		printf("cleaning distance map of size %d\n", g_hash_table_size(res->distancesMap));
 		hdbscan_destroy_distance_map_table(res->distancesMap);
 		res->distancesMap = NULL;
+	}
+	
+	/**
+	 * Here we are using the hdbscan_destroy_cluster_table from the hdbscan.c
+	 * because roiClusterPoints and clusterTable are basically the same structure
+	 * being IntIntListMap datatype.
+	 */ 
+	if(res->roiClusterPoints != NULL){		
+		printf("cleaning roi cluster points table of size %d\n", g_hash_table_size(res->roiClusterPoints));
+		hdbscan_destroy_cluster_table(res->roiClusterPoints);
+		res->roiClusterPoints = NULL;
 	}
 	
 	delete res->dataset;

@@ -185,8 +185,7 @@ bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
 /**
  *
  */
-//void boxStructure(framed& f);
-void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, Rect2d& roi, vector<box_structure>* boxStructures, map<String, Mat>* keyPointImages);
+void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, Rect2d& roi, vector<box_structure>* boxStructures);
 
 /**
  *
@@ -280,4 +279,16 @@ vector<KeyPoint> getListKeypoints(vector<KeyPoint> keypoints, IntArrayList* list
  * 
  */ 
 void cleanResult(results_t* res);
+
+/**
+ * Given a vector of box structures, the function draws the rectangles around the identified object locations
+ * 
+ */ 
+void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, Mat>* keyPointImages);
+
+/**
+ * Find clusters that have points inside one of the bounding boxes
+ * 
+ */ 
+void extendBoxClusters(vector<box_structure>* boxStructures, vector<KeyPoint>& keypoints, map_kp* finalPointClusters, IntIntListMap* clusterMap);
 #endif
