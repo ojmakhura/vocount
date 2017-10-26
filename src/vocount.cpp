@@ -175,26 +175,23 @@ int main(int argc, char** argv) {
 			Mat dset = getDescriptorDataset(vcount.frameHistory, vcount.step, f.descriptors);
 
 			//dset = f.descriptors.clone();
-			results_t res1 = do_cluster(f.descriptors, f.keypoints, vcount.step, 3, true);
-			printf("clusterMap size = %d\n", g_hash_table_size(res1.clusterMap));
-			res1.roiClusterPoints = mapSampleFeatureClusters(f.roiFeatures, res1.labels);
-			printf("f.roiFeatures size = %d and res1.roiClusterPoints size = %d\n", f.roiFeatures.size(), g_hash_table_size(res1.roiClusterPoints));
-			map_kp kpMap = getKeypointMap(res1.clusterMap, res1.keypoints);
-			printf("kpMap size = %d\n", kpMap.size());
-			generateFinalPointClusters(res1.finalPointClusters, res1.roiClusterPoints, kpMap);
+			results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true);
+			res1->roiClusterPoints = mapSampleFeatureClusters(&f.roiFeatures, res1->labels);
+			map_kp kpMap = getKeypointMap(res1->clusterMap, res1->keypoints);
+			generateFinalPointClusters(res1->finalPointClusters, res1->roiClusterPoints, &kpMap);
 			
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-			res1.total = countPrint(res1.roiClusterPoints, kpMap, res1.cest, res1.selectedFeatures, res1.lsize);
+			res1->total = countPrint(res1->roiClusterPoints, &kpMap, res1->cest, res1->selectedFeatures, res1->lsize);
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 
-			generateClusterImages(f.frame, res1.finalPointClusters, res1.keyPointImages, res1.cest, res1.total, res1.lsize, res1.selectedFeatures);
-			boxStructure(res1.finalPointClusters, f.keypoints, f.roi, res1.boxStructures, res1.keyPointImages);
+			generateClusterImages(f.frame, res1->finalPointClusters, res1->keyPointImages, res1->cest, res1->total, res1->lsize, res1->selectedFeatures);
+			boxStructure(res1->finalPointClusters, f.keypoints, f.roi, res1->boxStructures, res1->keyPointImages);
 
 			f.results["res1"] = res1;
-			printData(vcount, f.frame, 	f.keypoints, f.roiFeatures, res1, f.i);
+			printData(vcount, f.frame, 	f.keypoints, f.roiFeatures, *res1, f.i);
 			if(parser.has("o")){
-				printImages(keypointsFrameDir, res1.keyPointImages, vcount.frameCount);
+				printImages(keypointsFrameDir, res1->keyPointImages, vcount.frameCount);
 			}
 
 			/*if(vcount.frameHistory.size() > 0){
@@ -298,7 +295,7 @@ int main(int argc, char** argv) {
 						//printf("-------------- We found %lu objects by index points clustering.\n", ss.size() - 1);
 						//mapClusters(rs.labels, rs.clusterKeyPoints, rs.clusterKeypointIdx, rs.keypoints);
 						rs.roiClusterPoints = mapSampleFeatureClusters(colourSel.roiFeatures, rs.labels);
-						generateClusterImages(f.frame, rs.clusterKeyPoints, rs.keyPointImages, rs.cest, rs.total, res1.lsize, res1.selectedFeatures);
+						generateClusterImages(f.frame, rs.clusterKeyPoints, rs.keyPointImages, rs.cest, rs.total, res1->lsize, res1->selectedFeatures);
 
 						if(parser.has("o")){
 							printf("--------------------- found %lu images\n", rs.keyPointImages.size());
@@ -313,7 +310,7 @@ int main(int argc, char** argv) {
 						//sel_r.labels = sel_scan.getClusterLabels();
 						//mapClusters(sel_r.labels, sel_r.clusterKeyPoints, sel_r.clusterKeypointIdx, sel_r.keypoints);
 						sel_r.roiClusterPoints = mapSampleFeatureClusters(colourSel.roiFeatures, sel_r.labels);
-						generateClusterImages(f.frame, sel_r.clusterKeyPoints, sel_r.keyPointImages, sel_r.cest, sel_r.total, res1.lsize, res1.selectedFeatures);
+						generateClusterImages(f.frame, sel_r.clusterKeyPoints, sel_r.keyPointImages, sel_r.cest, sel_r.total, res1->lsize, res1->selectedFeatures);
 
 						if(parser.has("o")){
 							//printf("--------------------- found %lu images\n", sel_r.keyPointImages.size());
@@ -328,6 +325,13 @@ int main(int argc, char** argv) {
 
 				}
 			}*/
+			
+			/*
+			for(map<String, results_t>::iterator it = f.results.begin(); it != f.results.end(); ++it){
+				printf("Cleaning results %s\n", it->first.c_str());
+				cleanResult(it->second);
+			}
+			*/
 		}
 
 		maintaintHistory(vcount, f);

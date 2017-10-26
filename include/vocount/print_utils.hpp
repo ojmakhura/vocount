@@ -34,6 +34,6 @@ String createDirectory(String& mainFolder, String subfolder);
 /**
  *
  */
-void printImages(String folder, map<String, Mat> images, int count);
+void printImages(String folder, map<String, Mat>* images, int count);
 
 #endif /* PRINT_UTILS_HPP_ */

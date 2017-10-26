@@ -142,8 +142,8 @@ String createDirectory(String& mainFolder, String subfolder){
 
 }
 
-void printImages(String folder, map<String, Mat> images, int count){
-	for(map<String, Mat>::iterator it = images.begin(); it != images.end(); ++it){
+void printImages(String folder, map<String, Mat>* images, int count){
+	for(map<String, Mat>::iterator it = images->begin(); it != images->end(); ++it){
 		printImage(folder, count, it->first, it->second);
 	}
 }
@@ -156,11 +156,7 @@ void printData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<
 		Mat ff = drawKeyPoints(frame, keypoints, Scalar(0, 0, 255), -1);
 		printImage(vcount.destFolder, vcount.frameCount, "frame_kp", ff);
 
-		/*for(map<String, Mat>::iterator it = res.keyPointImages.begin(); it != res.keyPointImages.end(); ++it){
-			printImage(vcount.destFolder, vcount.frameCount, it->first, it->second);
-		}*/
-
-		res.odata.push_back(roiFeatures.size());
+		res.odata->push_back(roiFeatures.size());
 
 		int selSampleSize = 0;
 
@@ -174,33 +170,29 @@ void printData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<
 			selSampleSize += list->size;
 			
 		}
-		/*for (map<int, vector<int>>::iterator it = res.roiClusterPoints.begin();
-				it != res.roiClusterPoints.end(); ++it) {
-			selSampleSize += it->second.size();
-		}*/
 
-		res.odata.push_back(selSampleSize);
-		res.odata.push_back(res.ogsize);
-		res.odata.push_back(res.selectedFeatures);
-		res.odata.push_back(res.keyPointImages.size());
-		res.odata.push_back(res.total);
-		int32_t avg = res.total / res.keyPointImages.size();
-		res.odata.push_back(avg);
-		res.odata.push_back(res.boxStructures.size());
+		res.odata->push_back(selSampleSize);
+		res.odata->push_back(res.ogsize);
+		res.odata->push_back(res.selectedFeatures);
+		res.odata->push_back(res.keyPointImages->size());
+		res.odata->push_back(res.total);
+		int32_t avg = res.total / res.keyPointImages->size();
+		res.odata->push_back(avg);
+		res.odata->push_back(res.boxStructures->size());
 
 		map<int, int>::iterator it = vcount.truth.find(i);
 
 		if(it == vcount.truth.end()){
-			res.odata.push_back(0);
+			res.odata->push_back(0);
 		} else{
-			res.odata.push_back(it->second);
+			res.odata->push_back(it->second);
 		}
-		pair<int32_t, vector<int32_t> > pp(vcount.frameCount, res.odata);
+		pair<int32_t, vector<int32_t> > pp(vcount.frameCount, *res.odata);
 		vcount.stats.insert(pp);
-		res.cest.push_back(res.boxStructures.size());
-		res.cest.push_back(avg);
-		res.cest.push_back(res.total);
-		pair<int32_t, vector<int32_t> > cpp(vcount.frameCount, res.cest);
+		res.cest->push_back(res.boxStructures->size());
+		res.cest->push_back(avg);
+		res.cest->push_back(res.total);
+		pair<int32_t, vector<int32_t> > cpp(vcount.frameCount, *res.cest);
 		vcount.clusterEstimates.insert(cpp);
 	}
 }

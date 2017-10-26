@@ -41,18 +41,18 @@ typedef struct _box_structure{
 } box_structure;
 
 typedef struct {
-	vector<KeyPoint> keypoints;
-	Mat dataset;
+	vector<KeyPoint>* keypoints;
+	Mat* dataset;
     IntIntListMap* clusterMap = NULL;		 								/// maps labels to the keypoint indices
     IntIntListMap* roiClusterPoints = NULL;								/// cluster labels for the region of interest mapped to the roi points in the cluster
     StringDoubleMap* stats = NULL;											/// Statistical values for the clusters
     IntDoubleListMap* distancesMap = NULL;									/// Min and Max distance table for each cluster
-	map_kp finalPointClusters;
-	vector<int32_t> odata;											/// Output data
-    vector<int32_t> labels;												/// hdbscan cluster labels
-	vector<box_structure> boxStructures;							/// Bounding boxes for the individual objects in the frame
-	vector<int32_t> cest;
-	map<String, Mat> keyPointImages;										/// images with cluster by cluster keypoints drawn
+	map_kp* finalPointClusters;
+	vector<int32_t>* odata;											/// Output data
+    vector<int32_t>* labels;												/// hdbscan cluster labels
+	vector<box_structure>* boxStructures;							/// Bounding boxes for the individual objects in the frame
+	vector<int32_t>* cest;
+	map<String, Mat>* keyPointImages;										/// images with cluster by cluster keypoints drawn
 	double lsize = 0;
 	double total = 0;
 	int32_t selectedFeatures = 0;
@@ -73,7 +73,7 @@ typedef struct FRAMED{
 	Mat roiDesc;													/// region of interest descriptors
 	bool hasRoi = false;
 
-	map<String, results_t> results;
+	map<String, results_t*> results;
 } framed;
 
 typedef struct VOCOUNT{
@@ -90,6 +90,7 @@ typedef struct VOCOUNT{
     map<int, int> truth;
 } vocount;
 
+results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints);
 
 /**
  *
@@ -139,12 +140,12 @@ set<int32_t> getIgnoreSegments(Rect roi, Mat segments);
 /**
  *
  */
-void generateClusterImages(Mat frame, map_kp& finalPointClusters, map<String, Mat>& keyPointImages, vector<int32_t>& cest, double& total, double& lsize, int32_t& selectedFeatures);
+void generateClusterImages(Mat frame, map_kp* finalPointClusters, map<String, Mat>* keyPointImages, vector<int32_t>* cest, double& total, double& lsize, int32_t& selectedFeatures);
 
 /**
  *
  */
-double countPrint(IntIntListMap* roiClusterPoints, map_kp& clusterKeyPoints, vector<int32_t>& cest, int32_t& selectedFeatures, double& lsize);
+double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vector<int32_t>* cest, int32_t& selectedFeatures, double& lsize);
 
 /**
  *
@@ -185,12 +186,12 @@ bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
  *
  */
 //void boxStructure(framed& f);
-void boxStructure(map_kp& finalPointClusters, vector<KeyPoint>& keypoints, Rect2d& roi, vector<box_structure>& boxStructures, map<String, Mat>& keyPointImages);
+void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, Rect2d& roi, vector<box_structure>* boxStructures, map<String, Mat>* keyPointImages);
 
 /**
  *
  */
-void generateFinalPointClusters(map_kp& finalPointClusters, IntIntListMap* roiClusterPoints, map_kp& clusterKeyPoints);
+void generateFinalPointClusters(map_kp* finalPointClusters, IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints);
 
 /**
  *
@@ -215,7 +216,7 @@ Mat getDistanceDataset(vector<int>roiIdx, Mat descriptors);
 /**
  * map sample features to their clusters
  */
-IntIntListMap* mapSampleFeatureClusters(vector<int>& roiFeatures, vector<int32_t>& labels);
+IntIntListMap* mapSampleFeatureClusters(vector<int>* roiFeatures, vector<int32_t>* labels);
 
 /**
  * Given the descriptors and their keypoints, find the Mat object representing the colour values
@@ -259,7 +260,7 @@ Mat getPointDataset(vector<KeyPoint> keypoint);
 /**
  *
  */
-results_t do_cluster(Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_minPts, bool mapDistances);
+results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_minPts, bool mapDistances);
 
 /**
  * Takes a hash table of cluster point indices anc creates a map
@@ -267,7 +268,7 @@ results_t do_cluster(Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_
  * returned map is a C++ std::map<int, vector<KeyPoint>> 
  * 
  */ 
-map_kp getKeypointMap(IntIntListMap* listMap, vector<KeyPoint> keypoints);
+map_kp getKeypointMap(IntIntListMap* listMap, vector<KeyPoint>* keypoints);
 
 /**
  * Create a vector of KeyPoint's from a lsit of keypoint indices.
@@ -278,5 +279,5 @@ vector<KeyPoint> getListKeypoints(vector<KeyPoint> keypoints, IntArrayList* list
  * Clean the glib hash tables and any other memory that was dynamically allocated
  * 
  */ 
-void cleanResult(results_t& res);
+void cleanResult(results_t* res);
 #endif
