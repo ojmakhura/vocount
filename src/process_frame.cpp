@@ -338,45 +338,40 @@ void extendBoxClusters(vector<box_structure>* boxStructures, vector<KeyPoint>& k
 			int32_t* dt = (int32_t*)list->data;
 			bool found = false;
 			KeyPoint kp;
-			vector<box_structure>::iterator it = boxStructures->begin();
-			int i = 0;
-			while(i < list->size){
+			box_structure bs;
+			
+			for(int i = 0; i < list->size; i++){
 				kp = keypoints[i];
-				while(it != boxStructures->end()){
-					box_structure bs = *it;
+				
+				//cout << "Cluster " << *kk << " Point at " << i << " is " << kp.pt << endl;
+				for(vector<box_structure>::iterator it = boxStructures->begin(); it != boxStructures->end(); ++it){
+					
+					//cout << "Checking " << kp.pt << " in " << it->box << endl;
 					if(it->box.contains(kp.pt)){
 						toExamine.insert(*kk);
 						found = true;
+						bs = *it;
+						//cout << "found " << kp.pt << " in " << bs.box << endl;
 						break;
 					}
-					++it;
 				}
 				
 				if(found){
 					break;
 				}
-				
-				i++;
 			}
 			
 			if(found){
-				printf("Cluster %d intersects with one of the box_structures\n", *kk);
-				//vector<KeyPoint> c_points = getListKeypoints(keypoints, list);
-				//Rect2d r(it->box);
-				//addToBoxStructure(boxStructures, c_points, kp, r);
-				//printf("boxStructures now has size %d \n", boxStructures->size());
+				//printf("Cluster %d intersects with one of the box_structures\n", *kk);
+				vector<KeyPoint> c_points = getListKeypoints(keypoints, list);
+				Rect2d r(bs.box);
+				addToBoxStructure(boxStructures, c_points, kp, r);
 			} else{
-				printf("************** Cluster %d does not intersect with any of the box_structures\n", *kk);
+				//printf("************** Cluster %d does not intersect with any of the box_structures\n", *kk);
 			}
 		}
-	}
-	
-	/*for(set<int32_t>::iterator it = toExamine.begin(); it != toExamine.end(); ++it){
-		int32_t label = *it;
-		IntArrayList* list = (IntArrayList *)g_hash_table_lookup(clusterMap, &label);
-		printf("Found new cluster %d with %d items\n", label, list->size);
-	}*/	
-	
+	}	
+	printf("boxStructures now has size %d \n", boxStructures->size());
 }
 
 
