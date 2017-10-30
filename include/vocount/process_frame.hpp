@@ -23,7 +23,7 @@ using namespace clustering;
 
 //typedef map<int, vector<int>> map_t;
 //typedef map<int, vector<double>> map_d;
-typedef map<int, vector<KeyPoint>> map_kp;
+typedef map<int32_t, vector<KeyPoint>> map_kp;
 //typedef set<int> set_t;
 
 typedef struct {
@@ -53,6 +53,7 @@ typedef struct {
 	vector<box_structure>* boxStructures;							/// Bounding boxes for the individual objects in the frame
 	vector<int32_t>* cest;
 	map<String, Mat>* keyPointImages;										/// images with cluster by cluster keypoints drawn
+	set<int32_t>* objectClusters;
 	double lsize = 0;
 	double total = 0;
 	int32_t selectedFeatures = 0;
@@ -145,7 +146,7 @@ void generateClusterImages(Mat frame, map_kp* finalPointClusters, map<String, Ma
 /**
  *
  */
-double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vector<int32_t>* cest, int32_t& selectedFeatures, double& lsize);
+double countPrint(map_kp* clusterKeyPoints, vector<int32_t>* cest, int32_t& selectedFeatures, double& lsize);
 
 /**
  *
@@ -190,7 +191,7 @@ void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, Rect2
 /**
  *
  */
-void generateFinalPointClusters(map_kp* finalPointClusters, IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints);
+void generateFinalPointClusters(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, set<int32_t>* objectClusters, IntIntListMap* clusterMap);
 
 /**
  *
@@ -215,27 +216,12 @@ Mat getDistanceDataset(vector<int>roiIdx, Mat descriptors);
 /**
  * map sample features to their clusters
  */
-IntIntListMap* mapSampleFeatureClusters(vector<int>* roiFeatures, vector<int32_t>* labels);
+void getSampleFeatureClusters(vector<int>* roiFeatures, vector<int32_t>* labels, set<int32_t>* objectClusters, IntIntListMap* roiClusterPoints);
 
 /**
  * Given the descriptors and their keypoints, find the Mat object representing the colour values
  */
 Mat getColourDataset(Mat f, vector<KeyPoint> pts);
-
-/**
- * Find the minimum and maximum core distances and intra cluster distances
- */
-//IntDoubleListMap* getMinMaxDistances(map_t mp, hdbscan& sc, double* core);
-
-/**
- * Get the statistics for the core distance and intra cluster distances
- */
-//map<String, double> getStatistics(map_d distances);
-
-/**
- *
- */
-//int analyseStats(map<String, double> stats);
 
 /***
  *
