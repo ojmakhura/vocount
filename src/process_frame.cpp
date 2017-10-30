@@ -176,24 +176,9 @@ vector<KeyPoint> getAllMatchedKeypoints( map_kp& finalPointClusters){
 	return kp;
 }
 
-double countPrint( map_kp* clusterKeyPoints, vector<int32_t>* cest, int32_t& selectedFeatures, double& lsize){
+double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vector<int32_t>* cest, int32_t& selectedFeatures, double& lsize){
 	double total = 0;
-	
-	for(map_kp::iterator it = clusterKeyPoints->begin(); it != clusterKeyPoints->end(); ++it){
-		if(it->first != 0){
-			int32_t n = it->second.size();
-			/// TODO: find out if everaging is necessary
-			cest->push_back(n);
-			total += n;
-			printf("%d has %lu and total is %lu :: Approx Num of objects: %d\n\n", it->first, 1,
-						it->second.size(), n);
-			if (it->second.size() > lsize) {
-				//f.largest = it->first;
-				lsize = it->second.size();
-			}
-		}
-	}
-	/*
+			
 	GHashTableIter iter;
 	gpointer key;
 	gpointer value;
@@ -216,19 +201,13 @@ double countPrint( map_kp* clusterKeyPoints, vector<int32_t>* cest, int32_t& sel
 				lsize = (*clusterKeyPoints)[*kk].size();
 			}
 		}		
-	}*/
+	}
 	return total;
 }
 
-void generateFinalPointClusters(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, set<int32_t>* objectClusters, IntIntListMap* clusterMap){
-	
-	for(set<int32_t>::iterator it = objectClusters->begin(); it != objectClusters->end(); ++it){
-		int32_t key = *it;
-		IntArrayList* list = (IntArrayList*)g_hash_table_lookup(clusterMap, &key);
-		(*finalPointClusters)[key] = getListKeypoints(keypoints, list);
-	}
-	
-	/*GHashTableIter iter;
+void generateFinalPointClusters(IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<KeyPoint>& keypoints, vector<int32_t>* labels, IntIntListMap* clusterMap){
+		
+	GHashTableIter iter;
 	gpointer key;
 	gpointer value;
 	g_hash_table_iter_init (&iter, roiClusterPoints);
@@ -238,8 +217,12 @@ void generateFinalPointClusters(map_kp* finalPointClusters, vector<KeyPoint>& ke
 		IntArrayList* list = (IntArrayList *)value;
 		if (*kk != 0 && list->size == 1) {
 			int32_t* dd = (int32_t *)list->data;
-			int32_t ptIdx = dd[0];
-			(*finalPointClusters)[ptIdx] = (*clusterKeyPoints)[*kk];
+			int32_t label = (*labels)[dd[0]];
+			IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(clusterMap, &label);
+			vector<KeyPoint> kps = getListKeypoints(keypoints, l1);
+			//printf("Labels is %d and kps has %lu\n", label, kps.size());
+			
+			(*finalPointClusters)[label] = kps;
 		}
 	}
 	
@@ -252,36 +235,33 @@ void generateFinalPointClusters(map_kp* finalPointClusters, vector<KeyPoint>& ke
 			IntArrayList* list = (IntArrayList *)value;
 			if (*kk != 0) {
 				int32_t* dd = (int32_t *)list->data;
-				int32_t ptIdx = dd[0];
-				(*finalPointClusters)[ptIdx] = (*clusterKeyPoints)[*kk];
+				int32_t ptIdx = (*labels)[dd[0]];
+				(*finalPointClusters)[ptIdx] = getListKeypoints(keypoints, list);
 			}
 		}
-	}*/
+	}
 }
 
 void getSampleFeatureClusters(vector<int>* roiFeatures, vector<int32_t>* labels, set<int32_t>* objectClusters, IntIntListMap* roiClusterPoints){
 
-	//IntIntListMap* rcp = g_hash_table_new(g_int_hash, g_int_equal);
 	vector<int32_t>& lbs = *labels;
 	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
 	for (vector<int>::iterator it = roiFeatures->begin(); it != roiFeatures->end(); ++it) {
 		int* key;
 		int k = lbs[*it];
 		objectClusters->insert(k);
-		*key = &k;
-		IntArrayList* list = (IntArrayList *)g_hash_table_lookup(rcp, key);
+		key = &k;
+		IntArrayList* list = (IntArrayList *)g_hash_table_lookup(roiClusterPoints, key);
 		
 		if(list == NULL){
 			key = (int *)malloc(sizeof(int));
 			*key = (*labels)[*it];
 			list = int_array_list_init_size(roiFeatures->size());
+			g_hash_table_insert(roiClusterPoints, key, list);
 		}
 		
 		int_array_list_append(list, *it);
-		g_hash_table_insert(rcp, key, list);
 	}
-		
-	//return rcp;
 }
 
 int rectExist(vector<box_structure>& structures, Rect& r){
@@ -308,7 +288,10 @@ int rectExist(vector<box_structure>& structures, Rect& r){
 	return -1;
 }
 
-void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_points, KeyPoint first_p, Rect2d& rect){
+void compareHistograms(box_structure& base, box_structure& check){
+}
+
+void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_points, KeyPoint first_p, box_structure& mbs){
 	
 	for(uint j = 0; j < c_points.size(); j++){
 			
@@ -319,16 +302,18 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 			pshift.y = point.pt.y - first_p.pt.y;
 
 			// shift the roi to get roi for a possible new object
-			Rect nr = rect;
+			Rect n_rect = mbs.box;
 
 			Point pp = pshift;
-			nr = nr + pp;
+			n_rect = n_rect + pp;
 			// check that the rect does not already exist
-			int idx = rectExist(*boxStructures, nr);
+			int idx = rectExist(*boxStructures, n_rect);
 			if(idx == -1){
 				box_structure bst;
-				bst.box = nr;
+				bst.box = n_rect;
 				bst.points.push_back(point);
+				//bst.img = frame[bst.box];
+				//calculateHistogram(bst);
 				boxStructures->push_back(bst);
 			} else{
 				(*boxStructures)[idx].points.push_back(point);
@@ -341,9 +326,12 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
  * Find clusters that have points inside one of the bounding boxes
  * 
  */ 
-void extendBoxClusters(vector<box_structure>* boxStructures, vector<KeyPoint>& keypoints, map_kp* finalPointClusters, IntIntListMap* clusterMap){
+void extendBoxClusters(vector<box_structure>* boxStructures, vector<KeyPoint>& keypoints, map_kp* finalPointClusters, IntIntListMap* clusterMap, IntDoubleListMap* distanceMap){
 	set<int32_t> freeClusters;
 	set<int32_t> toExamine;
+	vector<box_structure> bst;
+	map<int32_t, box_structure> rec_map; // map for holding the rects that the other a point intersect with
+	map<int32_t, int32_t> idx_map;
 	
 	GHashTableIter iter;
 	gpointer key;
@@ -352,12 +340,19 @@ void extendBoxClusters(vector<box_structure>* boxStructures, vector<KeyPoint>& k
 
 	while (g_hash_table_iter_next (&iter, &key, &value)){
 		int32_t* kk = (int32_t *)key;
-		if(*kk != 0 && finalPointClusters->find(*kk) == finalPointClusters->end()){
+		DoubleArrayList* dl = (DoubleArrayList*)g_hash_table_lookup(distanceMap, kk);
+		//if(dl != NULL){
+		double* ddata = (double *)dl->data;		
+		double cr = ddata[1]/ddata[0];
+		double dr = ddata[3]/ddata[2];
+		double x = dr/cr;
+		if(*kk != 0 && finalPointClusters->find(*kk) == finalPointClusters->end() && x < 2){
 			freeClusters.insert(*kk);
 			IntArrayList* list = (IntArrayList *)value;
 			int32_t* dt = (int32_t*)list->data;
 			bool found = false;
 			KeyPoint kp;
+			int32_t kp_index = -1;
 			box_structure bs;
 			
 			for(int i = 0; i < list->size; i++){
@@ -371,58 +366,68 @@ void extendBoxClusters(vector<box_structure>* boxStructures, vector<KeyPoint>& k
 						toExamine.insert(*kk);
 						found = true;
 						bs = *it;
-						//cout << "found " << kp.pt << " in " << bs.box << endl;
+						//cout << "index " << i << ": found " << kp.pt << " in " << bs.box << endl;
 						break;
 					}
 				}
 				
 				if(found){
+					kp_index = dt[i];
 					break;
 				}
 			}
 			
 			if(found){
-				//printf("Cluster %d intersects with one of the box_structures\n", *kk);
-				vector<KeyPoint> c_points = getListKeypoints(keypoints, list);
-				Rect2d r(bs.box);
-				addToBoxStructure(boxStructures, c_points, kp, r);
+				rec_map[*kk] = bs;
+				idx_map[*kk] = kp_index;
 			} else{
-				//printf("************** Cluster %d does not intersect with any of the box_structures\n", *kk);
+				//printf("Cluster %d does not intersect with one of the box_structures\n", *kk);
 			}
 		}
-	}	
-	printf("boxStructures now has size %d \n", boxStructures->size());
+	}
+	
+	for(map<int32_t, box_structure>::iterator it = rec_map.begin(); it != rec_map.end(); ++it){
+		int32_t label = it->first;
+		IntArrayList * list = (IntArrayList *)g_hash_table_lookup(clusterMap, &label);
+		vector<KeyPoint> c_points = getListKeypoints(keypoints, list);
+		int32_t idx = idx_map[label];
+		KeyPoint kp = keypoints[idx];
+		addToBoxStructure(boxStructures, c_points, kp, it->second);
+		(*finalPointClusters)[idx] = c_points;
+		
+	}
 }
 
 
 /**
  *
  */
-void generateClusterImages(Mat frame, map_kp* finalPointClusters, map<String, Mat>* keyPointImages, vector<int32_t>* cest, double& total, double& lsize, int32_t& selectedFeatures){
+void generateClusterImages(Mat frame, results_t* res){
 
 	vector<KeyPoint> kp;
-	for(map<int, vector<KeyPoint> >::iterator it = finalPointClusters->begin(); it != finalPointClusters->end(); ++it){
-		cest->push_back(it->second.size());
-		total += it->second.size();
-		selectedFeatures += it->second.size();
+	for(map<int, vector<KeyPoint> >::iterator it = res->finalPointClusters->begin(); it != res->finalPointClusters->end(); ++it){
+		res->cest->push_back(it->second.size());
+		res->total += it->second.size();
+		res->selectedFeatures += it->second.size();
 
-		if(it->second.size() > lsize){
-			lsize = it->second.size();
+		if(it->second.size() > res->lsize){
+			res->lsize = it->second.size();
 		}
 
 		Mat kimg = drawKeyPoints(frame, it->second, Scalar(0, 0, 255), -1);
 
 		String ss = "img_keypoints-";
-		string s = to_string(keyPointImages->size());
+		vector<int32_t>& labels = *(res->labels);
+		string s = to_string(labels[it->first]);
 		ss += s.c_str();
-		(*keyPointImages)[ss] = kimg;
+		(*(res->keyPointImages))[ss] = kimg;
 		kp.insert(kp.end(), it->second.begin(), it->second.end());
 	}
 
 	Mat mm = drawKeyPoints(frame, kp, Scalar(0, 0, 255), -1);
 
 	String ss = "img_allkps";
-	(*keyPointImages)[ss] = mm;
+	(*(res->keyPointImages))[ss] = mm;
 }
 
 void maintaintHistory(vocount& voc, framed& f){
@@ -596,6 +601,8 @@ bool processOptions(vocount& vcount, CommandLineParser& parser, VideoCapture& ca
 void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, Rect2d& roi, vector<box_structure>* boxStructures){
 	box_structure mbs;
 	mbs.box = roi;
+	//mbs.img = frame[bst.box];
+	//calculateHistogram(mbs);
 
 	for(map_kp::iterator it = finalPointClusters->begin(); it != finalPointClusters->end(); ++it){
 		vector<KeyPoint>& kps = it->second;
@@ -610,7 +617,7 @@ void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, Rect2
 		}
 		
 		mbs.points.push_back(kp);
-		addToBoxStructure(boxStructures, it->second, kp, roi);
+		addToBoxStructure(boxStructures, it->second, kp, mbs);
 	}
 
 	boxStructures->push_back(mbs);
@@ -979,7 +986,7 @@ results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints){
 	res->objectClusters = new set<int32_t>();
 		
     res->clusterMap = NULL;		 								/// maps labels to the keypoint indices
-    res->roiClusterPoints = NULL;								/// cluster labels for the region of interest mapped to the roi points in the cluster
+    res->roiClusterPoints = g_hash_table_new(g_int_hash, g_int_equal);								/// cluster labels for the region of interest mapped to the roi points in the cluster
     res->stats = NULL;											/// Statistical values for the clusters
     res->distancesMap = NULL;									/// Min and Max distance table for each cluster
     
@@ -1083,4 +1090,24 @@ void cleanResult(results_t* res){
 	delete res->keyPointImages;
 	delete res->objectClusters;
 	free(res);
+}
+
+void calculateHistogram(box_structure& bst){	
+	cvtColor(bst.img, bst.hsv, COLOR_BGR2HSV );
+	
+	/// Using 50 bins for hue and 60 for saturation
+    int h_bins = 50; int s_bins = 60;
+    int histSize[] = { h_bins, s_bins };
+
+    // hue varies from 0 to 179, saturation from 0 to 255
+    float h_ranges[] = { 0, 180 };
+    float s_ranges[] = { 0, 256 };
+
+    const float* ranges[] = { h_ranges, s_ranges };
+
+    // Use the o-th and 1-st channels
+    int channels[] = { 0, 1 };
+    /// Calculate the histograms for the HSV images
+    //calcHist( &bst.hsv, 1, channels, Mat(), bst.hist, 2, histSize, ranges, true, false );
+    //normalize( bst.hist, bst.hist, 0, 1, NORM_MINMAX, -1, Mat() );
 }

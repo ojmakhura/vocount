@@ -174,19 +174,16 @@ int main(int argc, char** argv) {
 			findROIFeature(f, colourSel);
 			Mat dset = getDescriptorDataset(vcount.frameHistory, vcount.step, f.descriptors);
 
-			//dset = f.descriptors.clone();
 			results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true);
 			getSampleFeatureClusters(&f.roiFeatures, res1->labels, res1->objectClusters, res1->roiClusterPoints);
-			//map_kp kpMap = getKeypointMap(res1->clusterMap, res1->keypoints);
-			generateFinalPointClusters(res1->finalPointClusters, f.keypoints, res1->objectClusters, res1->clusterMap);
-			
+			generateFinalPointClusters(res1->roiClusterPoints, res1->finalPointClusters, f.keypoints, res1->labels, res1->clusterMap);
 			boxStructure(res1->finalPointClusters, f.keypoints, f.roi, res1->boxStructures);
-			//extendBoxClusters(res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap);
+			extendBoxClusters(res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
+			generateClusterImages(f.frame, res1);
 			createBoxStructureImages(res1->boxStructures, res1->keyPointImages);
-			generateClusterImages(f.frame, res1->finalPointClusters, res1->keyPointImages, res1->cest, res1->total, res1->lsize, res1->selectedFeatures);
 			
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-			res1->total = countPrint(res1->finalPointClusters, res1->cest, res1->selectedFeatures, res1->lsize);
+			res1->total = countPrint(res1->roiClusterPoints, res1->finalPointClusters, res1->cest, res1->selectedFeatures, res1->lsize);
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 

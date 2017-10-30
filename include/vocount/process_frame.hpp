@@ -38,6 +38,9 @@ typedef struct {
 typedef struct _box_structure{
 	Rect box;
 	vector<KeyPoint> points;
+	Mat img, hsv;
+	Mat hist[3];
+	
 } box_structure;
 
 typedef struct {
@@ -141,12 +144,12 @@ set<int32_t> getIgnoreSegments(Rect roi, Mat segments);
 /**
  *
  */
-void generateClusterImages(Mat frame, map_kp* finalPointClusters, map<String, Mat>* keyPointImages, vector<int32_t>* cest, double& total, double& lsize, int32_t& selectedFeatures);
+void generateClusterImages(Mat frame, results_t* res);
 
 /**
  *
  */
-double countPrint(map_kp* clusterKeyPoints, vector<int32_t>* cest, int32_t& selectedFeatures, double& lsize);
+double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vector<int32_t>* cest, int32_t& selectedFeatures, double& lsize);
 
 /**
  *
@@ -191,7 +194,7 @@ void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, Rect2
 /**
  *
  */
-void generateFinalPointClusters(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, set<int32_t>* objectClusters, IntIntListMap* clusterMap);
+void generateFinalPointClusters(IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<KeyPoint>& keypoints, vector<int32_t>* labels, IntIntListMap* clusterMap);
 
 /**
  *
@@ -276,5 +279,12 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
  * Find clusters that have points inside one of the bounding boxes
  * 
  */ 
-void extendBoxClusters(vector<box_structure>* boxStructures, vector<KeyPoint>& keypoints, map_kp* finalPointClusters, IntIntListMap* clusterMap);
+void extendBoxClusters(vector<box_structure>* boxStructures, vector<KeyPoint>& keypoints, map_kp* finalPointClusters, IntIntListMap* clusterMap, IntDoubleListMap* distanceMap);
+
+/**
+ * 
+ * 
+ */
+void calculateHistogram(Mat& img, Mat* hist);
+  
 #endif
