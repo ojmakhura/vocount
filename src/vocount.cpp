@@ -176,7 +176,13 @@ int main(int argc, char** argv) {
 
 			results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true);
 			getSampleFeatureClusters(&f.roiFeatures, res1->labels, res1->objectClusters, res1->roiClusterPoints);
-			generateFinalPointClusters(res1->roiClusterPoints, res1->finalPointClusters, f.keypoints, res1->labels, res1->clusterMap);
+			generateFinalPointClusters(res1, true);
+			
+			/*for(map_kp::iterator it = res1->finalPointClusters->begin(); it != res1->finalPointClusters->end(); ++it){
+				cout << it->first << " -> [" << it->second.size();
+				cout << "]" << endl;
+			}*/
+			
 			boxStructure(res1->finalPointClusters, f.keypoints, f.roi, res1->boxStructures);
 			extendBoxClusters(res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
 			generateClusterImages(f.frame, res1);
@@ -187,7 +193,7 @@ int main(int argc, char** argv) {
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 
-			f.results["res1"] = res1;
+			f.results["keypoints"] = res1;
 			printData(vcount, f.frame, 	f.keypoints, f.roiFeatures, *res1, f.i);
 			if(parser.has("o")){
 				printImages(keypointsFrameDir, res1->keyPointImages, vcount.frameCount);

@@ -194,7 +194,7 @@ void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, Rect2
 /**
  *
  */
-void generateFinalPointClusters(IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<KeyPoint>& keypoints, vector<int32_t>* labels, IntIntListMap* clusterMap);
+void generateFinalPointClusters(results_t* res, bool recluster);
 
 /**
  *
@@ -219,7 +219,7 @@ Mat getDistanceDataset(vector<int>roiIdx, Mat descriptors);
 /**
  * map sample features to their clusters
  */
-void getSampleFeatureClusters(vector<int>* roiFeatures, vector<int32_t>* labels, set<int32_t>* objectClusters, IntIntListMap* roiClusterPoints);
+void getSampleFeatureClusters(vector<int>* roiFeatures, vector<int32_t>* labels, set<int32_t>* objectClusters, IntIntListMap* roiClusterPoints, IntIntListMap* clusterMap);
 
 /**
  * Given the descriptors and their keypoints, find the Mat object representing the colour values
@@ -261,7 +261,7 @@ map_kp getKeypointMap(IntIntListMap* listMap, vector<KeyPoint>* keypoints);
 /**
  * Create a vector of KeyPoint's from a lsit of keypoint indices.
  */ 
-vector<KeyPoint> getListKeypoints(vector<KeyPoint> keypoints, IntArrayList* list);
+void getListKeypoints(vector<KeyPoint> keypoints, IntArrayList* list, vector<KeyPoint>& out);
 
 /**
  * Clean the glib hash tables and any other memory that was dynamically allocated

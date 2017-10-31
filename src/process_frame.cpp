@@ -20,6 +20,32 @@ void display(char const* screen, const InputArray& m) {
 	}
 }
 
+vector<int32_t> splitROICluster(IntArrayList* list, IntArrayList* l1, Mat* dataset, vector<KeyPoint>* keypoints, results_t* res){
+	
+	int32_t* l1d = (int32_t *)l1->data;
+	Mat dset(0, dataset->cols, CV_32FC1);
+	vector<KeyPoint> kp;
+	vector<int32_t> oldIdx;
+	for(int i = 0; i < l1->size; i++){
+		int idxx = l1d[i];
+		dset.push_back(dataset->row(idxx));
+		kp.push_back(keypoints->at(idxx));
+		oldIdx.push_back(idxx);
+	}
+	
+	if(res == NULL){
+		res = initResult_t(dset, kp);
+	}
+	res->minPts = 3;
+	hdbscan scan(res->minPts, DATATYPE_FLOAT);
+	scan.run(res->dataset->ptr<float>(), res->dataset->rows, res->dataset->cols, TRUE);
+	res->labels->insert(res->labels->begin(), scan.clusterLabels, scan.clusterLabels+scan.numPoints);
+	res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, scan.numPoints);
+	
+	hdbscan_print_cluster_table(res->clusterMap);
+	return oldIdx;
+}
+
 Scalar hsv_to_rgb(Scalar c) {
     Mat in(1, 1, CV_32FC3);
     Mat out(1, 1, CV_32FC3);
@@ -205,63 +231,126 @@ double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vec
 	return total;
 }
 
-void generateFinalPointClusters(IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<KeyPoint>& keypoints, vector<int32_t>* labels, IntIntListMap* clusterMap){
+
+
+void generateFinalPointClusters(results_t* res, bool recluster){
 		
 	GHashTableIter iter;
 	gpointer key;
 	gpointer value;
-	g_hash_table_iter_init (&iter, roiClusterPoints);
+	g_hash_table_iter_init (&iter, res->roiClusterPoints);
 
 	while (g_hash_table_iter_next (&iter, &key, &value)){
 		int32_t* kk = (int32_t *)key;
 		IntArrayList* list = (IntArrayList *)value;
-		if (*kk != 0 && list->size == 1) {
+		if (*kk != 0) {
 			int32_t* dd = (int32_t *)list->data;
-			int32_t label = (*labels)[dd[0]];
-			IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(clusterMap, &label);
-			vector<KeyPoint> kps = getListKeypoints(keypoints, l1);
-			//printf("Labels is %d and kps has %lu\n", label, kps.size());
+			int32_t label = (*(res->labels))[dd[0]];
+			IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(res->clusterMap, &label);
 			
-			(*finalPointClusters)[label] = kps;
-		}
-	}
-	
-	if(finalPointClusters->size() == 0){
+			if(recluster && list->size > 3 && g_hash_table_size(res->clusterMap)/l1->size < 2){ // Do a simple nerest neigbour search
+				
+				/*printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+				printf("Found %d ROI points in cluster %d whose size is %d\n", list->size, label, l1->size);
+				results_t* res2 = NULL;
+				vector<int32_t> oldIdx = splitROICluster(list, l1, res->dataset, res->keypoints, res2);
+				printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+				
+				vector<int32_t> roiFeatures;
+				vector<int32_t>::iterator itr;
+				
+				for(int32_t i = 0; i < list->size; i++){
+					int32_t idx = dd[i];
+					itr = std::find(oldIdx.begin(), oldIdx.end(), idx);
+					if(itr != oldIdx.end()){
+						roiFeatures.push_back(itr - oldIdx.begin());
+					}
+				}
+				printf("Found %d roi features compared with %d prev features\n", roiFeatures.size(), list->size);
+				//getSampleFeatureClusters(&roiFeatures, res2->labels, res2->objectClusters, res2->roiClusterPoints);
+				//generateFinalPointClusters(res2, false);
+				
+				/**
+				 * Iterate over the res2's cluster map and create new list keypoints to add to res->finalPointClusters
+				 */ 
+				/*GHashTableIter iter2;
+				gpointer key2;
+				gpointer value2;
+				g_hash_table_iter_init (&iter2, res2->clusterMap);
 
-		g_hash_table_iter_init (&iter, roiClusterPoints);
-
-		while (g_hash_table_iter_next (&iter, &key, &value)){
-			int32_t* kk = (int32_t *)key;
-			IntArrayList* list = (IntArrayList *)value;
-			if (*kk != 0) {
-				int32_t* dd = (int32_t *)list->data;
-				int32_t ptIdx = (*labels)[dd[0]];
-				(*finalPointClusters)[ptIdx] = getListKeypoints(keypoints, list);
+				while (g_hash_table_iter_next (&iter2, &key2, &value2)){
+					int32_t* l2 = (int32_t *)key2;
+					IntArrayList* list2 = (IntArrayList *)value2;
+					if(*l2 != 0){
+						int32_t newLabel = res->labels->size() + *l2;						
+						getListKeypoints(*(res2->keypoints), list2, (*(res->finalPointClusters))[newLabel]);
+					}
+				}*/
+			} else{
+				getListKeypoints(*(res->keypoints), l1, (*(res->finalPointClusters))[label]);
 			}
 		}
 	}
 }
 
-void getSampleFeatureClusters(vector<int>* roiFeatures, vector<int32_t>* labels, set<int32_t>* objectClusters, IntIntListMap* roiClusterPoints){
+void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
 
-	vector<int32_t>& lbs = *labels;
+	set<int32_t> toExamine;
 	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
-	for (vector<int>::iterator it = roiFeatures->begin(); it != roiFeatures->end(); ++it) {
+	for (vector<int>::iterator it = res->roiFeatures->begin(); it != res->roiFeatures->end(); ++it) {
 		int* key;
-		int k = lbs[*it];
-		objectClusters->insert(k);
+		int k = res->labels->at(*it);
+		res->objectClusters->insert(k);
 		key = &k;
-		IntArrayList* list = (IntArrayList *)g_hash_table_lookup(roiClusterPoints, key);
+		IntArrayList* list = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, key);
 		
 		if(list == NULL){
 			key = (int *)malloc(sizeof(int));
 			*key = (*labels)[*it];
 			list = int_array_list_init_size(roiFeatures->size());
-			g_hash_table_insert(roiClusterPoints, key, list);
+			g_hash_table_insert(res->roiClusterPoints, key, list);
+		} else{
+			if(list->size == 2 && k != 0){
+				toExamine.insert(k);
+			}
 		}
 		
 		int_array_list_append(list, *it);
 	}
+	
+	vector<results_t*> rxss;
+	for(set<int32_t>::iterator it = toExamine.begin(); it != toExamine.end(); ++it){
+		int32_t label = *it;
+		IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(clusterMap, &label);
+		
+		if(g_hash_table_size(clusterMap)/l1->size < 2){ // Do a simple nerest neigbour search
+				
+			printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+			printf("Found %d ROI points in cluster %d whose size is %d\n", list->size, label, l1->size);
+			results_t* res2 = NULL;
+			vector<int32_t> oldIdx = splitROICluster(list, l1, res->dataset, res->keypoints, res2);
+			rxss.push_back(rxss);
+			printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+			
+			vector<int32_t> roiFeatures;
+			vector<int32_t>::iterator itr;
+			
+			for(int32_t i = 0; i < list->size; i++){
+				int32_t idx = dd[i];
+				itr = std::find(oldIdx.begin(), oldIdx.end(), idx);
+				if(itr != oldIdx.end()){
+					roiFeatures.push_back(itr - oldIdx.begin());
+				}
+			}
+			printf("Found %d roi features compared with %d prev features\n", roiFeatures.size(), list->size);
+				
+		}
+	}
+	
+	/*
+	for(vector<results_t*>::iterator it = rxss.begin(); it != rxss.end(); ++it){
+		result_t* r = *it;
+	}*/
 }
 
 int rectExist(vector<box_structure>& structures, Rect& r){
@@ -389,11 +478,10 @@ void extendBoxClusters(vector<box_structure>* boxStructures, vector<KeyPoint>& k
 	for(map<int32_t, box_structure>::iterator it = rec_map.begin(); it != rec_map.end(); ++it){
 		int32_t label = it->first;
 		IntArrayList * list = (IntArrayList *)g_hash_table_lookup(clusterMap, &label);
-		vector<KeyPoint> c_points = getListKeypoints(keypoints, list);
 		int32_t idx = idx_map[label];
 		KeyPoint kp = keypoints[idx];
-		addToBoxStructure(boxStructures, c_points, kp, it->second);
-		(*finalPointClusters)[idx] = c_points;
+		getListKeypoints(keypoints, list, (*finalPointClusters)[idx]);
+		addToBoxStructure(boxStructures, (*finalPointClusters)[idx], kp, it->second);
 		
 	}
 }
@@ -847,27 +935,15 @@ map_kp getKeypointMap(IntIntListMap* listMap, vector<KeyPoint>* keypoints){
 		}
 	}
 	
-	/*for(map_kp::iterator it = mp.begin(); it != mp.end(); ++it){
-		printf("%d -> [", it->first);
-		for(size_t i = 0; i < it->second.size(); i++){
-			KeyPoint kp = (it->second)[i];
-			printf(" (%f, %f); ", kp.pt.x, kp.pt.y);
-		}
-		printf("]\n");
-	}*/
-	
 	return mp;
 }
 
-vector<KeyPoint> getListKeypoints(vector<KeyPoint> keypoints, IntArrayList* list){
-	vector<KeyPoint> kps;
+void getListKeypoints(vector<KeyPoint> keypoints, IntArrayList* list, vector<KeyPoint>& out){
 	int32_t* dt = (int32_t *)list->data;
 	for(int i = 0; i < list->size; i++){
 		int32_t idx = dt[i];
-		kps.push_back(keypoints[idx]);
+		out.push_back(keypoints[idx]);
 	}
-	
-	return kps;
 }
 
 /**
@@ -933,7 +1009,8 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 	while (g_hash_table_iter_next (&iter, &key, &value)){
 		IntArrayList* list = (IntArrayList*)value;
 		int32_t* k = (int32_t *)key;
-		vector<KeyPoint> kps = getListKeypoints(keypoints, list);
+		vector<KeyPoint> kps;
+		getListKeypoints(keypoints, list, kps);
 		Mat m = drawKeyPoints(frame, kps, Scalar(0, 0, 255), -1);
 		display("choose", m);
 		
@@ -1033,7 +1110,7 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 		hdbscan scan(res->minPts, DATATYPE_FLOAT);
 		scan.run(res->dataset->ptr<float>(), res->dataset->rows, res->dataset->cols, TRUE);
 		res->labels->insert(res->labels->begin(), scan.clusterLabels, scan.clusterLabels+scan.numPoints);
-		set<int> lset(res->labels->begin(), res->labels->end());
+		//set<int> lset(res->labels->begin(), res->labels->end());
 		res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, scan.numPoints);
 		
 		if(analyse){
@@ -1046,7 +1123,20 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 		i++;
 	}	
 
-	printf("------- Selected max clustering size = %d\n", res->minPts);
+	printf("------- Selected max clustering size = %d and cluster table has %d\n", res->minPts, g_hash_table_size(res->clusterMap));
+	//hdbscan_print_cluster_table(res->clusterMap);
+	/*GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	g_hash_table_iter_init (&iter, res->clusterMap);
+	printf("&&&&&&&&&&&&&&&&&&&&&&&&\n");
+	while (g_hash_table_iter_next (&iter, &key, &value)){
+		int32_t* k = (int32_t*)key;
+		IntArrayList* l = (IntArrayList*)value;
+		printf("%d -> [%d]\n", *k, l->size);
+	}
+	printf("&&&&&&&&&&&&&&&&&&&&&&&&\n");
+	* */
 	return res;
 }
 
