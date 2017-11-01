@@ -194,7 +194,7 @@ void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, Rect2
 /**
  *
  */
-void generateFinalPointClusters(results_t* res, bool recluster);
+void generateFinalPointClusters(IntIntListMap* clusterMap, IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<int32_t>* labels, vector<KeyPoint>* keypoints);
 
 /**
  *
@@ -219,7 +219,7 @@ Mat getDistanceDataset(vector<int>roiIdx, Mat descriptors);
 /**
  * map sample features to their clusters
  */
-void getSampleFeatureClusters(vector<int>* roiFeatures, vector<int32_t>* labels, set<int32_t>* objectClusters, IntIntListMap* roiClusterPoints, IntIntListMap* clusterMap);
+void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res);
 
 /**
  * Given the descriptors and their keypoints, find the Mat object representing the colour values
