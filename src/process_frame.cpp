@@ -42,6 +42,11 @@ vector<int32_t> splitROICluster(IntArrayList* list, Mat* dataset, vector<KeyPoin
 	res->labels->insert(res->labels->begin(), scan.clusterLabels, scan.clusterLabels+scan.numPoints);
 	res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, scan.numPoints);
 	
+	double* core = scan.distanceFunction.coreDistances;
+	res->distancesMap = hdbscan_get_min_max_distances(&scan, res->clusterMap);
+	res->stats = hdbscan_calculate_stats(res->distancesMap);
+	res->validity = hdbscan_analyse_stats(res->stats);
+	
 	hdbscan_print_cluster_table(res->clusterMap);
 	return oldIdx;
 }
@@ -276,7 +281,7 @@ void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
 		int_array_list_append(list, *it);
 	}
 	
-	int32_t kt = 0;
+	int32_t kt = 0;	
 	
 	/// Get cluster 0 so that we can just add to it when needed without having to search the 
 	/// hash table everytime
@@ -292,10 +297,15 @@ void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
 			printf("Found %d ROI points in cluster %d whose size is %d\n", list->size, oldLabel, l1->size);
 			results_t* res2 = NULL;
 			vector<int32_t> oldIdx = splitROICluster(l1, res->dataset, res->keypoints, res2);
+			
+			//for(size_t x = 0; x < oldIdx.size(); x++){
+				//printf("x = %d idx = %d\n", x, oldIdx[x]);
+			//}
+			
 			GHashTableIter iter;
 			gpointer key;
 			gpointer value;
-			g_hash_table_iter_init (&iter, res->clusterMap);
+			g_hash_table_iter_init (&iter, res2->clusterMap);
 			
 			while (g_hash_table_iter_next (&iter, &key, &value)){
 				int32_t* newLabel = (int32_t *)key;
@@ -313,7 +323,9 @@ void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
 				 */ 
 				for(int32_t i = 0; i < newList->size; i++){
 					int32_t index = newData[i];
-					if(newLabel == 0){
+					int32_t d = oldIdx[index];
+					printf("i = %d, index = %d and d = %d\n", i, index, d);
+					if(*newLabel == 0){
 						int_array_list_append(zeroList, oldIdx[index]);
 					} else{
 						if(translatedList == NULL){
@@ -327,6 +339,17 @@ void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
 					int32_t* extendedLabel = (int32_t*)malloc(sizeof(int32_t));
 					*extendedLabel = *newLabel + oldLabel * res->labels->size();
 					g_hash_table_insert(res->clusterMap, extendedLabel, translatedList);
+					
+					DoubleArrayList* dl = (DoubleArrayList*)g_hash_table_lookup(res2->distancesMap, newLabel);
+					g_hash_table_insert(res2->distancesMap, newLabel, NULL); // remove the list from res2->distancesMap
+					g_hash_table_insert(res->distancesMap, extendedLabel, dl);
+					
+					//res->stats = hdbscan_calculate_stats(res->distancesMap);
+					//DoubleArrayList* sta = (DoubleArrayList*)g_hash_table_lookup(res1->distancesMap, &newLabel);
+					//g_hash_table_insert(res2->distancesMap, &newLabel, NULL); // remove the list from res2->distancesMap
+					//g_hash_table_insert(res->distancesMap, extendedLabel, dl);
+					
+					//res->validity = hdbscan_analyse_stats(res->stats);				
 				}			
 			}
 			
@@ -1116,62 +1139,52 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 	}	
 
 	printf("------- Selected max clustering size = %d and cluster table has %d\n", res->minPts, g_hash_table_size(res->clusterMap));
-	//hdbscan_print_cluster_table(res->clusterMap);
-	/*GHashTableIter iter;
-	gpointer key;
-	gpointer value;
-	g_hash_table_iter_init (&iter, res->clusterMap);
-	printf("&&&&&&&&&&&&&&&&&&&&&&&&\n");
-	while (g_hash_table_iter_next (&iter, &key, &value)){
-		int32_t* k = (int32_t*)key;
-		IntArrayList* l = (IntArrayList*)value;
-		printf("%d -> [%d]\n", *k, l->size);
-	}
-	printf("&&&&&&&&&&&&&&&&&&&&&&&&\n");
-	* */
+	
 	return res;
 }
 
 void cleanResult(results_t* res){
-	if(res->clusterMap != NULL){
-		printf("cleaning cluster table of size %d\n", g_hash_table_size(res->clusterMap));
-		hdbscan_destroy_cluster_table(res->clusterMap);
-		res->clusterMap = NULL;
+	if(res != NULL){
+		if(res->clusterMap != NULL){
+			printf("cleaning cluster table of size %d\n", g_hash_table_size(res->clusterMap));
+			hdbscan_destroy_cluster_table(res->clusterMap);
+			res->clusterMap = NULL;
+		}
+		
+		if(res->stats != NULL){
+			printf("cleaning stats map of size %d\n", g_hash_table_size(res->stats));
+			hdbscan_destroy_stats_map(res->stats);
+			res->stats = NULL;
+		}
+		
+		if(res->distancesMap != NULL){
+			printf("cleaning distance map of size %d\n", g_hash_table_size(res->distancesMap));
+			hdbscan_destroy_distance_map_table(res->distancesMap);
+			res->distancesMap = NULL;
+		}
+		
+		/**
+		 * Here we are using the hdbscan_destroy_cluster_table from the hdbscan.c
+		 * because roiClusterPoints and clusterTable are basically the same structure
+		 * being IntIntListMap datatype.
+		 */ 
+		if(res->roiClusterPoints != NULL){		
+			printf("cleaning roi cluster points table of size %d\n", g_hash_table_size(res->roiClusterPoints));
+			hdbscan_destroy_cluster_table(res->roiClusterPoints);
+			res->roiClusterPoints = NULL;
+		}
+		
+		delete res->dataset;
+		delete res->keypoints;
+		delete res->finalPointClusters;
+		delete res->odata;
+		delete res->labels;
+		delete res->boxStructures;
+		delete res->cest;
+		delete res->keyPointImages;
+		delete res->objectClusters;
+		free(res);
 	}
-	
-	if(res->stats != NULL){
-		printf("cleaning stats map of size %d\n", g_hash_table_size(res->stats));
-		hdbscan_destroy_stats_map(res->stats);
-		res->stats = NULL;
-	}
-	
-	if(res->distancesMap != NULL){
-		printf("cleaning distance map of size %d\n", g_hash_table_size(res->distancesMap));
-		hdbscan_destroy_distance_map_table(res->distancesMap);
-		res->distancesMap = NULL;
-	}
-	
-	/**
-	 * Here we are using the hdbscan_destroy_cluster_table from the hdbscan.c
-	 * because roiClusterPoints and clusterTable are basically the same structure
-	 * being IntIntListMap datatype.
-	 */ 
-	if(res->roiClusterPoints != NULL){		
-		printf("cleaning roi cluster points table of size %d\n", g_hash_table_size(res->roiClusterPoints));
-		hdbscan_destroy_cluster_table(res->roiClusterPoints);
-		res->roiClusterPoints = NULL;
-	}
-	
-	delete res->dataset;
-	delete res->keypoints;
-	delete res->finalPointClusters;
-	delete res->odata;
-	delete res->labels;
-	delete res->boxStructures;
-	delete res->cest;
-	delete res->keyPointImages;
-	delete res->objectClusters;
-	free(res);
 }
 
 void calculateHistogram(box_structure& bst){	

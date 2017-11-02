@@ -176,13 +176,7 @@ int main(int argc, char** argv) {
 
 			results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true);
 			getSampleFeatureClusters(&f.roiFeatures, res1);
-			//generateFinalPointClusters(IntIntListMap* clusterMap, IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<int32_t>* labels)
 			generateFinalPointClusters(res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);
-			
-			/*for(map_kp::iterator it = res1->finalPointClusters->begin(); it != res1->finalPointClusters->end(); ++it){
-				cout << it->first << " -> [" << it->second.size();
-				cout << "]" << endl;
-			}*/
 			
 			boxStructure(res1->finalPointClusters, f.keypoints, f.roi, res1->boxStructures);
 			extendBoxClusters(res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
