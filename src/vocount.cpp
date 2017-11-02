@@ -175,7 +175,9 @@ int main(int argc, char** argv) {
 			Mat dset = getDescriptorDataset(vcount.frameHistory, vcount.step, f.descriptors);
 
 			results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true);
+			//hdbscan_print_cluster_table(res1->clusterMap);
 			getSampleFeatureClusters(&f.roiFeatures, res1);
+			hdbscan_print_cluster_table(res1->roiClusterPoints);
 			generateFinalPointClusters(res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);
 			
 			boxStructure(res1->finalPointClusters, f.keypoints, f.roi, res1->boxStructures);

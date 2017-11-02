@@ -20,12 +20,11 @@ void display(char const* screen, const InputArray& m) {
 	}
 }
 
-vector<int32_t> splitROICluster(IntArrayList* list, Mat* dataset, vector<KeyPoint>* keypoints, results_t* res){
+results_t* splitROICluster(IntArrayList* list, Mat* dataset, vector<KeyPoint>* keypoints, vector<int32_t>& oldIdx){
 	
 	int32_t* l1d = (int32_t *)list->data;
 	Mat dset(0, dataset->cols, CV_32FC1);
 	vector<KeyPoint> kp;
-	vector<int32_t> oldIdx;
 	for(int i = 0; i < list->size; i++){
 		int idxx = l1d[i];
 		dset.push_back(dataset->row(idxx));
@@ -33,9 +32,7 @@ vector<int32_t> splitROICluster(IntArrayList* list, Mat* dataset, vector<KeyPoin
 		oldIdx.push_back(idxx);
 	}
 	
-	if(res == NULL){
-		res = initResult_t(dset, kp);
-	}
+	results_t* res = initResult_t(dset, kp);
 	res->minPts = 3;
 	hdbscan scan(res->minPts, DATATYPE_FLOAT);
 	scan.run(res->dataset->ptr<float>(), res->dataset->rows, res->dataset->cols, TRUE);
@@ -47,8 +44,8 @@ vector<int32_t> splitROICluster(IntArrayList* list, Mat* dataset, vector<KeyPoin
 	res->stats = hdbscan_calculate_stats(res->distancesMap);
 	res->validity = hdbscan_analyse_stats(res->stats);
 	
-	hdbscan_print_cluster_table(res->clusterMap);
-	return oldIdx;
+	//hdbscan_print_cluster_table(res->clusterMap);
+	return res;
 }
 
 Scalar hsv_to_rgb(Scalar c) {
@@ -285,7 +282,7 @@ void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
 	
 	/// Get cluster 0 so that we can just add to it when needed without having to search the 
 	/// hash table everytime
-	IntArrayList* zeroList = (IntArrayList *)g_hash_table_lookup(res->clusterMap, &kt);
+	/*IntArrayList* zeroList = (IntArrayList *)g_hash_table_lookup(res->clusterMap, &kt);
 	for(set<int32_t>::iterator it = toExamine.begin(); it != toExamine.end(); ++it){
 		int32_t oldLabel = *it;
 		
@@ -295,8 +292,17 @@ void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
 			printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
 			IntArrayList* list = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, &oldLabel);
 			printf("Found %d ROI points in cluster %d whose size is %d\n", list->size, oldLabel, l1->size);
-			results_t* res2 = NULL;
-			vector<int32_t> oldIdx = splitROICluster(l1, res->dataset, res->keypoints, res2);
+			 
+			vector<int32_t> oldIdx;
+			results_t* res2 = splitROICluster(l1, res->dataset, res->keypoints, oldIdx);
+			
+			if(res2 != NULL){
+				printf("res2 is not null\n");
+			} else{
+				printf("res2 is null\n");
+			}
+			
+			printf("g_hash_table_size(res2->clusterMap) = %d\n", g_hash_table_size(res2->clusterMap));
 			
 			//for(size_t x = 0; x < oldIdx.size(); x++){
 				//printf("x = %d idx = %d\n", x, oldIdx[x]);
@@ -308,10 +314,11 @@ void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
 			g_hash_table_iter_init (&iter, res2->clusterMap);
 			
 			while (g_hash_table_iter_next (&iter, &key, &value)){
+				printf("1\n");
 				int32_t* newLabel = (int32_t *)key;
 				IntArrayList* newList = (IntArrayList *)value;
 				int32_t* newData = (int32_t*)newList->data;	
-				IntArrayList* translatedList = NULL;
+				IntArrayList* translatedList = NULL;*/
 				
 				/**
 				 * This new cluster has different mapping of indexes from the original dataset. So we need
@@ -321,10 +328,9 @@ void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
 				 * that labels remain uniques for different old clusters we use the formula 
 				 * newLabel + oldLabel * res->labels->size() 
 				 */ 
-				for(int32_t i = 0; i < newList->size; i++){
+				/*for(int32_t i = 0; i < newList->size; i++){
 					int32_t index = newData[i];
 					int32_t d = oldIdx[index];
-					printf("i = %d, index = %d and d = %d\n", i, index, d);
 					if(*newLabel == 0){
 						int_array_list_append(zeroList, oldIdx[index]);
 					} else{
@@ -342,29 +348,15 @@ void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
 					
 					DoubleArrayList* dl = (DoubleArrayList*)g_hash_table_lookup(res2->distancesMap, newLabel);
 					g_hash_table_insert(res2->distancesMap, newLabel, NULL); // remove the list from res2->distancesMap
-					g_hash_table_insert(res->distancesMap, extendedLabel, dl);
-					
-					//res->stats = hdbscan_calculate_stats(res->distancesMap);
-					//DoubleArrayList* sta = (DoubleArrayList*)g_hash_table_lookup(res1->distancesMap, &newLabel);
-					//g_hash_table_insert(res2->distancesMap, &newLabel, NULL); // remove the list from res2->distancesMap
-					//g_hash_table_insert(res->distancesMap, extendedLabel, dl);
-					
-					//res->validity = hdbscan_analyse_stats(res->stats);				
+					g_hash_table_insert(res->distancesMap, extendedLabel, dl);	
 				}			
 			}
 			
-			printf("Found %d roi features compared with %d prev features\n", roiFeatures->size(), list->size);
 			// Clean the result_t since we do not need it anymore
 			cleanResult(res2);
 			printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
 		}
 		
-		printf("New res->clusterMap size -s %d\n", g_hash_table_size(res->clusterMap));
-	}
-	
-	/*
-	for(vector<results_t*>::iterator it = rxss.begin(); it != rxss.end(); ++it){
-		result_t* r = *it;
 	}*/
 }
 
