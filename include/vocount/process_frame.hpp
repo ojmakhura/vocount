@@ -71,7 +71,7 @@ typedef struct FRAMED{
 		frame,														/// The frame
 		gray;													/// hdbscan cluster
 	vector<KeyPoint> keypoints; 									/// Frame keypoints
-	Rect2d roi;														/// region of interest rectangle
+	vector<Rect2d> rois;														/// region of interest rectangle
 	vector<int> roiFeatures;										/// indices of the features inside the roi
 	int centerFeature = -1;											/// index of the roi central feature
 	Mat roiDesc;													/// region of interest descriptors
@@ -92,6 +92,7 @@ typedef struct VOCOUNT{
     map<int32_t, vector<int32_t> > clusterEstimates;
 	vector<framed> frameHistory;
     map<int, int> truth;
+    String trackerAlgorithm;
 } vocount;
 
 results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints);
@@ -286,5 +287,11 @@ void extendBoxClusters(vector<box_structure>* boxStructures, vector<KeyPoint>& k
  * 
  */
 void calculateHistogram(Mat& img, Mat* hist);
+
+/**
+ * 
+ * 
+ */
+void expandClusters(results_t* res); 
   
 #endif

@@ -37,8 +37,27 @@ static void help(){
 	        "\n" );
 }
 
+inline cv::Ptr<cv::Tracker> createTrackerByName(cv::String name)
+{
+    cv::Ptr<cv::Tracker> tracker;
 
+    if (name == "KCF")
+        tracker = cv::TrackerKCF::create();
+    else if (name == "TLD")
+        tracker = cv::TrackerTLD::create();
+    else if (name == "BOOSTING")
+        tracker = cv::TrackerBoosting::create();
+    else if (name == "MEDIAN_FLOW")
+        tracker = cv::TrackerMedianFlow::create();
+    else if (name == "MIL")
+        tracker = cv::TrackerMIL::create();
+    else if (name == "GOTURN")
+        tracker = cv::TrackerGOTURN::create();
+    else
+        CV_Error(cv::Error::StsBadArg, "Invalid tracking algorithm name\n");
 
+    return tracker;
+}
 
 int main(int argc, char** argv) {
 	ocl::setUseOpenCL(true);
@@ -54,12 +73,13 @@ int main(int argc, char** argv) {
 	String selectedDir;
 
     Ptr<Feature2D> detector = SURF::create(500);
-	Ptr<Tracker> tracker;
+    MultiTracker trackers;
+	vector<Ptr<Tracker>> algorithms;
 
 	cv::CommandLineParser parser(argc, argv,
 					"{help ||}{o||}{n|1|}"
 					"{v||}{video||}{w|1|}{s||}"
-					"{i||}{c||}{t||}{l||}");
+					"{i||}{c||}{t||}{l||}{ta|BOOSTING|}");
 
 
 	if (parser.has("help")) {
@@ -69,6 +89,10 @@ int main(int argc, char** argv) {
 
 	if(parser.has("t")){
 		vcount.truth = getFrameTruth(parser.get<String>("t"));
+	}
+	
+	if(parser.has("ta")){
+		vcount.trackerAlgorithm = parser.get<String>("ta");
 	}
 
 	if(!processOptions(vcount, parser, cap)){
@@ -131,22 +155,17 @@ int main(int argc, char** argv) {
 		if (c == 'q') {
 			break;
 		} else if (c == 's' || (parser.has("s") && !vcount.roiExtracted)) { // select a roi if c has een pressed or if the program was run with -s option
-			tracker = TrackerBoosting::create();
-
-			if (tracker == NULL) {
-				cout << "***Error in the instantiation of the tracker...***\n";
-				return -1;
-			}
-
+			
 			Mat f2 = frame.clone();
-			f.roi = selectROI("Select ROI", f2);
+			Rect2d boundingBox = selectROI("Select ROI", f2);
 			destroyWindow("Select ROI");
-
-			//initializes the tracker
-			if (!tracker->init(frame, f.roi)) {
-				cout << "***Could not initialize tracker...***\n";
-				return -1;
+			f.rois.push_back(boundingBox);
+			
+			for(size_t i = 0; i < f.rois.size(); i++){
+				algorithms.push_back(createTrackerByName(vcount.trackerAlgorithm));
 			}
+			
+			trackers.add(algorithms, f2, f.rois);
 
 			vcount.roiExtracted = true;
 
@@ -155,10 +174,12 @@ int main(int argc, char** argv) {
 		}
 
 		if (vcount.roiExtracted ){
-			tracker->update(f.frame, f.roi);
+			trackers.update(f.frame);
 			RNG rng(12345);
 			Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));
-			rectangle(frame, f.roi, value, 2, 8, 0);
+			for(size_t i = 0; i < trackers.getObjects().size(); i++){
+				rectangle(frame, trackers.getObjects()[i], value, 2, 8, 0);
+			}
 		}
 
 		display("frame", frame);
@@ -177,14 +198,14 @@ int main(int argc, char** argv) {
 			results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true);
 			//hdbscan_print_cluster_table(res1->clusterMap);
 			getSampleFeatureClusters(&f.roiFeatures, res1);
-			hdbscan_print_cluster_table(res1->roiClusterPoints);
+			//hdbscan_print_cluster_table(res1->roiClusterPoints);
 			generateFinalPointClusters(res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);
 			
-			boxStructure(res1->finalPointClusters, f.keypoints, f.roi, res1->boxStructures);
+			boxStructure(res1->finalPointClusters, f.keypoints, f.rois[0], res1->boxStructures);
 			extendBoxClusters(res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
 			generateClusterImages(f.frame, res1);
 			createBoxStructureImages(res1->boxStructures, res1->keyPointImages);
-			
+			printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 			res1->total = countPrint(res1->roiClusterPoints, res1->finalPointClusters, res1->cest, res1->selectedFeatures, res1->lsize);
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;

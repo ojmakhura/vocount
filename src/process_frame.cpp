@@ -253,31 +253,7 @@ void generateFinalPointClusters(IntIntListMap* clusterMap, IntIntListMap* roiClu
 	}
 }
 
-void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
-
-	set<int32_t> toExamine;
-	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
-	for (vector<int>::iterator it = roiFeatures->begin(); it != roiFeatures->end(); ++it) {
-		int* key;
-		int k = res->labels->at(*it);
-		res->objectClusters->insert(k);
-		key = &k;
-		IntArrayList* list = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, key);
-		
-		if(list == NULL){
-			key = (int *)malloc(sizeof(int));
-			*key = k;
-			list = int_array_list_init_size(roiFeatures->size());
-			g_hash_table_insert(res->roiClusterPoints, key, list);
-		}
-		
-		if(k != 0){
-			toExamine.insert(k);
-		}
-		
-		int_array_list_append(list, *it);
-	}
-	hdbscan_print_cluster_table(res->roiClusterPoints);
+void expandClusters(results_t* res){
 	int32_t kt = 0;	
 	
 	/// Get cluster 0 so that we can just add to it when needed without having to search the 
@@ -358,6 +334,34 @@ void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
 		}
 		
 	}*/
+}
+
+void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
+
+	set<int32_t> toExamine;
+	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
+	for (vector<int>::iterator it = roiFeatures->begin(); it != roiFeatures->end(); ++it) {
+		int* key;
+		int k = res->labels->at(*it);
+		res->objectClusters->insert(k);
+		key = &k;
+		IntArrayList* list = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, key);
+		
+		if(list == NULL){
+			key = (int *)malloc(sizeof(int));
+			*key = k;
+			list = int_array_list_init_size(roiFeatures->size());
+			g_hash_table_insert(res->roiClusterPoints, key, list);
+		}
+		
+		if(k != 0){
+			toExamine.insert(k);
+		}
+		
+		int_array_list_append(list, *it);
+	}
+	//hdbscan_print_cluster_table(res->roiClusterPoints);
+	
 }
 
 int rectExist(vector<box_structure>& structures, Rect& r){
@@ -610,7 +614,7 @@ double calcDistanceL1(Point2f f1, Point2f f2){
  * Find the roi features and at the same time find the central feature.
  */
 void findROIFeature(framed& f, selection_t& sel){
-	Rect2d r = f.roi;
+	Rect2d r = f.rois[0];
 
 	Point2f p;
 
@@ -629,7 +633,7 @@ void findROIFeature(framed& f, selection_t& sel){
 		}
 
 		bool selected = sel.minPts == -1 || (sel.minPts != -1 && std::find(selPtsIdx.begin(), selPtsIdx.end(), i) != selPtsIdx.end());
-		if(f.hasRoi && f.roi.contains(f.keypoints[i].pt) && selected){
+		if(f.hasRoi && f.rois[0].contains(f.keypoints[i].pt) && selected){
 			f.roiFeatures.push_back(i);
 
 			// find the center feature index
