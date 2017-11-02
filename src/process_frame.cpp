@@ -246,9 +246,9 @@ void generateFinalPointClusters(IntIntListMap* clusterMap, IntIntListMap* roiClu
 			int32_t label = labels->at(dd[0]);
 			IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(clusterMap, &label);
 			
-			if(list->size < 3 && g_hash_table_size(clusterMap)/l1->size >= 2){ // Do a simple nerest neigbour search
+			//if(list->size < 3 && g_hash_table_size(clusterMap)/l1->size >= 2){ // Do a simple nerest neigbour search
 				getListKeypoints(*keypoints, l1, (*(finalPointClusters))[label]);
-			}
+			//}
 		}
 	}
 }
@@ -269,15 +269,15 @@ void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
 			*key = k;
 			list = int_array_list_init_size(roiFeatures->size());
 			g_hash_table_insert(res->roiClusterPoints, key, list);
-		} else{
-			if(list->size == 2 && k != 0){
-				toExamine.insert(k);
-			}
+		}
+		
+		if(k != 0){
+			toExamine.insert(k);
 		}
 		
 		int_array_list_append(list, *it);
 	}
-	
+	hdbscan_print_cluster_table(res->roiClusterPoints);
 	int32_t kt = 0;	
 	
 	/// Get cluster 0 so that we can just add to it when needed without having to search the 
