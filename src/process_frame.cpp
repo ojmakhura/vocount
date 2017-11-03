@@ -37,7 +37,7 @@ results_t* splitROICluster(IntArrayList* list, Mat* dataset, vector<KeyPoint>* k
 	hdbscan scan(res->minPts, DATATYPE_FLOAT);
 	scan.run(res->dataset->ptr<float>(), res->dataset->rows, res->dataset->cols, TRUE);
 	res->labels->insert(res->labels->begin(), scan.clusterLabels, scan.clusterLabels+scan.numPoints);
-	res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, scan.numPoints);
+	res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);
 	
 	double* core = scan.distanceFunction.coreDistances;
 	res->distancesMap = hdbscan_get_min_max_distances(&scan, res->clusterMap);
@@ -223,7 +223,6 @@ double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vec
 			selectedFeatures += (*clusterKeyPoints)[*kk].size();
 
 			if ((*clusterKeyPoints)[*kk].size() > lsize) {
-				//f.largest = it->first;
 				lsize = (*clusterKeyPoints)[*kk].size();
 			}
 		}		
@@ -614,6 +613,7 @@ double calcDistanceL1(Point2f f1, Point2f f2){
  * Find the roi features and at the same time find the central feature.
  */
 void findROIFeature(framed& f, selection_t& sel){
+	printf("f.rois has %d\n", f.rois.size());
 	Rect2d r = f.rois[0];
 
 	Point2f p;
@@ -1122,7 +1122,7 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 		scan.run(res->dataset->ptr<float>(), res->dataset->rows, res->dataset->cols, TRUE);
 		res->labels->insert(res->labels->begin(), scan.clusterLabels, scan.clusterLabels+scan.numPoints);
 		//set<int> lset(res->labels->begin(), res->labels->end());
-		res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, scan.numPoints);
+		res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);
 		
 		if(analyse){
 			double* core = scan.distanceFunction.coreDistances;

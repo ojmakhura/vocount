@@ -21,10 +21,18 @@ using namespace std;
 using namespace cv::ximgproc::segmentation;
 using namespace clustering;
 
-//typedef map<int, vector<int>> map_t;
-//typedef map<int, vector<double>> map_d;
 typedef map<int32_t, vector<KeyPoint>> map_kp;
-//typedef set<int> set_t;
+
+String frameNo = "Frame No.";
+String sampleSize = "Sample Size";
+String selectedSampleSize = "Selected Sample", 
+String featureSize = "Feature Size";
+String selectedFeatureSize = "Selected Features";
+String numClusters = "# Clusters";
+String clusterSum = "Cluster Sum";
+String clusterAverage = "Cluster Avg.";
+String boxEst = "Box Est."
+String truthCount = "Actual";
 
 typedef struct {
 	int minPts = -1;
@@ -88,7 +96,7 @@ typedef struct VOCOUNT{
 	bool roiExtracted = false;
 	bool interactive = false;
 	bool print = false;
-    map<int32_t, vector<int32_t> > stats;
+    map<int32_t, map<String, int32_t> > stats;
     map<int32_t, vector<int32_t> > clusterEstimates;
 	vector<framed> frameHistory;
     map<int, int> truth;

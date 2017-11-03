@@ -15,7 +15,7 @@ void printImage(String folder, int idx, String name, Mat img) {
 }
 
 
-void printStats(String folder, map<int32_t, vector<int32_t> > stats){
+void printStats(String folder, map<int32_t, map<String, int32_t> > stats){
 	ofstream myfile;
 	String f = folder;
 	String name = "/stats.csv";
@@ -24,12 +24,12 @@ void printStats(String folder, map<int32_t, vector<int32_t> > stats){
 
 	myfile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
 
-	for(map<int32_t, vector<int32_t> >::iterator it = stats.begin(); it != stats.end(); ++it){
-		vector<int32_t> vv = it->second;
+	for(map<int32_t, map<String, int32_t> >::iterator it = stats.begin(); it != stats.end(); ++it){
+		map<String, int32_t> vv = it->second;
 		myfile << it->first << ",";
 
-		for(uint i = 0; i < vv.size(); ++i){
-			myfile << vv[i] << ",";
+		for(map<String, int32_t>::iterator itr = vv.begin(); itr != vv.end(); ++itr){
+			myfile << itr->second << ",";
 		}
 		myfile << "\n";
 	}
@@ -171,23 +171,23 @@ void printData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<
 			
 		}
 
-		res.odata->push_back(selSampleSize);
-		res.odata->push_back(res.ogsize);
-		res.odata->push_back(res.selectedFeatures);
-		res.odata->push_back(res.keyPointImages->size());
-		res.odata->push_back(res.total);
+		res.odata[selectedSampleSize] = selSampleSize;
+		res.odata[sampleSize] = res.ogsize;
+		res.odata[selectedFeatureSize] = res.selectedFeatures;
+		res.odata[numClusters] = res.keyPointImages->size();
+		res.odata[clusterSum] = res.total;
 		int32_t avg = res.total / res.keyPointImages->size();
-		res.odata->push_back(avg);
-		res.odata->push_back(res.boxStructures->size());
+		res.odata[clusterAverage] = avg;
+		res.odata[boxEst] = res.boxStructures->size();
 
 		map<int, int>::iterator it = vcount.truth.find(i);
 
 		if(it == vcount.truth.end()){
-			res.odata->push_back(0);
+			res.odata[truthCount] = 0;
 		} else{
-			res.odata->push_back(it->second);
+			res.odata[truthCount] = it->second;
 		}
-		pair<int32_t, vector<int32_t> > pp(vcount.frameCount, *res.odata);
+		pair<int32_t, map<String, int32_t> > pp(vcount.frameCount, *res.odata);
 		vcount.stats.insert(pp);
 		res.cest->push_back(res.boxStructures->size());
 		res.cest->push_back(avg);
