@@ -250,16 +250,23 @@ int main(int argc, char** argv) {
 							printf("%d ", *it);
 						}
 						printf("\n");
+						
+						GHashTableIter iter;
+						gpointer key;
+						gpointer value;
+						g_hash_table_iter_init (&iter, cmap);
 
-						/*for(map_kp::iterator it = clusterKeyPoints.begin(); it != clusterKeyPoints.end(); it++){
-							Mat mm = drawKeyPoints(frame, it->second, Scalar(0, 0, 255), -1);
-							String s1 = to_string(it->first);
+						while (g_hash_table_iter_next (&iter, &key, &value)){
+							int32_t* k = (int32_t *)key;
+							IntArrayList* list = (IntArrayList*)value;
+							vector<KeyPoint> points;
+							getListKeypoints(ff.keypoints, list, points);
+							clusterKeyPoints[*k] = points;
+							String s1 = to_string(*k);
 							display(s1.c_str(), mm);
-						}*/
+						}
+						
 						/****************************************************************************************************/
-
-						//Mat mm1 = drawKeyPoints(frame, ssP, Scalar(0, 0, 255), -1);
-						//display("ssP", mm1);
 						printf(" sss.size() = %lu\n", sss.size());
 						printf("f_labels has %lu and f.keypoints has %lu and cselclusters has %lu and colourSel.selectedPtsIdx has %lu\n", f_labels.size(), f.keypoints.size(), cselclusters.size(), colourSel.selectedDesc.rows);
 
