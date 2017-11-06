@@ -10,21 +10,20 @@
 #include "process_frame.hpp"
 #include <iostream>
 
-void printStats(String folder, map<int32_t, vector<int32_t> > stats);
+void printEstimates(ofstream& myfile, map<String, int32_t>* estimates);
 
-void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstimates);
+void printClusterEstimates(ofstream& myfile, map<String, int32_t>* estimates, vector<int32_t>* cest);
 
 
 /***
  *
  */
-//void printData(vocount& vcount, framed& f);
-void printData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<int>& roiFeatures, results_t& res, int i);
+void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<int>& roiFeatures, results_t& res, int i);
 
 /**
  *
  */
-void printStatistics(map<int, map<String, double>> stats, String folder);
+void printStatistics(map<int32_t, map<String, double>>& stats, String folder);
 
 /**
  *

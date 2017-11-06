@@ -15,6 +15,7 @@
 #include <set>
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 
 using namespace cv;
 using namespace std;
@@ -23,24 +24,24 @@ using namespace clustering;
 
 typedef map<int32_t, vector<KeyPoint>> map_kp;
 
-String frameNo = "Frame No.";
-String sampleSize = "Sample Size";
-String selectedSampleSize = "Selected Sample", 
-String featureSize = "Feature Size";
-String selectedFeatureSize = "Selected Features";
-String numClusters = "# Clusters";
-String clusterSum = "Cluster Sum";
-String clusterAverage = "Cluster Avg.";
-String boxEst = "Box Est."
-String truthCount = "Actual";
+static String frameNum = "Frame No.";
+static String sampleSize = "Sample Size";
+static String selectedSampleSize = "Selected Sample";
+static String featureSize = "Feature Size";
+static String selectedFeatureSize = "Selected Features";
+static String numClusters = "# Clusters";
+static String clusterSum = "Cluster Sum";
+static String clusterAverage = "Cluster Avg.";
+static String boxEst = "Box Est.";
+static 	String truthCount = "Actual";
 
 typedef struct {
 	int minPts = -1;
     //map_kp clusterKeyPoints;					/// maps labels to their keypoints
     IntIntListMap* clusterKeypointIdx; 						/// maps labels to the keypoint indices
-	vector<int> roiFeatures;
+	vector<int32_t> roiFeatures;
 	Mat selectedDesc;
-	vector<int> selectedClusters;
+	set<int32_t> selectedClusters;
 } selection_t;
 
 typedef struct _box_structure{
@@ -59,7 +60,7 @@ typedef struct {
     StringDoubleMap* stats = NULL;											/// Statistical values for the clusters
     IntDoubleListMap* distancesMap = NULL;									/// Min and Max distance table for each cluster
 	map_kp* finalPointClusters;
-	vector<int32_t>* odata;											/// Output data
+	map<String, int32_t>* odata;											/// Output data
     vector<int32_t>* labels;												/// hdbscan cluster labels
 	vector<box_structure>* boxStructures;							/// Bounding boxes for the individual objects in the frame
 	vector<int32_t>* cest;
@@ -99,8 +100,9 @@ typedef struct VOCOUNT{
     map<int32_t, map<String, int32_t> > stats;
     map<int32_t, vector<int32_t> > clusterEstimates;
 	vector<framed> frameHistory;
-    map<int, int> truth;
+    vector<int32_t> truth;
     String trackerAlgorithm;
+    ofstream clusterFile, estimatesFile;
 } vocount;
 
 results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints);
@@ -218,7 +220,7 @@ map<int, int> splitROIPoints(framed& f, framed& f1);
 /**
  * Get the true count of objects from the given folder. The
  */
-map<int, int> getFrameTruth(String truthFolder);
+void getFrameTruth(String truthFolder, vector<int32_t>& truth);
 
 /**
  *
@@ -265,12 +267,12 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
  * returned map is a C++ std::map<int, vector<KeyPoint>> 
  * 
  */ 
-map_kp getKeypointMap(IntIntListMap* listMap, vector<KeyPoint>* keypoints);
+void getKeypointMap(IntIntListMap* listMap, vector<KeyPoint>* keypoints, map_kp& mp);
 
 /**
  * Create a vector of KeyPoint's from a lsit of keypoint indices.
  */ 
-void getListKeypoints(vector<KeyPoint> keypoints, IntArrayList* list, vector<KeyPoint>& out);
+void getListKeypoints(vector<KeyPoint>& keypoints, IntArrayList* list, vector<KeyPoint>& out);
 
 /**
  * Clean the glib hash tables and any other memory that was dynamically allocated

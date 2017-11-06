@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
 	}
 
 	if(parser.has("t")){
-		vcount.truth = getFrameTruth(parser.get<String>("t"));
+		getFrameTruth(parser.get<String>("t"), vcount.truth);
 	}
 	
 	if(parser.has("ta")){
@@ -113,6 +113,21 @@ int main(int argc, char** argv) {
 		indexDir = createDirectory(vcount.destFolder, "index");
 		keypointsDir = createDirectory(vcount.destFolder, "keypoints");
 		selectedDir = createDirectory(vcount.destFolder, "selected");
+		
+		//printStats(vcount.destFolder, vcount.stats);		
+		//String f = vcount.destFolder;
+		String name = vcount.destFolder + "/estimates.csv";
+		//f += name;
+		vcount.estimatesFile.open(name.c_str());
+		vcount.estimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
+    	
+    	//printClusterEstimates(vcount.destFolder, vcount.clusterEstimates);
+		//f = vcount.destFolder;
+		name = vcount.destFolder + "/ClusterEstimates.csv";
+		//f += name;
+		vcount.clusterFile.open(name.c_str());
+		vcount.clusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
+		
     }
 
     while(cap.read(frame))
@@ -198,25 +213,24 @@ int main(int argc, char** argv) {
 			Mat dset = getDescriptorDataset(vcount.frameHistory, vcount.step, f.descriptors);
 
 			results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true);
-			//hdbscan_print_cluster_table(res1->clusterMap);
 			getSampleFeatureClusters(&f.roiFeatures, res1);
-			//hdbscan_print_cluster_table(res1->roiClusterPoints);
-			generateFinalPointClusters(res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);
-			
+			generateFinalPointClusters(res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);			
 			boxStructure(res1->finalPointClusters, f.keypoints, f.rois[0], res1->boxStructures);
 			extendBoxClusters(res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
 			generateClusterImages(f.frame, res1);
 			createBoxStructureImages(res1->boxStructures, res1->keyPointImages);
-			printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
+			//printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 			res1->total = countPrint(res1->roiClusterPoints, res1->finalPointClusters, res1->cest, res1->selectedFeatures, res1->lsize);
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 
 			f.results["keypoints"] = res1;
-			printData(vcount, f.frame, 	f.keypoints, f.roiFeatures, *res1, f.i);
+			generateOutputData(vcount, f.frame, f.keypoints, f.roiFeatures, *res1, f.i);
 			if(parser.has("o")){
 				printImages(keypointsFrameDir, res1->keyPointImages, vcount.frameCount);
+				printEstimates(vcount.estimatesFile, res1->odata);
+				printClusterEstimates(vcount.clusterFile, res1->odata, res1->cest);	
 			}
 
 			if(vcount.frameHistory.size() > 0){
@@ -226,135 +240,123 @@ int main(int argc, char** argv) {
 					if(colourSel.minPts != -1){
 						framed ff = vcount.frameHistory[vcount.frameHistory.size()-1];
 						vector<KeyPoint> keyp(ff.keypoints.begin(), ff.keypoints.end());
-
 						keyp.insert(keyp.end(), f.keypoints.begin(), f.keypoints.end());
-
 						Mat dataset = getColourDataset(frame, keyp);
 
 						hdbscan scanis(2*colourSel.minPts, DATATYPE_FLOAT);
 						scanis.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
-
-						vector<int> f_labels(scanis.clusterLabels + ff.keypoints.size(), scanis.clusterLabels + scanis.numPoints);
-						vector<int> p_labels(scanis.clusterLabels, scanis.clusterLabels + ff.keypoints.size());
-						set<int> cselclusters, sss(p_labels.begin(), p_labels.end());
-						map_kp clusterKeyPoints;
-						//mapClusters(p_labels, clusterKeyPoints, clusterKeypointIdx, ff.keypoints);
-						IntIntListMap* cmap = hdbscan_create_cluster_table(scanis.clusterLabels, 0, ff.keypoints.size());
-						for(ulong i = 0; i < ff.keypoints.size(); i++){
-							cselclusters.insert(scanis.clusterLabels[i]);
-						}
+												
 						/****************************************************************************************************/
-						printf("Selected cluster ");
-
-						for(set<int>::iterator it = cselclusters.begin(); it != cselclusters.end(); it++){
-							printf("%d ", *it);
-						}
-						printf("\n");
-						
-						GHashTableIter iter;
-						gpointer key;
-						gpointer value;
-						g_hash_table_iter_init (&iter, cmap);
-
-						while (g_hash_table_iter_next (&iter, &key, &value)){
-							int32_t* k = (int32_t *)key;
-							IntArrayList* list = (IntArrayList*)value;
-							vector<KeyPoint> points;
-							getListKeypoints(ff.keypoints, list, points);
-							clusterKeyPoints[*k] = points;
-							String s1 = to_string(*k);
-							display(s1.c_str(), mm);
-						}
-						
+						/** Get the hash table for the current dataset and find the mapping to clusters in prev frame
+						/** and map them to selected colour map
 						/****************************************************************************************************/
-						printf(" sss.size() = %lu\n", sss.size());
-						printf("f_labels has %lu and f.keypoints has %lu and cselclusters has %lu and colourSel.selectedPtsIdx has %lu\n", f_labels.size(), f.keypoints.size(), cselclusters.size(), colourSel.selectedDesc.rows);
-
-						Mat ds;
-						vector<KeyPoint> selP;
-						vector<int> selPi, roiPts;
-						for(size_t i = 0; i < f_labels.size(); i++){
-							if(cselclusters.find(f_labels[i]) != cselclusters.end()){
-								selP.push_back(f.keypoints[i]);
-								selPi.push_back(i);
-
-								if(f.roi.contains(f.keypoints[i].pt)){
-									roiPts.push_back(roiPts.size());
-								}
-
-								if(ds.empty()){
-									ds = f.descriptors.row(i);
-								} else{
-									ds.push_back(f.descriptors.row(i));
+						set<int32_t> currSelClusters;
+						for (set<int32_t>::iterator itt = colourSel.selectedClusters.begin(); itt != colourSel.selectedClusters.end(); ++itt) {
+							int32_t cluster = *itt;
+							IntArrayList* list = (IntArrayList*)g_hash_table_lookup(colourSel.clusterKeypointIdx, &cluster);
+							int32_t* ldata = (int32_t*)list->data;
+							
+							/**
+							 * Since I have no idea whether the clusters from the previous frames will be clustered in the same manner
+							 * I have to get the cluster with the largest number of points from selected clusters
+							 **/ 
+							map<int32_t, vector<int32_t>> temp;
+							for(int32_t x = 0; x < list->size; x++){
+								int32_t idx = ldata[x];
+								int32_t newCluster = (scanis.clusterLabels)[idx];
+								temp[newCluster].push_back(idx);
+							}
+							
+							int32_t selC = -1;
+							int32_t mSize = 0;
+							for(map<int32_t, vector<int32_t>>::iterator it = temp.begin(); it != temp.end(); ++it){
+								if(mSize < it->second.size()){
+									selC = it->first;
+									mSize = it->second.size();
 								}
 							}
+							currSelClusters.insert(selC);
+							printf("Prev cluster %d has been found in current frame as %d and has msize = %d\n", cluster, selC, mSize);			
 						}
+						
+						// Need to clear the previous table map
+						hdbscan_destroy_cluster_table(colourSel.clusterKeypointIdx);
+												
+						//colourSel.selectedDesc = ds.clone();
+						//colourSel.roiFeatures = roiPts;
+						colourSel.clusterKeypointIdx = hdbscan_create_cluster_table(scanis.clusterLabels, ff.keypoints.size(), scanis.numPoints);
+						colourSel.selectedClusters = currSelClusters;
 
+						/****************************************************************************************************/
+						/** Image space clustering
+						/** -------------------------
+						/** Create a dataset from the keypoints by extracting the colours and using them as the dataset
+						/** hence clustering in image space
+						/****************************************************************************************************/
 						vector<KeyPoint> selPts;
 
-						for (uint j = 0; j < colourSel.selectedClusters.size(); j++) {
-							int cluster = colourSel.selectedClusters[j];
-							vector<KeyPoint> pts = colourSel.clusterKeyPoints[cluster];
-							selPts.insert(selPts.end(), pts.begin(), pts.end());
-						}
-						Mat mm = drawKeyPoints(frame, selPts, Scalar(0, 0, 255), -1);
-						display("selP", mm);*/
-
-						colourSel.selectedDesc = ds.clone();
-						//colourSel.selectedPts = selP;
-						colourSel.roiFeatures = roiPts;
-						//colourSel.selectedPtsIdx = selPi;
-						colourSel.clusterKeyPoints = clusterKeyPoints;
-						colourSel.clusterKeypointIdx = clusterKeypointIdx;
-
-						//printf("colourSel.selectedDesc has %d rows and colourSel.selectedPts has %lu size\n", colourSel.selectedDesc.rows, colourSel.selectedPts.size());
-
-						vector<KeyPoint> selPts;
-
-						for (uint j = 0; j < colourSel.selectedClusters.size();
-								j++) {
-							int cluster = colourSel.selectedClusters[j];
-							vector<KeyPoint> pts = colourSel.clusterKeyPoints[cluster];
+						for (set<int32_t>::iterator itt = colourSel.selectedClusters.begin(); itt != colourSel.selectedClusters.end(); ++itt) {
+							int cluster = *itt;
+							IntArrayList* list = (IntArrayList*)g_hash_table_lookup(colourSel.clusterKeypointIdx, &cluster);
+							vector<KeyPoint> pts;
+							getListKeypoints(f.keypoints, list, pts);
 							selPts.insert(selPts.end(), pts.begin(), pts.end());
 						}
 
-						ds = getPointDataset(selPts);
-						results_t rs = cluster(dataset, 3, true);
-						rs.keypoints = selPts;
-						set<int> ss(rs.labels.begin(), rs.labels.end());
+						//Mat ds = getPointDataset(selPts);
+						//results_t* idxClusterRes = do_cluster(NULL, ds, selPts, 1, 3, true);
+						//set<int> ss(idxClusterRes->labels->begin(), idxClusterRes->labels->end());
 						//printf("-------------- We found %lu objects by index points clustering.\n", ss.size() - 1);
-						//mapClusters(rs.labels, rs.clusterKeyPoints, rs.clusterKeypointIdx, rs.keypoints);
-						rs.roiClusterPoints = mapSampleFeatureClusters(colourSel.roiFeatures, rs.labels);
-						generateClusterImages(f.frame, rs.clusterKeyPoints, rs.keyPointImages, rs.cest, rs.total, res1->lsize, res1->selectedFeatures);
+						//getSampleFeatureClusters(&f.roiFeatures, idxClusterRes);
+						//generateClusterImages(f.frame, rs.clusterKeyPoints, rs.keyPointImages, rs.cest, rs.total, res1->lsize, res1->selectedFeatures);
+						/// TODO: finish the generation of images
+						
+						//generateFinalPointClusters(res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);			
+						//boxStructure(res1->finalPointClusters, f.keypoints, f.rois[0], res1->boxStructures);
+						//extendBoxClusters(res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
+						//generateClusterImages(f.frame, res1);
+						//createBoxStructureImages(res1->boxStructures, res1->keyPointImages);
+						//printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
+						//cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+						//res1->total = countPrint(res1->roiClusterPoints, res1->finalPointClusters, res1->cest, res1->selectedFeatures, res1->lsize);
+						//cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+						//cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 
-						if(parser.has("o")){
+						//f.results["image space"] = res1;
+						/*if(parser.has("o")){
 							printf("--------------------- found %lu images\n", rs.keyPointImages.size());
 							printImages(indexFrameDir, rs.keyPointImages, vcount.frameCount);
-						}
-
+						}*/
+					
+						
+						/****************************************************************************************************/
+						/** Selected Colour Model Descriptor Clustering
+						/** -------------------------
+						/** Create a dataset of descriptors based on the selected colour model
+						/** 
+						/****************************************************************************************************/
 						dataset = colourSel.selectedDesc.clone();
-						results_t sel_r = cluster(dataset, 3, true);
-						sel_r.keypoints = selPts;
+						//results_t sel_r = cluster(dataset, 3, true);
 						//hdbscan<float> sel_scan(_EUCLIDEAN, 3);
 						//sel_scan.run(sel_r.dataset.ptr<float>(), sel_r.dataset.rows, sel_r.dataset.cols, true);
 						//sel_r.labels = sel_scan.getClusterLabels();
 						//mapClusters(sel_r.labels, sel_r.clusterKeyPoints, sel_r.clusterKeypointIdx, sel_r.keypoints);
-						sel_r.roiClusterPoints = mapSampleFeatureClusters(colourSel.roiFeatures, sel_r.labels);
-						generateClusterImages(f.frame, sel_r.clusterKeyPoints, sel_r.keyPointImages, sel_r.cest, sel_r.total, res1->lsize, res1->selectedFeatures);
+						//sel_r.roiClusterPoints = mapSampleFeatureClusters(colourSel.roiFeatures, sel_r.labels);
+						//generateClusterImages(f.frame, sel_r.clusterKeyPoints, sel_r.keyPointImages, sel_r.cest, sel_r.total, res1->lsize, res1->selectedFeatures);
 
-						if(parser.has("o")){
+						//if(parser.has("o")){
 							//printf("--------------------- found %lu images\n", sel_r.keyPointImages.size());
-							printImages(selectedFrameDir, sel_r.keyPointImages, vcount.frameCount);
-						}
+						//	printImages(selectedFrameDir, sel_r.keyPointImages, vcount.frameCount);
+						//}
 						// update the colour selection so that for every new frame, colourSel is based on the previous frame.
-						scanis.clean();
+						//scanis.clean();
 						//sel_scan.clean();
 						//sc.clean();
 					}
 
 
 				}
-			}*/
+			}
 			
 			/*
 			for(map<String, results_t>::iterator it = f.results.begin(); it != f.results.end(); ++it){
@@ -368,8 +370,10 @@ int main(int argc, char** argv) {
 	}
 
     if(vcount.print){
-    	printStats(vcount.destFolder, vcount.stats);
-    	printClusterEstimates(vcount.destFolder, vcount.clusterEstimates);
+		vcount.clusterFile.close();
+		vcount.estimatesFile.close();
+    	//printStats(vcount.destFolder, vcount.stats);
+    	//printClusterEstimates(vcount.destFolder, vcount.clusterEstimates);
     }
 
 	return 0;

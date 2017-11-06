@@ -5,7 +5,6 @@
  *      Author: ojmakh
  */
 #include "vocount/print_utils.hpp"
-#include <fstream>
 
 void printImage(String folder, int idx, String name, Mat img) {
 	stringstream sstm;
@@ -15,54 +14,47 @@ void printImage(String folder, int idx, String name, Mat img) {
 }
 
 
-void printStats(String folder, map<int32_t, map<String, int32_t> > stats){
-	ofstream myfile;
-	String f = folder;
-	String name = "/stats.csv";
-	f += name;
-	myfile.open(f.c_str());
-
-	myfile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
-
-	for(map<int32_t, map<String, int32_t> >::iterator it = stats.begin(); it != stats.end(); ++it){
-		map<String, int32_t> vv = it->second;
-		myfile << it->first << ",";
-
-		for(map<String, int32_t>::iterator itr = vv.begin(); itr != vv.end(); ++itr){
-			myfile << itr->second << ",";
-		}
-		myfile << "\n";
-	}
-
-	myfile.close();
+void printEstimates(ofstream& myfile, map<String, int32_t>* estimates){
+	myfile << estimates->at(frameNum) << ",";
+	myfile << estimates->at(sampleSize) << ",";
+	myfile << estimates->at(selectedSampleSize) << ",";
+	myfile << estimates->at(featureSize) << ",";
+	myfile << estimates->at(selectedFeatureSize) << ",";
+	myfile << estimates->at(numClusters) << ",";
+	myfile << estimates->at(clusterSum) << ",";
+	myfile << estimates->at(clusterAverage) << ",";
+	myfile << estimates->at(boxEst) << ",";
+	myfile << estimates->at(truthCount) << "\n";
+	
+	myfile.flush();
 
 }
 
-void printClusterEstimates(String folder, map<int32_t, vector<int32_t> > cEstimates){
-	ofstream myfile;
+void printClusterEstimates(ofstream& myfile, map<String, int32_t>* estimates, vector<int32_t>* cest){
+	/*ofstream myfile;
 	String f = folder;
 	String name = "/ClusterEstimates.csv";
 	f += name;
 	myfile.open(f.c_str());
 
 	myfile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
-
-	for(map<int32_t, vector<int32_t> >::iterator it = cEstimates.begin(); it != cEstimates.end(); ++it){
-		vector<int32_t> vv = it->second;
-		size_t sz = vv.size();
-		myfile << it->first << "," << vv[sz-1] << "," << vv[sz-2] << "," << vv[sz-3] << ",";
-
-		for(uint i = 0; i < vv.size()-2; ++i){
-			myfile << vv[i] << ",";
-		}
-		myfile << "\n";
+	*/
+	
+	myfile << estimates->at(frameNum) << ",";
+	myfile << estimates->at(clusterSum) << ",";
+	myfile << estimates->at(clusterAverage) << ",";
+	myfile << estimates->at(boxEst) << ",";
+	
+	for(vector<int32_t>::iterator it = cest->begin(); it != cest->end(); ++it){
+		
+		myfile << *it << ",";
 	}
-
-	myfile.close();
+	myfile << "\n";
+	myfile.flush();
 
 }
 
-void printStatistics(map<int, map<String, double>> stats, String folder){
+void printStatistics(map<int32_t, map<String, double>>& stats, String folder){
 	printf("Printing statistics to %s.\n", folder.c_str());
 	ofstream coreFile, disFile;
 	String name = "/core_distance_statistics.csv";
@@ -78,7 +70,7 @@ void printStatistics(map<int, map<String, double>> stats, String folder){
 	coreFile << "minPts, Mean, Variance, Standard Deviation, Kurtosis, Skewness, Count\n";
 	disFile << "minPts, Mean, Variance, Standard Deviation, Kurtosis, Skewness, Count\n";
 
-	for(map<int, map<String, double>>::iterator it = stats.begin(); it != stats.end(); ++it){
+	for(map<int32_t, map<String, double>>::iterator it = stats.begin(); it != stats.end(); ++it){
 
 		map<String, double> mp = it->second;
 		coreFile << it->first << ",";
@@ -148,7 +140,7 @@ void printImages(String folder, map<String, Mat>* images, int count){
 	}
 }
 
-void printData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<int>& roiFeatures, results_t& res, int i){
+void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<int>& roiFeatures, results_t& res, int i){
 	if (vcount.print && g_hash_table_size(res.roiClusterPoints) > 0) {
 
 		printImage(vcount.destFolder, vcount.frameCount, "frame", frame);
@@ -156,7 +148,7 @@ void printData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<
 		Mat ff = drawKeyPoints(frame, keypoints, Scalar(0, 0, 255), -1);
 		printImage(vcount.destFolder, vcount.frameCount, "frame_kp", ff);
 
-		res.odata->push_back(roiFeatures.size());
+		(*(res.odata))[sampleSize] = roiFeatures.size();
 
 		int selSampleSize = 0;
 
@@ -168,32 +160,33 @@ void printData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<
 		while (g_hash_table_iter_next (&iter, &key, &value)){
 			IntArrayList* list = (IntArrayList*)value;
 			selSampleSize += list->size;
-			
 		}
 
-		res.odata[selectedSampleSize] = selSampleSize;
-		res.odata[sampleSize] = res.ogsize;
-		res.odata[selectedFeatureSize] = res.selectedFeatures;
-		res.odata[numClusters] = res.keyPointImages->size();
-		res.odata[clusterSum] = res.total;
+		(*(res.odata))[selectedSampleSize] = selSampleSize;
+		(*(res.odata))[featureSize] = res.ogsize;
+		(*(res.odata))[selectedFeatureSize] = res.selectedFeatures;
+		(*(res.odata))[numClusters] = res.keyPointImages->size();
+		(*(res.odata))[clusterSum] = res.total;
 		int32_t avg = res.total / res.keyPointImages->size();
-		res.odata[clusterAverage] = avg;
-		res.odata[boxEst] = res.boxStructures->size();
+		(*(res.odata))[clusterAverage] = avg;
+		(*(res.odata))[boxEst] = res.boxStructures->size();
+		(*(res.odata))[frameNum] = i;
 
-		map<int, int>::iterator it = vcount.truth.find(i);
 
-		if(it == vcount.truth.end()){
-			res.odata[truthCount] = 0;
+		
+
+		if(i >= vcount.truth.size()){
+			(*(res.odata))[truthCount] = 0;
 		} else{
-			res.odata[truthCount] = it->second;
+			(*(res.odata))[truthCount] = vcount.truth[i-1];
 		}
-		pair<int32_t, map<String, int32_t> > pp(vcount.frameCount, *res.odata);
-		vcount.stats.insert(pp);
-		res.cest->push_back(res.boxStructures->size());
-		res.cest->push_back(avg);
-		res.cest->push_back(res.total);
-		pair<int32_t, vector<int32_t> > cpp(vcount.frameCount, *res.cest);
-		vcount.clusterEstimates.insert(cpp);
+		//pair<int32_t, map<String, int32_t> > pp(vcount.frameCount, *res.odata);
+		//vcount.stats.insert(pp);
+		//res.cest->push_back(res.boxStructures->size());
+		//res.cest->push_back(avg);
+		//res.cest->push_back(res.total);
+		//pair<int32_t, vector<int32_t> > cpp(vcount.frameCount, *res.cest);
+		//vcount.clusterEstimates.insert(cpp);
 	}
 }
 
