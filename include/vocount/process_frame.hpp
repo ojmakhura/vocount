@@ -37,10 +37,10 @@ static 	String truthCount = "Actual";
 
 typedef struct {
 	int minPts = -1;
-    //map_kp clusterKeyPoints;					/// maps labels to their keypoints
     IntIntListMap* clusterKeypointIdx; 						/// maps labels to the keypoint indices
 	vector<int32_t> roiFeatures;
 	Mat selectedDesc;
+	vector<KeyPoint> selectedKeypoints;
 	set<int32_t> selectedClusters;
 } selection_t;
 
@@ -102,7 +102,9 @@ typedef struct VOCOUNT{
 	vector<framed> frameHistory;
     vector<int32_t> truth;
     String trackerAlgorithm;
-    ofstream clusterFile, estimatesFile;
+    ofstream descriptorsClusterFile, descriptorsEstimatesFile;
+    ofstream selDescClusterFile, selDescEstimatesFile;
+    ofstream indexClusterFile, indexEstimatesFile;
 } vocount;
 
 results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints);
@@ -150,11 +152,6 @@ set<int32_t> getIgnoreSegments(Rect roi, Mat segments);
 /**
  *
  */
-//void mapClusters(vector<int>& labels, map_kp& clusterKeyPoints, map_t& clusterKeypointIdx, vector<KeyPoint>& keypoints);
-
-/**
- *
- */
 void generateClusterImages(Mat frame, results_t* res);
 
 /**
@@ -190,7 +187,7 @@ vector<KeyPoint> getAllMatchedKeypoints(framed& f);
 /**
  *
  */
-void findROIFeature(framed& f, selection_t& csel);
+int32_t findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d>& rois, vector<int>& roiFeatures, Mat& roiDesc);
 
 /**
  *
@@ -240,7 +237,7 @@ Mat getColourDataset(Mat f, vector<KeyPoint> pts);
 /***
  *
  */
-Mat getSelectedKeypointsDescriptors(Mat desc, IntArrayList* indices);
+void getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices, Mat& out);
 
 /**
  * Detect the optimum minPts value for colour clustering.
@@ -254,7 +251,7 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
  * @param points - a vector of KeyPoint objects
  * @return an array of floats for the positions of the keypoints
  */
-Mat getPointDataset(vector<KeyPoint> keypoint);
+Mat getImageSpaceDataset(vector<KeyPoint> keypoint);
 
 /**
  *

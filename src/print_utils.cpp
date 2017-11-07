@@ -31,14 +31,6 @@ void printEstimates(ofstream& myfile, map<String, int32_t>* estimates){
 }
 
 void printClusterEstimates(ofstream& myfile, map<String, int32_t>* estimates, vector<int32_t>* cest){
-	/*ofstream myfile;
-	String f = folder;
-	String name = "/ClusterEstimates.csv";
-	f += name;
-	myfile.open(f.c_str());
-
-	myfile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
-	*/
 	
 	myfile << estimates->at(frameNum) << ",";
 	myfile << estimates->at(clusterSum) << ",";
@@ -140,53 +132,43 @@ void printImages(String folder, map<String, Mat>* images, int count){
 	}
 }
 
-void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<int>& roiFeatures, results_t& res, int i){
-	if (vcount.print && g_hash_table_size(res.roiClusterPoints) > 0) {
+void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<int>& roiFeatures, results_t* res, int i){
+	if (vcount.print && g_hash_table_size(res->roiClusterPoints) > 0) {
 
 		printImage(vcount.destFolder, vcount.frameCount, "frame", frame);
 
 		Mat ff = drawKeyPoints(frame, keypoints, Scalar(0, 0, 255), -1);
 		printImage(vcount.destFolder, vcount.frameCount, "frame_kp", ff);
 
-		(*(res.odata))[sampleSize] = roiFeatures.size();
+		(*(res->odata))[sampleSize] = roiFeatures.size();
 
 		int selSampleSize = 0;
 
 		GHashTableIter iter;
 		gpointer key;
 		gpointer value;
-		g_hash_table_iter_init (&iter, res.roiClusterPoints);
+		g_hash_table_iter_init (&iter, res->roiClusterPoints);
 		
 		while (g_hash_table_iter_next (&iter, &key, &value)){
 			IntArrayList* list = (IntArrayList*)value;
 			selSampleSize += list->size;
 		}
 
-		(*(res.odata))[selectedSampleSize] = selSampleSize;
-		(*(res.odata))[featureSize] = res.ogsize;
-		(*(res.odata))[selectedFeatureSize] = res.selectedFeatures;
-		(*(res.odata))[numClusters] = res.keyPointImages->size();
-		(*(res.odata))[clusterSum] = res.total;
-		int32_t avg = res.total / res.keyPointImages->size();
-		(*(res.odata))[clusterAverage] = avg;
-		(*(res.odata))[boxEst] = res.boxStructures->size();
-		(*(res.odata))[frameNum] = i;
-
-
-		
+		(*(res->odata))[selectedSampleSize] = selSampleSize;
+		(*(res->odata))[featureSize] = res->ogsize;
+		(*(res->odata))[selectedFeatureSize] = res->selectedFeatures;
+		(*(res->odata))[numClusters] = res->keyPointImages->size();
+		(*(res->odata))[clusterSum] = res->total;
+		int32_t avg = res->total / res->keyPointImages->size();
+		(*(res->odata))[clusterAverage] = avg;
+		(*(res->odata))[boxEst] = res->boxStructures->size();
+		(*(res->odata))[frameNum] = i;
 
 		if(i >= vcount.truth.size()){
-			(*(res.odata))[truthCount] = 0;
+			(*(res->odata))[truthCount] = 0;
 		} else{
-			(*(res.odata))[truthCount] = vcount.truth[i-1];
+			(*(res->odata))[truthCount] = vcount.truth[i-1];
 		}
-		//pair<int32_t, map<String, int32_t> > pp(vcount.frameCount, *res.odata);
-		//vcount.stats.insert(pp);
-		//res.cest->push_back(res.boxStructures->size());
-		//res.cest->push_back(avg);
-		//res.cest->push_back(res.total);
-		//pair<int32_t, vector<int32_t> > cpp(vcount.frameCount, *res.cest);
-		//vcount.clusterEstimates.insert(cpp);
 	}
 }
 

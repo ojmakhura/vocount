@@ -612,51 +612,40 @@ double calcDistanceL1(Point2f f1, Point2f f2){
 /**
  * Find the roi features and at the same time find the central feature.
  */
-void findROIFeature(framed& f, selection_t& sel){
-	printf("f.rois has %d\n", f.rois.size());
-	Rect2d r = f.rois[0];
+int32_t findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d>& rois, vector<int>& roiFeatures, Mat& roiDesc){
+	printf("f.rois has %d\n", rois.size());
+	Rect2d r = rois[0];
 
 	Point2f p;
 
 	p.x = (r.x + r.width)/2.0f;
 	p.y = (r.y + r.height)/2.0f;
 	double distance;
-
-	for(uint i = 0; i < f.keypoints.size(); ++i){
-		vector<int> selPtsIdx;
-
-		for (set<int32_t>::iterator itt = sel.selectedClusters.begin(); itt != sel.selectedClusters.end(); ++itt) {
-			int cluster = *itt;
-			IntArrayList* ptsIdx = (IntArrayList *)g_hash_table_lookup(sel.clusterKeypointIdx, &cluster); 
-			int32_t* dt = (int32_t *)ptsIdx->data;
-			selPtsIdx.insert(selPtsIdx.end(), dt, dt + ptsIdx->size);
-		}
-
-		bool selected = sel.minPts == -1 || (sel.minPts != -1 && std::find(selPtsIdx.begin(), selPtsIdx.end(), i) != selPtsIdx.end());
-		if(f.hasRoi && f.rois[0].contains(f.keypoints[i].pt) && selected){
-			f.roiFeatures.push_back(i);
+	int32_t centerFeature = -1;
+	for(uint i = 0; i < keypoints.size(); ++i){		
+		if(rois[0].contains(keypoints[i].pt)){
+			roiFeatures.push_back(i);
 
 			// find the center feature index
-			if(f.centerFeature == -1){
-				f.centerFeature = i;
-				distance = calcDistanceL1(p, f.keypoints[i].pt);
+			if(centerFeature == -1){
+				centerFeature = i;
+				distance = calcDistanceL1(p, keypoints[i].pt);
 			} else {
-				double d1 = calcDistanceL1(p, f.keypoints[i].pt);
+				double d1 = calcDistanceL1(p, keypoints[i].pt);
 
 				if(d1 < distance){
 					distance = d1;
-					f.centerFeature = i;
+					centerFeature = i;
 				}
 			}
 
 			// create the roi descriptor
-			if(f.roiDesc.empty()){
-				f.roiDesc = f.descriptors.row(i);
-			} else{
-				f.roiDesc.push_back(f.descriptors.row(i));
-			}
+			roiDesc.push_back(descriptors.row(i));
+			
 		}
 	}
+	//printf("roiDesc had %d rows\n", roiDesc.rows);
+	return centerFeature;
 }
 
 bool processOptions(vocount& vcount, CommandLineParser& parser, VideoCapture& cap){
@@ -732,7 +721,7 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
 	String ss = "img_bounds";
 
 	Mat img_bounds = (*keyPointImages)["img_allkps"].clone();
-	for (uint i = 0; i < boxStructures->size(); i++) {
+	for (size_t i = 0; i < boxStructures->size(); i++) {
 		box_structure b = (*boxStructures)[i];
 		RNG rng(12345);
 		Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
@@ -749,7 +738,7 @@ map<int, int> addDescriptors(results_t& f, results_t& f1, int cluster, vector<in
 	IntArrayList* crois = (IntArrayList *)g_hash_table_lookup(f.clusterMap, &cluster); //f.clusterKeypointIdx[cluster];
 	map<int, int> newMap;
 
-	for(uint i = 0; i < crois->size; i++){
+	for(size_t i = 0; i < crois->size; i++){
 		//int rp = crois[i];
 
 		/*f1.dataset.push_back(f.descriptors.row(rp));
@@ -842,11 +831,11 @@ Mat getDistanceDataset(Mat descriptors, Mat roiDesc){
 #pragma omp for shared(data)
 #endif
 */
-	for (size_t i = 0; i < descriptors.rows; ++i) {
+	for (int i = 0; i < descriptors.rows; ++i) {
 		Mat row = descriptors.row(i);
 		int x = i * 3;
 
-		for (size_t j = 0; j < roiDesc.rows; ++j) {
+		for (int j = 0; j < roiDesc.rows; ++j) {
 			Mat d = roiDesc.row(j);
 			float distance = norm(row, d);
 /*
@@ -874,11 +863,11 @@ Mat getDistanceDataset(Mat descriptors, vector<int> roiIdx){
 #pragma omp for shared(data)
 #endif
 */
-	for (size_t i = 0; i < descriptors.rows; ++i) {
+	for (int i = 0; i < descriptors.rows; ++i) {
 		Mat row = descriptors.row(i);
 		int x = i * 3;
 
-		for (size_t j = 0; j < roiIdx.size(); ++j) {
+		for (int j = 0; j < roiIdx.size(); ++j) {
 			Mat d = descriptors.row(roiIdx[j]);
 			float distance = norm(row, d);
 /*
@@ -910,19 +899,21 @@ Mat getColourDataset(Mat f, vector<KeyPoint> pts){
 	return m;
 }
 
-Mat getSelectedKeypointsDescriptors(Mat desc, IntArrayList* indices){
-	Mat m;
+void getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices, Mat& out){
+	//Mat m;
+	//printf("desc has %d rows \n", desc.rows);
 	int32_t *dt = (int32_t *)indices->data;
-	for(size_t i = 0; i < indices->size; i++){
-		if(m.empty()){
+	for(int i = 0; i < indices->size; i++){
+		/*if(m.empty()){
 			m = desc.row(dt[i]);
 
-		} else{
-			m.push_back(desc.row(dt[i]));
-		}
+		} else{*/
+		//printf("Adding row %d\n", dt[i]);
+		out.push_back(desc.row(dt[i]));
+		//}
 	}
 
-	return m;
+	//return m;
 }
 
 void getKeypointMap(IntIntListMap* listMap, vector<KeyPoint>* keypoints, map_kp& mp){
@@ -1020,7 +1011,8 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 			char c = ' ';
 			while(true){
 				if (c == 'a') {
-					Mat xx = getSelectedKeypointsDescriptors(descriptors, list);
+					Mat xx ;
+					getSelectedKeypointsDescriptors(descriptors, list, xx);
 					colourSelection.selectedClusters.insert(*k);
 					if(colourSelection.selectedDesc.empty()){
 						colourSelection.selectedDesc = xx.clone();
@@ -1041,7 +1033,7 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 }
 
 
-Mat getPointDataset(vector<KeyPoint> keypoints){
+Mat getImageSpaceDataset(vector<KeyPoint> keypoints){
 	Mat m(keypoints.size(), 2, CV_32FC1);
 	float *data = m.ptr<float>(0);
 	for(size_t i = 0; i < keypoints.size(); i++){
