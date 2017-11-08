@@ -23,7 +23,7 @@ void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints
 /**
  *
  */
-void printStatistics(map<int32_t, map<String, double>>& stats, String folder);
+void printStatistics(map<int32_t, map<String, double>>& stats, String& folder);
 
 /**
  *
@@ -33,6 +33,8 @@ String createDirectory(String& mainFolder, String subfolder);
 /**
  *
  */
-void printImages(String folder, map<String, Mat>* images, int count);
+void printImages(String& folder, map<String, Mat>* images, int count);
+
+void printImage(String folder, int idx, String name, Mat img);
 
 #endif /* PRINT_UTILS_HPP_ */

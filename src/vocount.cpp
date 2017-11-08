@@ -249,20 +249,21 @@ int main(int argc, char** argv) {
 				}
 			}
 			if(vcount.frameHistory.size() > 0 &&(parser.has("i") || parser.has("f"))){
-
-				// Do index based clustering
-					
+				
 				if(colourSel.minPts == -1){
 					printf("Finding proper value of minPts\n");
 					colourSel = detectColourSelectionMinPts(frame, f.descriptors, f.keypoints);
+					//Mat kimg = drawKeyPoints(f.frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
+					//display("Selected Keypoints 11", kimg);
 					printf("Finding value of minPts = %d with colourSel.selectedPts as %lu from %lu\n", colourSel.minPts, colourSel.selectedDesc.rows, f.keypoints.size());
-				}
-					
-				if(colourSel.minPts != -1){
+				
+				} else {
 					framed ff = vcount.frameHistory[vcount.frameHistory.size()-1];
 					vector<KeyPoint> keyp(ff.keypoints.begin(), ff.keypoints.end());
+					Mat dataset = getColourDataset(ff.frame, keyp);
 					keyp.insert(keyp.end(), f.keypoints.begin(), f.keypoints.end());
-					Mat dataset = getColourDataset(frame, keyp);
+					dataset.push_back(getColourDataset(frame, f.keypoints));
+					dataset = dataset.clone();
 
 					hdbscan scanis(2*colourSel.minPts, DATATYPE_FLOAT);
 					scanis.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
@@ -271,10 +272,13 @@ int main(int argc, char** argv) {
 					/** Get the hash table for the current dataset and find the mapping to clusters in prev frame
 					/** and map them to selected colour map
 					/****************************************************************************************************/
-					set<int32_t> currSelClusters;
+					IntIntListMap* prevHashTable = colourSel.clusterKeypointIdx;
+					colourSel.clusterKeypointIdx = hdbscan_create_cluster_table(scanis.clusterLabels + ff.keypoints.size(), 0, f.keypoints.size());
+					set<int32_t> currSelClusters, cClusters;
+							
 					for (set<int32_t>::iterator itt = colourSel.selectedClusters.begin(); itt != colourSel.selectedClusters.end(); ++itt) {
 						int32_t cluster = *itt;
-						IntArrayList* list = (IntArrayList*)g_hash_table_lookup(colourSel.clusterKeypointIdx, &cluster);
+						IntArrayList* list = (IntArrayList*)g_hash_table_lookup(prevHashTable, &cluster);
 						int32_t* ldata = (int32_t*)list->data;
 							
 						/**
@@ -301,15 +305,12 @@ int main(int argc, char** argv) {
 					}
 						
 					// Need to clear the previous table map
-					hdbscan_destroy_cluster_table(colourSel.clusterKeypointIdx);
-											
-					//colourSel.selectedDesc = ds.clone();
-					//colourSel.roiFeatures = roiPts;
-						
+					hdbscan_destroy_cluster_table(prevHashTable);
+					
 					/// Here we need to create the cluster table that maps to the f.keypoints but starting from 0 so we pass the 
 					/// scanis.clusterLabels pointer that has been offset by ff.keypoints. This way we won't get a runtime error when
 					/// we use the clsuters to construct the 
-					colourSel.clusterKeypointIdx = hdbscan_create_cluster_table(scanis.clusterLabels + ff.keypoints.size(), 0, f.keypoints.size());
+					
 					colourSel.selectedClusters = currSelClusters;
 					colourSel.selectedKeypoints.clear();
 					colourSel.roiFeatures.clear();
@@ -324,15 +325,17 @@ int main(int argc, char** argv) {
 					Mat selDesc;
 					printf("f.keypoints = %d and f.descriptors = %d \n", f.keypoints.size(), f.descriptors.rows);
 					for (set<int32_t>::iterator itt = colourSel.selectedClusters.begin(); itt != colourSel.selectedClusters.end(); ++itt) {
+						
 						int cluster = *itt;
 						IntArrayList* list = (IntArrayList*)g_hash_table_lookup(colourSel.clusterKeypointIdx, &cluster);
-						//vector<KeyPoint> pts;
 						getListKeypoints(f.keypoints, list, colourSel.selectedKeypoints);
 						getSelectedKeypointsDescriptors(f.descriptors, list, selDesc);
-						//selPts.insert(selPts.end(), pts.begin(), pts.end());
 					}
 						
 					colourSel.selectedDesc = selDesc.clone();
+					//Mat kimg = drawKeyPoints(f.frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
+					//display("Selected Keypoints", kimg);
+					
 					Mat roiDesc;
 					findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.rois, colourSel.roiFeatures, roiDesc);
 					
@@ -343,10 +346,9 @@ int main(int argc, char** argv) {
 						Mat ds = getImageSpaceDataset(colourSel.selectedKeypoints);
 						results_t* idxClusterRes = do_cluster(NULL, ds, colourSel.selectedKeypoints, 1, 3, true);
 						set<int> ss(idxClusterRes->labels->begin(), idxClusterRes->labels->end());
-						printf("-------------- We found %lu objects by index points clustering.\n", ss.size() - 1);
+						//printf("We found %lu objects by index points clustering.\n", ss.size() - 1);
 						
-					}
-				
+					}				
 					
 					/****************************************************************************************************/
 					/** Selected Colour Model Descriptor Clustering
@@ -356,7 +358,7 @@ int main(int argc, char** argv) {
 					/****************************************************************************************************/
 					if(parser.has("f")){
 						//dataset = colourSel.selectedDesc.clone();
-						printf("Clustering selected keypoints in descriptor space\n");
+						printf("Clustering selected keypoints in descriptor space\n\n\n");
 						results_t* selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true);							
 						getSampleFeatureClusters(&colourSel.roiFeatures, selDescRes);
 						generateFinalPointClusters(selDescRes->clusterMap, selDescRes->roiClusterPoints, 
@@ -372,7 +374,6 @@ int main(int argc, char** argv) {
 						cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 						selDescRes->total = countPrint(selDescRes->roiClusterPoints, selDescRes->finalPointClusters, 
 														selDescRes->cest, selDescRes->selectedFeatures, selDescRes->lsize);
-						cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 						cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 													
 						f.results["sel_keypoints"] = selDescRes;

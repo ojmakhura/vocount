@@ -884,7 +884,6 @@ Mat getDistanceDataset(Mat descriptors, vector<int> roiIdx){
 
 
 Mat getColourDataset(Mat f, vector<KeyPoint> pts){
-	cout << "getting stdata" << endl;
 	Mat m(pts.size(), 3, CV_32FC1);
 	float* data = m.ptr<float>(0);
 	for(size_t i = 0; i < pts.size(); i++){
@@ -895,7 +894,6 @@ Mat getColourDataset(Mat f, vector<KeyPoint> pts){
 		data[idx + 1] = p.val[1];
 		data[idx + 2] = p.val[2];
 	}
-	cout << "getting stdata done" << endl;
 	return m;
 }
 
@@ -946,7 +944,7 @@ void getListKeypoints(vector<KeyPoint>& keypoints, IntArrayList* list, vector<Ke
 /**
  *
  */
-selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPoint> keypoints){
+selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints){
 	int mpts;
 	printf("Detecting minPts value for colour clustering.\n");
 	Mat dataset = getColourDataset(frame, keypoints);
@@ -1014,11 +1012,13 @@ selection_t detectColourSelectionMinPts(Mat frame, Mat descriptors, vector<KeyPo
 					Mat xx ;
 					getSelectedKeypointsDescriptors(descriptors, list, xx);
 					colourSelection.selectedClusters.insert(*k);
+					colourSelection.selectedKeypoints.insert(colourSelection.selectedKeypoints.end(), kps.begin(), kps.end());
 					if(colourSelection.selectedDesc.empty()){
 						colourSelection.selectedDesc = xx.clone();
 					} else{
 						colourSelection.selectedDesc.push_back(xx);
 					}
+					printf("%%%%%%%%%%%%%% added cluster %d of size %d\n", *k, list->size);
 					break;
 				} else if (c == 'q'){
 					break;

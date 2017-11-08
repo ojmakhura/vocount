@@ -46,7 +46,7 @@ void printClusterEstimates(ofstream& myfile, map<String, int32_t>* estimates, ve
 
 }
 
-void printStatistics(map<int32_t, map<String, double>>& stats, String folder){
+void printStatistics(map<int32_t, map<String, double>>& stats, String& folder){
 	printf("Printing statistics to %s.\n", folder.c_str());
 	ofstream coreFile, disFile;
 	String name = "/core_distance_statistics.csv";
@@ -126,7 +126,7 @@ String createDirectory(String& mainFolder, String subfolder){
 
 }
 
-void printImages(String folder, map<String, Mat>* images, int count){
+void printImages(String& folder, map<String, Mat>* images, int count){
 	for(map<String, Mat>::iterator it = images->begin(); it != images->end(); ++it){
 		printImage(folder, count, it->first, it->second);
 	}
