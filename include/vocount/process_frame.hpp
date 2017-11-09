@@ -47,9 +47,9 @@ typedef struct {
 typedef struct _box_structure{
 	Rect box;
 	vector<KeyPoint> points;
-	Mat img, hsv;
-	Mat hist[3];
-	
+	Mat img_, hsv;
+	MatND hist;
+	double histCompare;	
 } box_structure;
 
 typedef struct {
@@ -197,7 +197,7 @@ bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
 /**
  *
  */
-void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, Rect2d& roi, vector<box_structure>* boxStructures);
+void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, vector<Rect2d>& rois, vector<box_structure>* boxStructures, Mat& frame);
 
 /**
  *
@@ -287,13 +287,13 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
  * Find clusters that have points inside one of the bounding boxes
  * 
  */ 
-void extendBoxClusters(vector<box_structure>* boxStructures, vector<KeyPoint>& keypoints, map_kp* finalPointClusters, IntIntListMap* clusterMap, IntDoubleListMap* distanceMap);
+void extendBoxClusters(Mat& frame, vector<box_structure>* boxStructures, vector<KeyPoint>& keypoints, map_kp* finalPointClusters, IntIntListMap* clusterMap, IntDoubleListMap* distanceMap);
 
 /**
  * 
  * 
  */
-void calculateHistogram(Mat& img, Mat* hist);
+void calculateHistogram(box_structure& bst);
 
 /**
  * 

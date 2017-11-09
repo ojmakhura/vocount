@@ -229,8 +229,8 @@ int main(int argc, char** argv) {
 				results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true);
 				getSampleFeatureClusters(&f.roiFeatures, res1);
 				generateFinalPointClusters(res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);			
-				boxStructure(res1->finalPointClusters, f.keypoints, f.rois[0], res1->boxStructures);
-				extendBoxClusters(res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
+				boxStructure(res1->finalPointClusters, f.keypoints, f.rois, res1->boxStructures, frame);
+				extendBoxClusters(frame, res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
 				generateClusterImages(f.frame, res1);
 				createBoxStructureImages(res1->boxStructures, res1->keyPointImages);
 				//printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
@@ -365,8 +365,8 @@ int main(int argc, char** argv) {
 													selDescRes->finalPointClusters, selDescRes->labels, 
 													selDescRes->keypoints);
 															
-						boxStructure(selDescRes->finalPointClusters, colourSel.selectedKeypoints, f.rois[0], selDescRes->boxStructures);
-						extendBoxClusters(selDescRes->boxStructures, colourSel.selectedKeypoints, selDescRes->finalPointClusters, 
+						boxStructure(selDescRes->finalPointClusters, colourSel.selectedKeypoints, f.rois, selDescRes->boxStructures, frame);
+						extendBoxClusters(frame, selDescRes->boxStructures, colourSel.selectedKeypoints, selDescRes->finalPointClusters, 
 											selDescRes->clusterMap, selDescRes->distancesMap);
 						generateClusterImages(f.frame, selDescRes);
 						createBoxStructureImages(selDescRes->boxStructures, selDescRes->keyPointImages);

@@ -8,6 +8,7 @@
 #include "vocount/process_frame.hpp"
 #include <fstream>
 #include <opencv/cv.hpp>
+#include <opencv2/imgproc.hpp>
 #include <dirent.h>
 #include <gsl/gsl_statistics.h>
 
@@ -390,7 +391,7 @@ int rectExist(vector<box_structure>& structures, Rect& r){
 void compareHistograms(box_structure& base, box_structure& check){
 }
 
-void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_points, KeyPoint first_p, box_structure& mbs){
+void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_points, KeyPoint first_p, box_structure& mbs, Mat& frame){
 	
 	for(uint j = 0; j < c_points.size(); j++){
 			
@@ -411,8 +412,8 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 				box_structure bst;
 				bst.box = n_rect;
 				bst.points.push_back(point);
-				//bst.img = frame[bst.box];
-				//calculateHistogram(bst);
+				bst.img_ = frame(bst.box);
+				calculateHistogram(bst);
 				boxStructures->push_back(bst);
 			} else{
 				(*boxStructures)[idx].points.push_back(point);
@@ -425,7 +426,7 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
  * Find clusters that have points inside one of the bounding boxes
  * 
  */ 
-void extendBoxClusters(vector<box_structure>* boxStructures, vector<KeyPoint>& keypoints, map_kp* finalPointClusters, IntIntListMap* clusterMap, IntDoubleListMap* distanceMap){
+void extendBoxClusters(Mat& frame, vector<box_structure>* boxStructures, vector<KeyPoint>& keypoints, map_kp* finalPointClusters, IntIntListMap* clusterMap, IntDoubleListMap* distanceMap){
 	set<int32_t> freeClusters;
 	set<int32_t> toExamine;
 	vector<box_structure> bst;
@@ -491,7 +492,7 @@ void extendBoxClusters(vector<box_structure>* boxStructures, vector<KeyPoint>& k
 		int32_t idx = idx_map[label];
 		KeyPoint kp = keypoints[idx];
 		getListKeypoints(keypoints, list, (*finalPointClusters)[idx]);
-		addToBoxStructure(boxStructures, (*finalPointClusters)[idx], kp, it->second);
+		addToBoxStructure(boxStructures, (*finalPointClusters)[idx], kp, it->second, frame);
 		
 	}
 }
@@ -686,11 +687,11 @@ bool processOptions(vocount& vcount, CommandLineParser& parser, VideoCapture& ca
  * Creates box_structure objects from final point clusters
  * 
  */ 
-void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, Rect2d& roi, vector<box_structure>* boxStructures){
+void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, vector<Rect2d>& rois, vector<box_structure>* boxStructures, Mat& frame){
 	box_structure mbs;
-	mbs.box = roi;
-	//mbs.img = frame[bst.box];
-	//calculateHistogram(mbs);
+	mbs.box = rois[0];
+	mbs.img_ = frame(mbs.box);
+	calculateHistogram(mbs);
 
 	for(map_kp::iterator it = finalPointClusters->begin(); it != finalPointClusters->end(); ++it){
 		vector<KeyPoint>& kps = it->second;
@@ -698,14 +699,14 @@ void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, Rect2
 		// here we are looking for the point that is inside the roi for use as a point
 		// of reference with the other cluster points
 		for(vector<KeyPoint>::iterator itr = kps.begin(); itr != kps.end(); ++itr){
-			if(roi.contains(itr->pt)){
+			if(rois[0].contains(itr->pt)){
 				kp = *itr;
 				break;
 			}
 		}
 		
 		mbs.points.push_back(kp);
-		addToBoxStructure(boxStructures, it->second, kp, mbs);
+		addToBoxStructure(boxStructures, it->second, kp, mbs, frame);
 	}
 
 	boxStructures->push_back(mbs);
@@ -1167,7 +1168,7 @@ void cleanResult(results_t* res){
 }
 
 void calculateHistogram(box_structure& bst){	
-	cvtColor(bst.img, bst.hsv, COLOR_BGR2HSV );
+	cvtColor(bst.img_, bst.hsv, COLOR_BGR2HSV );
 	
 	/// Using 50 bins for hue and 60 for saturation
     int h_bins = 50; int s_bins = 60;
@@ -1182,6 +1183,8 @@ void calculateHistogram(box_structure& bst){
     // Use the o-th and 1-st channels
     int channels[] = { 0, 1 };
     /// Calculate the histograms for the HSV images
-    //calcHist( &bst.hsv, 1, channels, Mat(), bst.hist, 2, histSize, ranges, true, false );
-    //normalize( bst.hist, bst.hist, 0, 1, NORM_MINMAX, -1, Mat() );
+    //calcHist(const Mat* images, int nimages, const int* channels, InputArray mask, OutputArray hist, int dims, const int* histSize, const float** ranges, bool uniform = true, bool accumulate = false);
+    //calcHist(cv::Mat*, int, int [2], cv::Mat, cv::Mat [3], int, int [2], const float* [2], bool, bool)
+    calcHist( &bst.hsv, 1, channels, Mat(), bst.hist, 2, histSize, ranges, true, false );
+    normalize( bst.hist, bst.hist, 0, 1, NORM_MINMAX, -1, Mat() );
 }
