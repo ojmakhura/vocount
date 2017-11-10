@@ -388,9 +388,6 @@ int rectExist(vector<box_structure>& structures, Rect& r){
 	return -1;
 }
 
-void compareHistograms(box_structure& base, box_structure& check){
-}
-
 void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_points, KeyPoint first_p, box_structure& mbs, Mat& frame){
 	
 	for(uint j = 0; j < c_points.size(); j++){
@@ -412,8 +409,33 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 				box_structure bst;
 				bst.box = n_rect;
 				bst.points.push_back(point);
-				bst.img_ = frame(bst.box);
+				
+				cout << mbs.box << " : " << n_rect;
+				
+				if(n_rect.x < 0){
+					n_rect.width += n_rect.x;
+					n_rect.x = 0;
+				}
+				
+				if(n_rect.y < 0){
+					n_rect.height += n_rect.y;
+					n_rect.y = 0;
+				}
+				
+				if((n_rect.x + n_rect.width) >= frame.cols){
+					n_rect.width = frame.cols - n_rect.x;
+				}
+				
+				if((n_rect.y + n_rect.height) >= frame.rows){
+					n_rect.height = frame.rows - n_rect.y;
+				}
+				
+				cout << " (" << n_rect << ") compare ";
+				
+				bst.img_ = frame(n_rect);
 				calculateHistogram(bst);
+				bst.histCompare = compareHist(mbs.hist, bst.hist, CV_COMP_CORREL);
+				cout << bst.histCompare << endl;
 				boxStructures->push_back(bst);
 			} else{
 				(*boxStructures)[idx].points.push_back(point);
@@ -429,7 +451,7 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 void extendBoxClusters(Mat& frame, vector<box_structure>* boxStructures, vector<KeyPoint>& keypoints, map_kp* finalPointClusters, IntIntListMap* clusterMap, IntDoubleListMap* distanceMap){
 	set<int32_t> freeClusters;
 	set<int32_t> toExamine;
-	vector<box_structure> bst;
+	vector<box_structure> bst(boxStructures->begin(), boxStructures->end());
 	map<int32_t, box_structure> rec_map; // map for holding the rects that the other a point intersect with
 	map<int32_t, int32_t> idx_map;
 	
@@ -458,15 +480,12 @@ void extendBoxClusters(Mat& frame, vector<box_structure>* boxStructures, vector<
 			for(int i = 0; i < list->size; i++){
 				kp = keypoints[i];
 				
-				//cout << "Cluster " << *kk << " Point at " << i << " is " << kp.pt << endl;
 				for(vector<box_structure>::iterator it = boxStructures->begin(); it != boxStructures->end(); ++it){
 					
-					//cout << "Checking " << kp.pt << " in " << it->box << endl;
 					if(it->box.contains(kp.pt)){
 						toExamine.insert(*kk);
 						found = true;
 						bs = *it;
-						//cout << "index " << i << ": found " << kp.pt << " in " << bs.box << endl;
 						break;
 					}
 				}
@@ -480,20 +499,17 @@ void extendBoxClusters(Mat& frame, vector<box_structure>* boxStructures, vector<
 			if(found){
 				rec_map[*kk] = bs;
 				idx_map[*kk] = kp_index;
-			} else{
-				//printf("Cluster %d does not intersect with one of the box_structures\n", *kk);
 			}
 		}
 	}
 	
 	for(map<int32_t, box_structure>::iterator it = rec_map.begin(); it != rec_map.end(); ++it){
 		int32_t label = it->first;
-		IntArrayList * list = (IntArrayList *)g_hash_table_lookup(clusterMap, &label);
+		IntArrayList* list = (IntArrayList *)g_hash_table_lookup(clusterMap, &label);
 		int32_t idx = idx_map[label];
 		KeyPoint kp = keypoints[idx];
 		getListKeypoints(keypoints, list, (*finalPointClusters)[idx]);
-		addToBoxStructure(boxStructures, (*finalPointClusters)[idx], kp, it->second, frame);
-		
+		addToBoxStructure(boxStructures, (*finalPointClusters)[idx], kp, it->second, frame);		
 	}
 }
 
@@ -692,6 +708,9 @@ void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, vecto
 	mbs.box = rois[0];
 	mbs.img_ = frame(mbs.box);
 	calculateHistogram(mbs);
+	mbs.histCompare = compareHist(mbs.hist, mbs.hist, CV_COMP_CORREL);
+	boxStructures->push_back(mbs);
+	cout << "First box : " << boxStructures->at(0).box << " - " << boxStructures->at(0).histCompare << endl;
 
 	for(map_kp::iterator it = finalPointClusters->begin(); it != finalPointClusters->end(); ++it){
 		vector<KeyPoint>& kps = it->second;
@@ -708,8 +727,11 @@ void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, vecto
 		mbs.points.push_back(kp);
 		addToBoxStructure(boxStructures, it->second, kp, mbs, frame);
 	}
+	
+	/*for(vector<box_structure>::iterator it = boxStructures->begin(); it != boxStructures->end(); ++it){
+		cout << "Box : " << boxStructures->at(0).box << " - " << boxStructures->at(0).hist << endl;
+	}*/
 
-	boxStructures->push_back(mbs);
 }
 
 /**
