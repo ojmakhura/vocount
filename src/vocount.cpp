@@ -164,7 +164,6 @@ int main(int argc, char** argv) {
         }
 
 		framed f, index_f, sel_f;
-		bool clusterInspect = false;
 
 		f.i = vcount.frameCount;
 		index_f.i = f.i;
@@ -196,9 +195,7 @@ int main(int argc, char** argv) {
 
 			vcount.roiExtracted = true;
 
-		} else if(c == 'i'){ // inspect clusters
-			clusterInspect = true;
-		}
+		} 
 
 		if (vcount.roiExtracted ){
 			f.rois.clear();
@@ -230,7 +227,7 @@ int main(int argc, char** argv) {
 				getSampleFeatureClusters(&f.roiFeatures, res1);
 				generateFinalPointClusters(res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);			
 				boxStructure(res1->finalPointClusters, f.keypoints, f.rois, res1->boxStructures, frame);
-				//extendBoxClusters(frame, res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
+				extendBoxClusters(frame, res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
 				generateClusterImages(f.frame, res1);
 				createBoxStructureImages(res1->boxStructures, res1->keyPointImages);
 				//printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
@@ -255,7 +252,7 @@ int main(int argc, char** argv) {
 					colourSel = detectColourSelectionMinPts(frame, f.descriptors, f.keypoints);
 					//Mat kimg = drawKeyPoints(f.frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
 					//display("Selected Keypoints 11", kimg);
-					printf("Finding value of minPts = %d with colourSel.selectedPts as %lu from %lu\n", colourSel.minPts, colourSel.selectedDesc.rows, f.keypoints.size());
+					printf("Finding value of minPts = %d with colourSel.selectedPts as %d from %lu\n", colourSel.minPts, colourSel.selectedDesc.rows, f.keypoints.size());
 				
 				} else {
 					framed ff = vcount.frameHistory[vcount.frameHistory.size()-1];
@@ -269,8 +266,8 @@ int main(int argc, char** argv) {
 					scanis.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
 												
 					/****************************************************************************************************/
-					/** Get the hash table for the current dataset and find the mapping to clusters in prev frame
-					/** and map them to selected colour map
+					/// Get the hash table for the current dataset and find the mapping to clusters in prev frame
+					/// and map them to selected colour map
 					/****************************************************************************************************/
 					IntIntListMap* prevHashTable = colourSel.clusterKeypointIdx;
 					colourSel.clusterKeypointIdx = hdbscan_create_cluster_table(scanis.clusterLabels + ff.keypoints.size(), 0, f.keypoints.size());
@@ -293,7 +290,7 @@ int main(int argc, char** argv) {
 						}
 							
 						int32_t selC = -1;
-						int32_t mSize = 0;
+						size_t mSize = 0;
 						for(map<int32_t, vector<int32_t>>::iterator it = temp.begin(); it != temp.end(); ++it){
 							if(mSize < it->second.size()){
 								selC = it->first;
@@ -301,7 +298,7 @@ int main(int argc, char** argv) {
 							}
 						}
 						currSelClusters.insert(selC);
-						printf("Prev cluster %d has been found in current frame as %d and has msize = %d\n", cluster, selC, mSize);			
+						printf("Prev cluster %d has been found in current frame as %d and has msize = %lu\n", cluster, selC, mSize);			
 					}
 						
 					// Need to clear the previous table map
@@ -316,14 +313,14 @@ int main(int argc, char** argv) {
 					colourSel.roiFeatures.clear();
 
 					/****************************************************************************************************/
-					/** Image space clustering
-					/** -------------------------
-					/** Create a dataset from the keypoints by extracting the colours and using them as the dataset
-					/** hence clustering in image space
+					/// Image space clustering
+					/// -------------------------
+					/// Create a dataset from the keypoints by extracting the colours and using them as the dataset
+					/// hence clustering in image space
 					/****************************************************************************************************/
 						
 					Mat selDesc;
-					printf("f.keypoints = %d and f.descriptors = %d \n", f.keypoints.size(), f.descriptors.rows);
+					printf("f.keypoints = %lu and f.descriptors = %d \n", f.keypoints.size(), f.descriptors.rows);
 					for (set<int32_t>::iterator itt = colourSel.selectedClusters.begin(); itt != colourSel.selectedClusters.end(); ++itt) {
 						
 						int cluster = *itt;
@@ -347,14 +344,15 @@ int main(int argc, char** argv) {
 						results_t* idxClusterRes = do_cluster(NULL, ds, colourSel.selectedKeypoints, 1, 3, true);
 						set<int> ss(idxClusterRes->labels->begin(), idxClusterRes->labels->end());
 						//printf("We found %lu objects by index points clustering.\n", ss.size() - 1);
+						f.results["im_space"] = idxClusterRes;
 						
 					}				
 					
 					/****************************************************************************************************/
-					/** Selected Colour Model Descriptor Clustering
-					/** -------------------------
-					/** Create a dataset of descriptors based on the selected colour model
-					/** 
+					/// Selected Colour Model Descriptor Clustering
+					/// -------------------------
+					/// Create a dataset of descriptors based on the selected colour model
+					/// 
 					/****************************************************************************************************/
 					if(parser.has("f")){
 						//dataset = colourSel.selectedDesc.clone();
@@ -366,8 +364,8 @@ int main(int argc, char** argv) {
 													selDescRes->keypoints);
 															
 						boxStructure(selDescRes->finalPointClusters, colourSel.selectedKeypoints, f.rois, selDescRes->boxStructures, frame);
-						extendBoxClusters(frame, selDescRes->boxStructures, colourSel.selectedKeypoints, selDescRes->finalPointClusters, 
-											selDescRes->clusterMap, selDescRes->distancesMap);
+						//extendBoxClusters(frame, selDescRes->boxStructures, colourSel.selectedKeypoints, selDescRes->finalPointClusters, 
+						//					selDescRes->clusterMap, selDescRes->distancesMap);
 						generateClusterImages(f.frame, selDescRes);
 						createBoxStructureImages(selDescRes->boxStructures, selDescRes->keyPointImages);
 						

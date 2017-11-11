@@ -210,11 +210,6 @@ void generateFinalPointClusters(IntIntListMap* clusterMap, IntIntListMap* roiClu
 vector<Point2f> reduceDescriptorDimensions(Mat descriptors);
 
 /**
- *
- */
-map<int, int> splitROIPoints(framed& f, framed& f1);
-
-/**
  * Get the true count of objects from the given folder. The
  */
 void getFrameTruth(String truthFolder, vector<int32_t>& truth);

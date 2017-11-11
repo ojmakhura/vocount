@@ -40,7 +40,6 @@ results_t* splitROICluster(IntArrayList* list, Mat* dataset, vector<KeyPoint>* k
 	res->labels->insert(res->labels->begin(), scan.clusterLabels, scan.clusterLabels+scan.numPoints);
 	res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);
 	
-	double* core = scan.distanceFunction.coreDistances;
 	res->distancesMap = hdbscan_get_min_max_distances(&scan, res->clusterMap);
 	res->stats = hdbscan_calculate_stats(res->distancesMap);
 	res->validity = hdbscan_analyse_stats(res->stats);
@@ -219,7 +218,7 @@ double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vec
 			int32_t n = (*clusterKeyPoints)[*kk].size() / list->size;
 			cest->push_back(n);
 			total += n;
-			printf("%d has %lu and total is %lu :: Approx Num of objects: %d\n\n", *kk, list->size,
+			printf("%d has %d and total is %lu :: Approx Num of objects: %d\n\n", *kk, list->size,
 					(*clusterKeyPoints)[*kk].size(), n);
 			selectedFeatures += (*clusterKeyPoints)[*kk].size();
 
@@ -246,94 +245,9 @@ void generateFinalPointClusters(IntIntListMap* clusterMap, IntIntListMap* roiClu
 			int32_t label = labels->at(dd[0]);
 			IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(clusterMap, &label);
 			
-			//if(list->size < 3 && g_hash_table_size(clusterMap)/l1->size >= 2){ // Do a simple nerest neigbour search
-				getListKeypoints(*keypoints, l1, (*(finalPointClusters))[label]);
-			//}
+			getListKeypoints(*keypoints, l1, (*(finalPointClusters))[label]);
 		}
 	}
-}
-
-void expandClusters(results_t* res){
-	int32_t kt = 0;	
-	
-	/// Get cluster 0 so that we can just add to it when needed without having to search the 
-	/// hash table everytime
-	/*IntArrayList* zeroList = (IntArrayList *)g_hash_table_lookup(res->clusterMap, &kt);
-	for(set<int32_t>::iterator it = toExamine.begin(); it != toExamine.end(); ++it){
-		int32_t oldLabel = *it;
-		
-		IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(res->clusterMap, &oldLabel);
-		if(g_hash_table_size(res->clusterMap)/l1->size < 2){ // Do a simple nerest neigbour search
-				
-			printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-			IntArrayList* list = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, &oldLabel);
-			printf("Found %d ROI points in cluster %d whose size is %d\n", list->size, oldLabel, l1->size);
-			 
-			vector<int32_t> oldIdx;
-			results_t* res2 = splitROICluster(l1, res->dataset, res->keypoints, oldIdx);
-			
-			if(res2 != NULL){
-				printf("res2 is not null\n");
-			} else{
-				printf("res2 is null\n");
-			}
-			
-			printf("g_hash_table_size(res2->clusterMap) = %d\n", g_hash_table_size(res2->clusterMap));
-			
-			//for(size_t x = 0; x < oldIdx.size(); x++){
-				//printf("x = %d idx = %d\n", x, oldIdx[x]);
-			//}
-			
-			GHashTableIter iter;
-			gpointer key;
-			gpointer value;
-			g_hash_table_iter_init (&iter, res2->clusterMap);
-			
-			while (g_hash_table_iter_next (&iter, &key, &value)){
-				printf("1\n");
-				int32_t* newLabel = (int32_t *)key;
-				IntArrayList* newList = (IntArrayList *)value;
-				int32_t* newData = (int32_t*)newList->data;	
-				IntArrayList* translatedList = NULL;*/
-				
-				/**
-				 * This new cluster has different mapping of indexes from the original dataset. So we need
-				 * to add the contents of the new clusterMap to the old clusterMap using the the old indices
-				 * in oldIdx. If the new cluster is 0, we just add its points (translated to thier old indices) 
-				 * to the 0 cluster in the old clusterMap. Otherwise a new cluster label is created. To ensure
-				 * that labels remain uniques for different old clusters we use the formula 
-				 * newLabel + oldLabel * res->labels->size() 
-				 */ 
-				/*for(int32_t i = 0; i < newList->size; i++){
-					int32_t index = newData[i];
-					int32_t d = oldIdx[index];
-					if(*newLabel == 0){
-						int_array_list_append(zeroList, oldIdx[index]);
-					} else{
-						if(translatedList == NULL){
-							translatedList = int_array_list_init_size(newList->size);
-						}
-						int_array_list_append(translatedList, oldIdx[index]);					
-					}
-				}
-				
-				if(newLabel != 0){				
-					int32_t* extendedLabel = (int32_t*)malloc(sizeof(int32_t));
-					*extendedLabel = *newLabel + oldLabel * res->labels->size();
-					g_hash_table_insert(res->clusterMap, extendedLabel, translatedList);
-					
-					DoubleArrayList* dl = (DoubleArrayList*)g_hash_table_lookup(res2->distancesMap, newLabel);
-					g_hash_table_insert(res2->distancesMap, newLabel, NULL); // remove the list from res2->distancesMap
-					g_hash_table_insert(res->distancesMap, extendedLabel, dl);	
-				}			
-			}
-			
-			// Clean the result_t since we do not need it anymore
-			cleanResult(res2);
-			printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-		}
-		
-	}*/
 }
 
 void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
@@ -403,13 +317,19 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 
 			Point pp = pshift;
 			n_rect = n_rect + pp;
+			
+			if(n_rect.x < 0 || n_rect.y < 0 || (n_rect.x + n_rect.width) >= frame.cols || (n_rect.y + n_rect.height) >= frame.rows){
+				cout << "Skipping " << n_rect << endl;
+				continue;
+			}
+			
 			// check that the rect does not already exist
 			int idx = rectExist(*boxStructures, n_rect);
 			if(idx == -1){
 				box_structure bst;
 				bst.box = n_rect;
 				bst.points.push_back(point);
-				
+								
 				cout << mbs.box << " : " << n_rect;
 				
 				if(n_rect.x < 0){
@@ -431,11 +351,15 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 				}
 				
 				cout << " (" << n_rect << ") compare ";
-				
+								
 				bst.img_ = frame(n_rect);
 				calculateHistogram(bst);
 				bst.histCompare = compareHist(mbs.hist, bst.hist, CV_COMP_CORREL);
 				cout << bst.histCompare << endl;
+				if(bst.histCompare < 0.1){
+					cout << "Skipping for low similarity" << endl;
+					continue;
+				}
 				boxStructures->push_back(bst);
 			} else{
 				(*boxStructures)[idx].points.push_back(point);
@@ -630,7 +554,7 @@ double calcDistanceL1(Point2f f1, Point2f f2){
  * Find the roi features and at the same time find the central feature.
  */
 int32_t findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d>& rois, vector<int>& roiFeatures, Mat& roiDesc){
-	printf("f.rois has %d\n", rois.size());
+	printf("f.rois has %lu\n", rois.size());
 	Rect2d r = rois[0];
 
 	Point2f p;
@@ -746,53 +670,11 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
 	Mat img_bounds = (*keyPointImages)["img_allkps"].clone();
 	for (size_t i = 0; i < boxStructures->size(); i++) {
 		box_structure b = (*boxStructures)[i];
-		RNG rng(12345);
-		Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
-				rng.uniform(0, 255));
 		//rectangle(img_bounds, b.box, value, 2, 8, 0);
 		Point center = (b.box.br() + b.box.tl())/2;
 		circle(img_bounds, center, 4, Scalar(255, 255, 255), CV_FILLED, 10, 0);
 	}
 	(*keyPointImages)[ss] = img_bounds;
-}
-
-map<int, int> addDescriptors(results_t& f, results_t& f1, int cluster, vector<int> roipts){
-
-	IntArrayList* crois = (IntArrayList *)g_hash_table_lookup(f.clusterMap, &cluster); //f.clusterKeypointIdx[cluster];
-	map<int, int> newMap;
-
-	for(size_t i = 0; i < crois->size; i++){
-		//int rp = crois[i];
-
-		/*f1.dataset.push_back(f.descriptors.row(rp));
-		f1.keypoints.push_back(f.keypoints[rp]);
-		newMap[f1.dataset.rows-1] = rp;
-
-		for(uint j = 0; j < roipts.size(); j++){
-			if(roipts[j] == rp){
-				f1.roiFeatures.push_back(i);
-				if(f1.roiDesc.empty()){
-					f1.roiDesc = f.descriptors.row(rp);
-				} else{
-					f1.roiDesc.push_back(f.descriptors.row(rp));
-				}
-			}
-		}*/
-	}
-
-	return newMap;
-}
-
-map<int, int> splitROIPoints(framed& f, framed& f1){
-
-	map<int, int> fToF1;
-	f1.i = f.i;
-	f1.frame = f.frame;
-	f1.hasRoi = f.hasRoi;
-
-	bool run = false;
-
-	return map<int, int>();
 }
 
 vector<Point2f> reduceDescriptorDimensions(Mat descriptors){
@@ -820,7 +702,8 @@ void getFrameTruth(String truthFolder, vector<int32_t>& truth){
 	DIR*     dir;
 	dirent*  pdir;
 	dir = opendir(truthFolder.c_str());     // open current directory
-	while (pdir = readdir(dir)) {
+	pdir = readdir(dir);
+	while (pdir) {
 	    
 		String s = pdir->d_name;
 	    if(s != "." && s != ".."){
@@ -837,6 +720,7 @@ void getFrameTruth(String truthFolder, vector<int32_t>& truth){
 			int fnum = atoi(pch)-1;
 			truth.insert(truth.begin() + fnum, int(max));
 		}
+		pdir = readdir(dir);
 	}
 }
 
@@ -890,7 +774,7 @@ Mat getDistanceDataset(Mat descriptors, vector<int> roiIdx){
 		Mat row = descriptors.row(i);
 		int x = i * 3;
 
-		for (int j = 0; j < roiIdx.size(); ++j) {
+		for (size_t j = 0; j < roiIdx.size(); ++j) {
 			Mat d = descriptors.row(roiIdx[j]);
 			float distance = norm(row, d);
 /*
@@ -987,7 +871,7 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 		set<int> lsetkps(scan.clusterLabels, scan.clusterLabels + scan.numPoints);	
 			
 		IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);
-		double* core = scan.distanceFunction.coreDistances;
+		
 		IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scan, clusterMap);
 
 		if(g_hash_table_size(distancesMap) != size){
@@ -1088,7 +972,7 @@ results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints){
 	res->lsize = 0;
 	res->total = 0;
 	res->selectedFeatures = 0;
-	res->ogsize;
+	res->ogsize = 0;
 	res->validity = -1;
 	res->minPts = 3;
 	
@@ -1103,7 +987,7 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 	}
 	
 	res->minPts = step * f_minPts;
-	int max = 0, maxSize = 0;
+	
 	int i = 0;
 	
 	while(res->validity <= 2 && i < 5){
@@ -1131,7 +1015,6 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 		res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);
 		
 		if(analyse){
-			double* core = scan.distanceFunction.coreDistances;
 			res->distancesMap = hdbscan_get_min_max_distances(&scan, res->clusterMap);
 			res->stats = hdbscan_calculate_stats(res->distancesMap);
 			res->validity = hdbscan_analyse_stats(res->stats);

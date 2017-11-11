@@ -164,7 +164,7 @@ void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints
 		(*(res->odata))[boxEst] = res->boxStructures->size();
 		(*(res->odata))[frameNum] = i;
 
-		if(i >= vcount.truth.size()){
+		if((size_t)i >= vcount.truth.size()){
 			(*(res->odata))[truthCount] = 0;
 		} else{
 			(*(res->odata))[truthCount] = vcount.truth[i-1];
