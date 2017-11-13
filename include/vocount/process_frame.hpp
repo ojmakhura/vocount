@@ -127,27 +127,12 @@ Scalar color_mapping(int segment_id);
 /**
  *
  */
-Mat getSegmentImage(Mat& gs, map<uint, vector<Point> >& points);
-
-/**
- *
- */
-void printImage(String folder, int idx, String name, Mat img);
-
-/**
- *
- */
 Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour, int type);
 
 /**
  *
  */
 void maintaintHistory(vocount& voc, framed& f);
-
-/**
- *
- */
-set<int32_t> getIgnoreSegments(Rect roi, Mat segments);
 
 /**
  *
@@ -203,11 +188,6 @@ void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, vecto
  *
  */
 void generateFinalPointClusters(IntIntListMap* clusterMap, IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<int32_t>* labels, vector<KeyPoint>* keypoints);
-
-/**
- *
- */
-vector<Point2f> reduceDescriptorDimensions(Mat descriptors);
 
 /**
  * Get the true count of objects from the given folder. The

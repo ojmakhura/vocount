@@ -78,108 +78,6 @@ Scalar color_mapping(int segment_id) {
     return hsv_to_rgb(Scalar(fmod(base, 1.2), 0.95, 0.80));
 }
 
-Mat getSegmentImage(Mat& gs, map<uint, vector<Point> >& points){
-	//map<uint, vector<Point> > points;
-    Mat output_image = Mat::zeros(gs.rows, gs.cols, CV_8UC3);
-    uint* p;
-    uchar* p2;
-
-    /**
-     * Get the segmentation points that will be assigned to individual
-     */
-	for (int i = 0; i < gs.rows; i++) {
-		p = gs.ptr<uint>(i);
-		p2 = output_image.ptr<uchar>(i);
-		for (int j = 0; j < gs.cols; j++) {
-			pair<uint, vector<Point> > pr(p[j], vector<Point>());
-			std::map<uint, vector<Point> >::iterator it;
-			it = points.find(p[j]);
-
-			if (it == points.end()) {
-				pair<map<uint, vector<Point> >::iterator, bool> ret =
-						points.insert(pr);
-				ret.first->second.push_back(Point(j, i));
-			} else {
-				it->second.push_back(Point(j, i));
-			}
-
-			Scalar color = color_mapping(p[j]);
-			p2[j * 3] = color[0];
-			p2[j * 3 + 1] = color[1];
-			p2[j * 3 + 2] = color[2];
-		}
-	}
-
-	return output_image;
-}
-
-
-/**
- * Find the possible segment of interest
- * This function works by looking at the segments on both
- * sides of the roi rectangle. If the same segment is on
- * both sides, then it is added to the list of segments to
- * ignore.
- */
-set<int32_t> getIgnoreSegments(Rect roi, Mat segments){
-	set<int32_t> span;
-	int32_t t = 3;
-	cout << roi << endl;
-
-	for(int i = roi.x; i < roi.x+roi.width; ++i){
-		Point p1(roi.x, roi.y-t);
-		Point p2(roi.x, roi.y+t);
-
-		int32_t i1 = segments.at<int32_t>(p1);
-		int32_t i2 = segments.at<int32_t>(p2);
-
-		if(i1 == i2){
-			span.insert(i1);
-		}
-
-		///printf("(p1.x, p1.y) = (%d, %d) ::::::: (p2.x, p2.y) = (%d, %d)\n", p1.x, p2.y, i1, i2);
-
-		int end = roi.y + roi.height;
-		p1.y = end + t;
-		p2.y = end - t;
-
-		i1 = segments.at<int32_t>(p1);
-		i2 = segments.at<int32_t>(p2);
-
-		if(i1 == i2){
-			span.insert(i1);
-		}
-		///printf("(p1.x, p1.y) = (%d, %d) ::::::: (p2.x, p2.y) = (%d, %d)\n", p1.x, p2.y, i1, i2);
-	}
-
-	for(int j = roi.y; j < roi.y + roi.height; ++j){
-		Point p1(roi.x - t, roi.y);
-		Point p2(roi.x + t, roi.y);
-
-		int32_t i1 = segments.at<int32_t>(p1);
-		int32_t i2 = segments.at<int32_t>(p2);
-
-		if(i1 == i2){
-			span.insert(i1);
-		}
-
-		int end = roi.x + roi.width;
-		p1.x = end + t;
-		p2.x = end - t;
-
-		i1 = segments.at<int32_t>(p1);
-		i2 = segments.at<int32_t>(p2);
-
-		if(i1 == i2){
-			span.insert(i1);
-		}
-
-	}
-
-
-	return span;
-}
-
 Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour, int type){
 	Mat x = in.clone();
 	if(type == -1){
@@ -252,7 +150,6 @@ void generateFinalPointClusters(IntIntListMap* clusterMap, IntIntListMap* roiClu
 
 void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
 
-	set<int32_t> toExamine;
 	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
 	for (vector<int>::iterator it = roiFeatures->begin(); it != roiFeatures->end(); ++it) {
 		int* key;
@@ -267,21 +164,14 @@ void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
 			list = int_array_list_init_size(roiFeatures->size());
 			g_hash_table_insert(res->roiClusterPoints, key, list);
 		}
-		
-		if(k != 0){
-			toExamine.insert(k);
-		}
-		
+				
 		int_array_list_append(list, *it);
 	}
-	//hdbscan_print_cluster_table(res->roiClusterPoints);
-	
 }
 
 int rectExist(vector<box_structure>& structures, Rect& r){
 
 	double maxIntersect = 0.0;
-	//Rect maxRec(0, 0, 0, 0);
 	int maxIndex = -1;
 
 	for(uint i = 0; i < structures.size(); i++){
@@ -289,7 +179,6 @@ int rectExist(vector<box_structure>& structures, Rect& r){
 		double sect = ((double)r2.area()/r.area()) * 100;
 		if(sect > maxIntersect){
 			maxIndex = i;
-			//maxRec = r2;
 			maxIntersect = sect;
 		}
 	}
@@ -677,26 +566,6 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
 	(*keyPointImages)[ss] = img_bounds;
 }
 
-vector<Point2f> reduceDescriptorDimensions(Mat descriptors){
-	vector<Point2f> points;
-
-	for(int i = 0; i < descriptors.rows; i++){
-		Point2f p(0, 0);
-		for(int j = 0; j < descriptors.cols; i++){
-			float f = descriptors.at<float>(i, j);
-
-			if(j %2 == 0){
-				p.x += f;
-			} else{
-				p.y += f;
-			}
-		}
-		points.push_back(p);
-	}
-
-	return points;
-}
-
 void getFrameTruth(String truthFolder, vector<int32_t>& truth){
 	//map<int, int> trueCount;
 	DIR*     dir;
@@ -870,14 +739,14 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 		scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);		
 		set<int> lsetkps(scan.clusterLabels, scan.clusterLabels + scan.numPoints);	
 			
-		IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);
-		
+		IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);		
 		IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scan, clusterMap);
-
+		
 		if(g_hash_table_size(distancesMap) != size){
 			size = g_hash_table_size(distancesMap);
 			mpts = i;
 			currentCount = 1;
+			hdbscan_destroy_cluster_table(clusterMap);
 		} else{
 			currentCount++;
 			if(currentCount > chosenCount){
@@ -889,6 +758,8 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 				}
 				
 				clusterKeypointIdxMap = clusterMap;
+			} else{
+				hdbscan_destroy_cluster_table(clusterMap);
 			}
 		}
 		hdbscan_destroy_distance_map_table(distancesMap);
@@ -1021,7 +892,8 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 		}
 		
 		i++;
-	}	
+	}
+	res->ogsize = keypoints.size();
 
 	printf("------- Selected max clustering size = %d and cluster table has %d\n", res->minPts, g_hash_table_size(res->clusterMap));
 	
@@ -1031,19 +903,16 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 void cleanResult(results_t* res){
 	if(res != NULL){
 		if(res->clusterMap != NULL){
-			printf("cleaning cluster table of size %d\n", g_hash_table_size(res->clusterMap));
 			hdbscan_destroy_cluster_table(res->clusterMap);
 			res->clusterMap = NULL;
 		}
 		
 		if(res->stats != NULL){
-			printf("cleaning stats map of size %d\n", g_hash_table_size(res->stats));
 			hdbscan_destroy_stats_map(res->stats);
 			res->stats = NULL;
 		}
 		
 		if(res->distancesMap != NULL){
-			printf("cleaning distance map of size %d\n", g_hash_table_size(res->distancesMap));
 			hdbscan_destroy_distance_map_table(res->distancesMap);
 			res->distancesMap = NULL;
 		}
@@ -1054,7 +923,6 @@ void cleanResult(results_t* res){
 		 * being IntIntListMap datatype.
 		 */ 
 		if(res->roiClusterPoints != NULL){		
-			printf("cleaning roi cluster points table of size %d\n", g_hash_table_size(res->roiClusterPoints));
 			hdbscan_destroy_cluster_table(res->roiClusterPoints);
 			res->roiClusterPoints = NULL;
 		}

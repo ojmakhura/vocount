@@ -303,11 +303,6 @@ int main(int argc, char** argv) {
 						
 					// Need to clear the previous table map
 					hdbscan_destroy_cluster_table(prevHashTable);
-					
-					/// Here we need to create the cluster table that maps to the f.keypoints but starting from 0 so we pass the 
-					/// scanis.clusterLabels pointer that has been offset by ff.keypoints. This way we won't get a runtime error when
-					/// we use the clsuters to construct the 
-					
 					colourSel.selectedClusters = currSelClusters;
 					colourSel.selectedKeypoints.clear();
 					colourSel.roiFeatures.clear();
@@ -327,15 +322,11 @@ int main(int argc, char** argv) {
 						IntArrayList* list = (IntArrayList*)g_hash_table_lookup(colourSel.clusterKeypointIdx, &cluster);
 						getListKeypoints(f.keypoints, list, colourSel.selectedKeypoints);
 						getSelectedKeypointsDescriptors(f.descriptors, list, selDesc);
-					}
-						
+					}					
 					colourSel.selectedDesc = selDesc.clone();
-					//Mat kimg = drawKeyPoints(f.frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
-					//display("Selected Keypoints", kimg);
 					
 					Mat roiDesc;
-					findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.rois, colourSel.roiFeatures, roiDesc);
-					
+					findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.rois, colourSel.roiFeatures, roiDesc);					
 					printf("colourSel.selectedKeypoints.size = %lu selDesc.rows = %d\n", colourSel.selectedKeypoints.size(), selDesc.rows);
 					
 					if(parser.has("i")){
@@ -386,13 +377,6 @@ int main(int argc, char** argv) {
 					}
 				}
 			}
-			
-			/*
-			for(map<String, results_t>::iterator it = f.results.begin(); it != f.results.end(); ++it){
-				printf("Cleaning results %s\n", it->first.c_str());
-				cleanResult(it->second);
-			}
-			*/
 		}
 
 		maintaintHistory(vcount, f);
