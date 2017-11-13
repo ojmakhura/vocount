@@ -128,44 +128,33 @@ double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vec
 	return total;
 }
 
-void generateFinalPointClusters(IntIntListMap* clusterMap, IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<int32_t>* labels, vector<KeyPoint>* keypoints){
-		
-	GHashTableIter iter;
-	gpointer key;
-	gpointer value;
-	g_hash_table_iter_init (&iter, roiClusterPoints);
-
-	while (g_hash_table_iter_next (&iter, &key, &value)){
-		int32_t* kk = (int32_t *)key;
-		IntArrayList* list = (IntArrayList *)value;
-		if (*kk != 0) {
-			int32_t* dd = (int32_t *)list->data;
-			int32_t label = labels->at(dd[0]);
-			IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(clusterMap, &label);
-			
-			getListKeypoints(*keypoints, l1, (*(finalPointClusters))[label]);
-		}
-	}
-}
-
-void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res){
-
-	// get a cluster labels belonging to the sample features and map them the KeyPoint indexes
-	for (vector<int>::iterator it = roiFeatures->begin(); it != roiFeatures->end(); ++it) {
+void generateFinalPointClusters(vector<int32_t>* roiFeatures, IntIntListMap* clusterMap, IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<int32_t>* labels, vector<KeyPoint>* keypoints){
+	set<int32_t> st;
+	for (vector<int32_t>::iterator it = roiFeatures->begin(); it != roiFeatures->end(); ++it) {
 		int* key;
-		int k = res->labels->at(*it);
-		res->objectClusters->insert(k);
+		int k = labels->at(*it);
+		//res->objectClusters->insert(k);
 		key = &k;
-		IntArrayList* list = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, key);
+		IntArrayList* list = (IntArrayList *)g_hash_table_lookup(roiClusterPoints, key);
 		
 		if(list == NULL){
 			key = (int *)malloc(sizeof(int));
 			*key = k;
 			list = int_array_list_init_size(roiFeatures->size());
-			g_hash_table_insert(res->roiClusterPoints, key, list);
+			g_hash_table_insert(roiClusterPoints, key, list);
+			st.insert(k);
 		}
 				
 		int_array_list_append(list, *it);
+		
+	}
+	
+	for (set<int32_t>::iterator it = st.begin(); it != st.end(); ++it){
+		int32_t key = *it;
+		if (key != 0) {
+			IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(clusterMap, &key);			
+			getListKeypoints(*keypoints, l1, (*(finalPointClusters))[key]);
+		}		
 	}
 }
 
@@ -219,7 +208,7 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 				bst.box = n_rect;
 				bst.points.push_back(point);
 								
-				cout << mbs.box << " : " << n_rect;
+				//cout << mbs.box << " : " << n_rect;
 				
 				if(n_rect.x < 0){
 					n_rect.width += n_rect.x;
@@ -239,13 +228,26 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 					n_rect.height = frame.rows - n_rect.y;
 				}
 				
-				cout << " (" << n_rect << ") compare ";
+				double area1 = bst.box.width * bst.box.width; 
+				double area2 = n_rect.width * n_rect.width;
+				double ratio = area2/area1;
+				//if(ratio < 0.5){
+					//cout << "Ratio is " << ratio<< " Skipping " << n_rect << endl;
+					//continue;
+				//}
+				
+				//cout << " (" << n_rect << ") compare ";
 								
 				bst.img_ = frame(n_rect);
 				calculateHistogram(bst);
 				bst.histCompare = compareHist(mbs.hist, bst.hist, CV_COMP_CORREL);
-				cout << bst.histCompare << endl;
-				if(bst.histCompare < 0.1){
+				
+				Mat g1, g2;
+				cvtColor(mbs.img_, g1, COLOR_RGB2GRAY);
+				cvtColor(bst.img_, g2, COLOR_RGB2GRAY);
+				bst.momentsCompare = matchShapes(g1, g2, CONTOURS_MATCH_I3, 0);
+				cout << " (" << n_rect << ") compare " << bst.histCompare << " moments compare " << bst.momentsCompare << endl;
+				if(bst.momentsCompare > 0.05){
 					cout << "Skipping for low similarity" << endl;
 					continue;
 				}
@@ -262,68 +264,7 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
  * 
  */ 
 void extendBoxClusters(Mat& frame, vector<box_structure>* boxStructures, vector<KeyPoint>& keypoints, map_kp* finalPointClusters, IntIntListMap* clusterMap, IntDoubleListMap* distanceMap){
-	set<int32_t> freeClusters;
-	set<int32_t> toExamine;
-	vector<box_structure> bst(boxStructures->begin(), boxStructures->end());
-	map<int32_t, box_structure> rec_map; // map for holding the rects that the other a point intersect with
-	map<int32_t, int32_t> idx_map;
 	
-	GHashTableIter iter;
-	gpointer key;
-	gpointer value;
-	g_hash_table_iter_init (&iter, clusterMap);
-
-	while (g_hash_table_iter_next (&iter, &key, &value)){
-		int32_t* kk = (int32_t *)key;
-		DoubleArrayList* dl = (DoubleArrayList*)g_hash_table_lookup(distanceMap, kk);
-		//if(dl != NULL){
-		double* ddata = (double *)dl->data;		
-		double cr = ddata[1]/ddata[0];
-		double dr = ddata[3]/ddata[2];
-		double x = dr/cr;
-		if(*kk != 0 && finalPointClusters->find(*kk) == finalPointClusters->end() && x < 2){
-			freeClusters.insert(*kk);
-			IntArrayList* list = (IntArrayList *)value;
-			int32_t* dt = (int32_t*)list->data;
-			bool found = false;
-			KeyPoint kp;
-			int32_t kp_index = -1;
-			box_structure bs;
-			
-			for(int i = 0; i < list->size; i++){
-				kp = keypoints[i];
-				
-				for(vector<box_structure>::iterator it = boxStructures->begin(); it != boxStructures->end(); ++it){
-					
-					if(it->box.contains(kp.pt)){
-						toExamine.insert(*kk);
-						found = true;
-						bs = *it;
-						break;
-					}
-				}
-				
-				if(found){
-					kp_index = dt[i];
-					break;
-				}
-			}
-			
-			if(found){
-				rec_map[*kk] = bs;
-				idx_map[*kk] = kp_index;
-			}
-		}
-	}
-	
-	for(map<int32_t, box_structure>::iterator it = rec_map.begin(); it != rec_map.end(); ++it){
-		int32_t label = it->first;
-		IntArrayList* list = (IntArrayList *)g_hash_table_lookup(clusterMap, &label);
-		int32_t idx = idx_map[label];
-		KeyPoint kp = keypoints[idx];
-		getListKeypoints(keypoints, list, (*finalPointClusters)[idx]);
-		addToBoxStructure(boxStructures, (*finalPointClusters)[idx], kp, it->second, frame);		
-	}
 }
 
 
@@ -345,8 +286,7 @@ void generateClusterImages(Mat frame, results_t* res){
 		Mat kimg = drawKeyPoints(frame, it->second, Scalar(0, 0, 255), -1);
 
 		String ss = "img_keypoints-";
-		vector<int32_t>& labels = *(res->labels);
-		string s = to_string(labels[it->first]);
+		string s = to_string(it->first);
 		ss += s.c_str();
 		(*(res->keyPointImages))[ss] = kimg;
 		kp.insert(kp.end(), it->second.begin(), it->second.end());
@@ -522,8 +462,11 @@ void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, vecto
 	mbs.img_ = frame(mbs.box);
 	calculateHistogram(mbs);
 	mbs.histCompare = compareHist(mbs.hist, mbs.hist, CV_COMP_CORREL);
+	Mat g1;
+	cvtColor(mbs.img_, g1, COLOR_RGB2GRAY);
+	mbs.momentsCompare = matchShapes(g1, g1, CONTOURS_MATCH_I3, 0);
 	boxStructures->push_back(mbs);
-	cout << "First box : " << boxStructures->at(0).box << " - " << boxStructures->at(0).histCompare << endl;
+	cout << "First box : " << boxStructures->at(0).box << " - " << boxStructures->at(0).momentsCompare << endl;
 
 	for(map_kp::iterator it = finalPointClusters->begin(); it != finalPointClusters->end(); ++it){
 		vector<KeyPoint>& kps = it->second;
@@ -559,9 +502,12 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
 	Mat img_bounds = (*keyPointImages)["img_allkps"].clone();
 	for (size_t i = 0; i < boxStructures->size(); i++) {
 		box_structure b = (*boxStructures)[i];
-		//rectangle(img_bounds, b.box, value, 2, 8, 0);
-		Point center = (b.box.br() + b.box.tl())/2;
-		circle(img_bounds, center, 4, Scalar(255, 255, 255), CV_FILLED, 10, 0);
+		RNG rng(12345);
+		Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
+				rng.uniform(0, 255));
+		rectangle(img_bounds, b.box, value, 2, 8, 0);
+		//Point center = (b.box.br() + b.box.tl())/2;
+		//circle(img_bounds, center, 4, Scalar(255, 255, 255), CV_FILLED, 10, 0);
 	}
 	(*keyPointImages)[ss] = img_bounds;
 }

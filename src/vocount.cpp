@@ -224,10 +224,9 @@ int main(int argc, char** argv) {
 				Mat dset = getDescriptorDataset(vcount.frameHistory, vcount.step, f.descriptors);
 
 				results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true);
-				getSampleFeatureClusters(&f.roiFeatures, res1);
-				generateFinalPointClusters(res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);			
+				generateFinalPointClusters(&f.roiFeatures, res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);			
 				boxStructure(res1->finalPointClusters, f.keypoints, f.rois, res1->boxStructures, frame);
-				extendBoxClusters(frame, res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
+				//extendBoxClusters(frame, res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
 				generateClusterImages(f.frame, res1);
 				createBoxStructureImages(res1->boxStructures, res1->keyPointImages);
 				//printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
@@ -348,9 +347,8 @@ int main(int argc, char** argv) {
 					if(parser.has("f")){
 						//dataset = colourSel.selectedDesc.clone();
 						printf("Clustering selected keypoints in descriptor space\n\n\n");
-						results_t* selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true);							
-						getSampleFeatureClusters(&colourSel.roiFeatures, selDescRes);
-						generateFinalPointClusters(selDescRes->clusterMap, selDescRes->roiClusterPoints, 
+						results_t* selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true);
+						generateFinalPointClusters(&colourSel.roiFeatures, selDescRes->clusterMap, selDescRes->roiClusterPoints, 
 													selDescRes->finalPointClusters, selDescRes->labels, 
 													selDescRes->keypoints);
 															

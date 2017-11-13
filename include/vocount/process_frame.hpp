@@ -49,7 +49,7 @@ typedef struct _box_structure{
 	vector<KeyPoint> points;
 	Mat img_, hsv;
 	MatND hist;
-	double histCompare;	
+	double histCompare, momentsCompare;	
 } box_structure;
 
 typedef struct {
@@ -85,7 +85,6 @@ typedef struct FRAMED{
 	int centerFeature = -1;											/// index of the roi central feature
 	Mat roiDesc;													/// region of interest descriptors
 	bool hasRoi = false;
-
 	map<String, results_t*> results;
 } framed;
 
@@ -187,7 +186,7 @@ void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, vecto
 /**
  *
  */
-void generateFinalPointClusters(IntIntListMap* clusterMap, IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<int32_t>* labels, vector<KeyPoint>* keypoints);
+void generateFinalPointClusters(vector<int32_t>* roiFeatures, IntIntListMap* clusterMap, IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<int32_t>* labels, vector<KeyPoint>* keypoints);
 
 /**
  * Get the true count of objects from the given folder. The
@@ -198,11 +197,6 @@ void getFrameTruth(String truthFolder, vector<int32_t>& truth);
  *
  */
 Mat getDistanceDataset(vector<int>roiIdx, Mat descriptors);
-
-/**
- * map sample features to their clusters
- */
-void getSampleFeatureClusters(vector<int>* roiFeatures, results_t* res);
 
 /**
  * Given the descriptors and their keypoints, find the Mat object representing the colour values
