@@ -192,13 +192,14 @@ int main(int argc, char** argv) {
 			}
 			
 			trackers.add(algorithms, f2, f.rois);
-
 			vcount.roiExtracted = true;
 
 		} 
 
 		if (vcount.roiExtracted ){
+					
 			f.rois.clear();
+			f.rois.reserve(trackers.getObjects().size());
 			trackers.update(f.frame);
 			RNG rng(12345);
 			Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));
@@ -206,6 +207,8 @@ int main(int argc, char** argv) {
 				rectangle(frame, trackers.getObjects()[i], value, 2, 8, 0);
 				f.rois.push_back(trackers.getObjects()[i]);
 			}
+			
+			
 		}
 
 		display("frame", frame);
@@ -224,7 +227,7 @@ int main(int argc, char** argv) {
 				Mat dset = getDescriptorDataset(vcount.frameHistory, vcount.step, f.descriptors);
 
 				results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true);
-				generateFinalPointClusters(&f.roiFeatures, res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);			
+				generateFinalPointClusters(f.roiFeatures, res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);			
 				boxStructure(res1->finalPointClusters, f.keypoints, f.rois, res1->boxStructures, frame);
 				//extendBoxClusters(frame, res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
 				generateClusterImages(f.frame, res1);
@@ -243,7 +246,18 @@ int main(int argc, char** argv) {
 					printEstimates(vcount.descriptorsEstimatesFile, res1->odata);
 					printClusterEstimates(vcount.descriptorsClusterFile, res1->odata, res1->cest);	
 				}
+				
+				/*vector<Rect2d> rects;
+				for(uint i = 0; i < res1->boxStructures->size(); i++){
+					box_structure bs = res1->boxStructures->at(i);
+					rects.push_back(bs.box);
+				}
+				printf("rects have %lu\n", rects.size());
+				trackers.add(algorithms, f.frame, rects);
+				printf("Tracking %lu objects\n", trackers.getObjects().size());
+				* */
 			}
+			
 			if(vcount.frameHistory.size() > 0 &&(parser.has("i") || parser.has("f"))){
 				
 				if(colourSel.minPts == -1){
@@ -324,7 +338,7 @@ int main(int argc, char** argv) {
 					}					
 					colourSel.selectedDesc = selDesc.clone();
 					
-					Mat roiDesc;
+					vector<Mat> roiDesc;
 					findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.rois, colourSel.roiFeatures, roiDesc);					
 					printf("colourSel.selectedKeypoints.size = %lu selDesc.rows = %d\n", colourSel.selectedKeypoints.size(), selDesc.rows);
 					
@@ -348,7 +362,7 @@ int main(int argc, char** argv) {
 						//dataset = colourSel.selectedDesc.clone();
 						printf("Clustering selected keypoints in descriptor space\n\n\n");
 						results_t* selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true);
-						generateFinalPointClusters(&colourSel.roiFeatures, selDescRes->clusterMap, selDescRes->roiClusterPoints, 
+						generateFinalPointClusters(colourSel.roiFeatures, selDescRes->clusterMap, selDescRes->roiClusterPoints, 
 													selDescRes->finalPointClusters, selDescRes->labels, 
 													selDescRes->keypoints);
 															

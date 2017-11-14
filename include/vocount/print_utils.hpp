@@ -18,7 +18,7 @@ void printClusterEstimates(ofstream& myfile, map<String, int32_t>* estimates, ve
 /***
  *
  */
-void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<int>& roiFeatures, results_t* res, int i);
+void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<vector<int32_t>>& roiFeatures, results_t* res, int i);
 
 /**
  *

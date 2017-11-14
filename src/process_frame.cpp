@@ -128,25 +128,27 @@ double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vec
 	return total;
 }
 
-void generateFinalPointClusters(vector<int32_t>* roiFeatures, IntIntListMap* clusterMap, IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<int32_t>* labels, vector<KeyPoint>* keypoints){
+void generateFinalPointClusters(vector<vector<int32_t>>& roiFeatures, IntIntListMap* clusterMap, IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<int32_t>* labels, vector<KeyPoint>* keypoints){
 	set<int32_t> st;
-	for (vector<int32_t>::iterator it = roiFeatures->begin(); it != roiFeatures->end(); ++it) {
-		int* key;
-		int k = labels->at(*it);
-		//res->objectClusters->insert(k);
-		key = &k;
-		IntArrayList* list = (IntArrayList *)g_hash_table_lookup(roiClusterPoints, key);
-		
-		if(list == NULL){
-			key = (int *)malloc(sizeof(int));
-			*key = k;
-			list = int_array_list_init_size(roiFeatures->size());
-			g_hash_table_insert(roiClusterPoints, key, list);
-			st.insert(k);
+	for(uint i = 0; i < roiFeatures.size(); i++){
+		for (vector<int32_t>::iterator it = roiFeatures[i].begin(); it != roiFeatures[i].end(); ++it) {
+			int* key;
+			int k = labels->at(*it);
+			//res->objectClusters->insert(k);
+			key = &k;
+			IntArrayList* list = (IntArrayList *)g_hash_table_lookup(roiClusterPoints, key);
+			
+			if(list == NULL){
+				key = (int *)malloc(sizeof(int));
+				*key = k;
+				list = int_array_list_init_size(roiFeatures[i].size());
+				g_hash_table_insert(roiClusterPoints, key, list);
+				st.insert(k);
+			}
+					
+			int_array_list_append(list, *it);
+			
 		}
-				
-		int_array_list_append(list, *it);
-		
 	}
 	
 	for (set<int32_t>::iterator it = st.begin(); it != st.end(); ++it){
@@ -382,8 +384,16 @@ double calcDistanceL1(Point2f f1, Point2f f2){
 /**
  * Find the roi features and at the same time find the central feature.
  */
-int32_t findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d>& rois, vector<int>& roiFeatures, Mat& roiDesc){
+int32_t findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d>& rois, vector<vector<int32_t>>& roiFeatures, vector<Mat>& roiDesc){
 	printf("f.rois has %lu\n", rois.size());
+	roiFeatures.reserve(rois.size());
+	roiDesc.reserve(rois.size());
+	
+	for(uint i = 0; i < rois.size(); i++){
+		roiFeatures.push_back(vector<int32_t>());
+		roiDesc.push_back(Mat());
+	}
+	
 	Rect2d r = rois[0];
 
 	Point2f p;
@@ -392,26 +402,32 @@ int32_t findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rec
 	p.y = (r.y + r.height)/2.0f;
 	double distance;
 	int32_t centerFeature = -1;
-	for(uint i = 0; i < keypoints.size(); ++i){		
-		if(rois[0].contains(keypoints[i].pt)){
-			roiFeatures.push_back(i);
+	for(uint i = 0; i < keypoints.size(); ++i){
+		uint j = 0;
+		
+		while(j < rois.size()){		
+		
+			if(rois[j].contains(keypoints[i].pt)){
+				roiFeatures[j].push_back(i);
 
-			// find the center feature index
-			if(centerFeature == -1){
-				centerFeature = i;
-				distance = calcDistanceL1(p, keypoints[i].pt);
-			} else {
-				double d1 = calcDistanceL1(p, keypoints[i].pt);
-
-				if(d1 < distance){
-					distance = d1;
+				// find the center feature index
+				if(centerFeature == -1){
 					centerFeature = i;
-				}
-			}
+					distance = calcDistanceL1(p, keypoints[i].pt);
+				} else {
+					double d1 = calcDistanceL1(p, keypoints[i].pt);
 
-			// create the roi descriptor
-			roiDesc.push_back(descriptors.row(i));
-			
+					if(d1 < distance){
+						distance = d1;
+						centerFeature = i;
+					}
+				}
+
+				// create the roi descriptor
+				roiDesc[j].push_back(descriptors.row(i));
+				
+			}
+			j++;
 		}
 	}
 	//printf("roiDesc had %d rows\n", roiDesc.rows);

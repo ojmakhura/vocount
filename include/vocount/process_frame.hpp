@@ -38,7 +38,7 @@ static 	String truthCount = "Actual";
 typedef struct {
 	int minPts = -1;
     IntIntListMap* clusterKeypointIdx; 						/// maps labels to the keypoint indices
-	vector<int32_t> roiFeatures;
+	vector<vector<int32_t>> roiFeatures;
 	Mat selectedDesc;
 	vector<KeyPoint> selectedKeypoints;
 	set<int32_t> selectedClusters;
@@ -81,9 +81,9 @@ typedef struct FRAMED{
 		gray;													/// hdbscan cluster
 	vector<KeyPoint> keypoints; 									/// Frame keypoints
 	vector<Rect2d> rois;														/// region of interest rectangle
-	vector<int> roiFeatures;										/// indices of the features inside the roi
+	vector<vector<int32_t>> roiFeatures;										/// indices of the features inside the roi
 	int centerFeature = -1;											/// index of the roi central feature
-	Mat roiDesc;													/// region of interest descriptors
+	vector<Mat> roiDesc;													/// region of interest descriptors
 	bool hasRoi = false;
 	map<String, results_t*> results;
 } framed;
@@ -171,7 +171,7 @@ vector<KeyPoint> getAllMatchedKeypoints(framed& f);
 /**
  *
  */
-int32_t findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d>& rois, vector<int>& roiFeatures, Mat& roiDesc);
+int32_t findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d>& rois, vector<vector<int32_t>>& roiFeatures, vector<Mat>& roiDesc);
 
 /**
  *
@@ -186,7 +186,7 @@ void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, vecto
 /**
  *
  */
-void generateFinalPointClusters(vector<int32_t>* roiFeatures, IntIntListMap* clusterMap, IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<int32_t>* labels, vector<KeyPoint>* keypoints);
+void generateFinalPointClusters(vector<vector<int32_t>>& roiFeatures, IntIntListMap* clusterMap, IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<int32_t>* labels, vector<KeyPoint>* keypoints);
 
 /**
  * Get the true count of objects from the given folder. The
