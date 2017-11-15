@@ -246,23 +246,6 @@ int main(int argc, char** argv) {
 					printEstimates(vcount.descriptorsEstimatesFile, res1->odata);
 					printClusterEstimates(vcount.descriptorsClusterFile, res1->odata, res1->cest);	
 				}
-				
-				// We found some objects, let's add them to the tracker
-				/*vector<Rect2d> rects;
-				algorithms.clear();
-				for(uint i = 0; i < res1->boxStructures->size(); i++){
-					box_structure bs = res1->boxStructures->at(i);
-					rects.push_back(bs.box);
-					algorithms.push_back(createTrackerByName(vcount.trackerAlgorithm));
-					//trackers.add(createTrackerByName(vcount.trackerAlgorithm), f.frame, bs.box);
-					//cout << "Added object " << i << endl;
-				}
-				printf("rects have %lu\n", rects.size());
-				trackers = MultiTracker();
-				trackers.add(algorithms, f.frame, rects);
-				printf("Tracking %lu objects\n", trackers.getObjects().size());
-				* */
-				
 			}
 			
 			if(vcount.frameHistory.size() > 0 &&(parser.has("i") || parser.has("f"))){
@@ -354,7 +337,11 @@ int main(int argc, char** argv) {
 						Mat ds = getImageSpaceDataset(colourSel.selectedKeypoints);
 						results_t* idxClusterRes = do_cluster(NULL, ds, colourSel.selectedKeypoints, 1, 3, true);
 						set<int> ss(idxClusterRes->labels->begin(), idxClusterRes->labels->end());
-						//printf("We found %lu objects by index points clustering.\n", ss.size() - 1);
+						printf("We found %lu objects by index points clustering.\n", ss.size() - 1);
+						int lb = 0;
+						IntArrayList *zero = (IntArrayList *) g_hash_table_lookup(idxClusterRes->clusterMap, &lb);
+						printf("Cluster 0 has %d elements\n", zero->size);
+						
 						f.results["im_space"] = idxClusterRes;
 						
 					}				
@@ -372,13 +359,15 @@ int main(int argc, char** argv) {
 						generateFinalPointClusters(colourSel.roiFeatures, selDescRes->clusterMap, selDescRes->roiClusterPoints, 
 													selDescRes->finalPointClusters, selDescRes->labels, 
 													selDescRes->keypoints);
-															
-						boxStructure(selDescRes->finalPointClusters, colourSel.selectedKeypoints, f.rois, selDescRes->boxStructures, frame);
+						getBoxStructure(selDescRes, f.rois, frame);								
+						//boxStructure(selDescRes->finalPointClusters, colourSel.selectedKeypoints, f.rois, selDescRes->boxStructures, frame);
 						//extendBoxClusters(frame, selDescRes->boxStructures, colourSel.selectedKeypoints, selDescRes->finalPointClusters, 
 						//					selDescRes->clusterMap, selDescRes->distancesMap);
 						generateClusterImages(f.frame, selDescRes);
 						createBoxStructureImages(selDescRes->boxStructures, selDescRes->keyPointImages);
-						
+						int lb = 0;
+						IntArrayList *zero = (IntArrayList *) g_hash_table_lookup(selDescRes->clusterMap, &lb);
+						printf("Cluster 0 has %d elements\n", zero->size);
 						cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 						selDescRes->total = countPrint(selDescRes->roiClusterPoints, selDescRes->finalPointClusters, 
 														selDescRes->cest, selDescRes->selectedFeatures, selDescRes->lsize);

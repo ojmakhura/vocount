@@ -531,7 +531,6 @@ void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame){
 			if(idx == -1){
 				res->boxStructures->push_back(*it);
 			} else{ /// The rect exist s merge the points
-				printf("Merging structures\n");
 				box_structure& strct = res->boxStructures->at(idx);
 				strct.points.insert(strct.points.begin(), it->points.begin(), it->points.end());
 			}
