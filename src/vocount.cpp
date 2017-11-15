@@ -206,9 +206,7 @@ int main(int argc, char** argv) {
 			for(size_t i = 0; i < trackers.getObjects().size(); i++){
 				rectangle(frame, trackers.getObjects()[i], value, 2, 8, 0);
 				f.rois.push_back(trackers.getObjects()[i]);
-			}
-			
-			
+			}			
 		}
 
 		display("frame", frame);
@@ -227,8 +225,10 @@ int main(int argc, char** argv) {
 				Mat dset = getDescriptorDataset(vcount.frameHistory, vcount.step, f.descriptors);
 
 				results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true);
+				printf("Result confidence = %d\n", res1->validity);
 				generateFinalPointClusters(f.roiFeatures, res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);			
-				boxStructure(res1->finalPointClusters, f.keypoints, f.rois, res1->boxStructures, frame);
+				//boxStructure(res1->finalPointClusters, f.keypoints, f.rois, res1->boxStructures, frame);
+				getBoxStructure(res1, f.rois, frame);
 				//extendBoxClusters(frame, res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
 				generateClusterImages(f.frame, res1);
 				createBoxStructureImages(res1->boxStructures, res1->keyPointImages);
@@ -247,15 +247,22 @@ int main(int argc, char** argv) {
 					printClusterEstimates(vcount.descriptorsClusterFile, res1->odata, res1->cest);	
 				}
 				
+				// We found some objects, let's add them to the tracker
 				/*vector<Rect2d> rects;
+				algorithms.clear();
 				for(uint i = 0; i < res1->boxStructures->size(); i++){
 					box_structure bs = res1->boxStructures->at(i);
 					rects.push_back(bs.box);
+					algorithms.push_back(createTrackerByName(vcount.trackerAlgorithm));
+					//trackers.add(createTrackerByName(vcount.trackerAlgorithm), f.frame, bs.box);
+					//cout << "Added object " << i << endl;
 				}
 				printf("rects have %lu\n", rects.size());
+				trackers = MultiTracker();
 				trackers.add(algorithms, f.frame, rects);
 				printf("Tracking %lu objects\n", trackers.getObjects().size());
 				* */
+				
 			}
 			
 			if(vcount.frameHistory.size() > 0 &&(parser.has("i") || parser.has("f"))){

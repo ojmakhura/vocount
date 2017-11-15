@@ -269,5 +269,11 @@ void calculateHistogram(box_structure& bst);
  * 
  */
 void expandClusters(results_t* res); 
+
+/**
+ * 
+ * 
+ */ 
+void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame);
   
 #endif
