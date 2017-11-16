@@ -230,8 +230,7 @@ int main(int argc, char** argv) {
 				results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true);
 				printf("Result confidence = %d\n", res1->validity);
 				generateFinalPointClusters(f.roiFeatures, res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);			
-				getBoxStructure(res1, f.rois, frame);
-				//extendBoxClusters(frame, res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
+				getBoxStructure(res1, f.rois, frame, false);
 				generateClusterImages(f.frame, res1);
 				createBoxStructureImages(res1->boxStructures, res1->keyPointImages);
 				//printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
@@ -240,7 +239,7 @@ int main(int argc, char** argv) {
 				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 
-				f.results["keypoints"] = res1;
+				f.results["descriptors"] = res1;
 				
 				if(parser.has("o")){
 					generateOutputData(vcount, f.frame, f.keypoints, f.roiFeatures, res1, f.i);
@@ -250,7 +249,7 @@ int main(int argc, char** argv) {
 				}
 			}
 			
-			if(vcount.frameHistory.size() > 0 &&(parser.has("i") || parser.has("f"))){
+			if(vcount.frameHistory.size() > 0 && (parser.has("i") || parser.has("f") || parser.has("di") || parser.has("df") || parser.has("dfi"))){
 				
 				if(colourSel.minPts == -1){
 					printf("Finding proper value of minPts\n");
@@ -346,6 +345,8 @@ int main(int argc, char** argv) {
 						
 						f.results["im_space"] = idxClusterRes;
 						
+						if(parser.has("di") || parser.has("dfi")){
+						}
 					}				
 					
 					/****************************************************************************************************/
@@ -361,7 +362,7 @@ int main(int argc, char** argv) {
 						generateFinalPointClusters(colourSel.roiFeatures, selDescRes->clusterMap, selDescRes->roiClusterPoints, 
 													selDescRes->finalPointClusters, selDescRes->labels, 
 													selDescRes->keypoints);
-						getBoxStructure(selDescRes, f.rois, frame);								
+						getBoxStructure(selDescRes, f.rois, frame, true);								
 						//extendBoxClusters(frame, selDescRes->boxStructures, colourSel.selectedKeypoints, selDescRes->finalPointClusters, 
 						//					selDescRes->clusterMap, selDescRes->distancesMap);
 						generateClusterImages(f.frame, selDescRes);
@@ -383,9 +384,14 @@ int main(int argc, char** argv) {
 							printClusterEstimates(vcount.selDescClusterFile, selDescRes->odata, selDescRes->cest);	
 						}
 						
+						if(parser.has("df") || parser.has("dfi")){
+							
+						}
 					}
 				}
 			}
+			
+			
 		}
 
 		maintaintHistory(vcount, f);

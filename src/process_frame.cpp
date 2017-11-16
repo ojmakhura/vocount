@@ -6,6 +6,7 @@
  */
 
 #include "vocount/process_frame.hpp"
+#include <opencv2/tracking.hpp>
 #include <fstream>
 #include <opencv/cv.hpp>
 #include <opencv2/imgproc.hpp>
@@ -180,6 +181,7 @@ int rectExist(vector<box_structure>& structures, Rect& r){
 	return -1;
 }
 
+
 /**
  * 
  * 
@@ -196,14 +198,14 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 
 			// shift the roi to get roi for a possible new object
 			Rect n_rect = mbs.box;
-
+			
 			Point pp = pshift;
 			n_rect = n_rect + pp;
-			
-			if(n_rect.x < 0 || n_rect.y < 0 || (n_rect.x + n_rect.width) >= frame.cols || (n_rect.y + n_rect.height) >= frame.rows){
+						
+			//if(n_rect.x < 0 || n_rect.y < 0 || (n_rect.x + n_rect.width) >= frame.cols || (n_rect.y + n_rect.height) >= frame.rows){
 				//cout << "Skipping " << n_rect << endl;
 				//continue;
-			}
+			//}
 			
 			// check that the rect does not already exist
 			int idx = rectExist(*boxStructures, n_rect);
@@ -212,7 +214,7 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 				bst.box = n_rect;
 				bst.points.push_back(point);
 								
-				cout << frame.size() << " -- " << mbs.box << " : " << n_rect;
+				//cout << mbs.box << " : " << n_rect;
 				
 				if(n_rect.x < 0){
 					n_rect.width += n_rect.x;
@@ -240,11 +242,11 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 				double area2 = n_rect.width * n_rect.width;
 				double ratio = area2/area1;
 				if(ratio < 0.2){
-					cout << "Ratio is " << ratio<< " Skipping " << n_rect << endl;
+					//cout << "Ratio is " << ratio<< " Skipping " << n_rect << endl;
 					continue;
 				}
 				
-				cout << " (" << n_rect << ") compare ";
+				//cout << " (" << n_rect << ") compare ";
 				
 				//if(n_rect.x < 0 || ){
 				//}
@@ -257,7 +259,7 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 				cvtColor(mbs.img_, g1, COLOR_RGB2GRAY);
 				cvtColor(bst.img_, g2, COLOR_RGB2GRAY);
 				bst.momentsCompare = matchShapes(g1, g2, CONTOURS_MATCH_I3, 0);
-				cout << " (" << n_rect << ") compare " << bst.histCompare << " moments compare " << bst.momentsCompare << endl;
+				//cout << " (" << n_rect << ") compare " << bst.histCompare << " moments compare " << bst.momentsCompare << endl;
 				//if(bst.momentsCompare > 0.05){
 					//cout << "Skipping for low similarity" << endl;
 					//continue;
@@ -275,8 +277,52 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
  * Find clusters that have points inside one of the bounding boxes
  * 
  */ 
-void extendBoxClusters(Mat& frame, vector<box_structure>* boxStructures, vector<KeyPoint>& keypoints, map_kp* finalPointClusters, IntIntListMap* clusterMap, IntDoubleListMap* distanceMap){
+void extendBoxClusters(Mat& frame, results_t* res, set<int32_t>& processedClusters){
 	
+	GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	g_hash_table_iter_init (&iter, res->clusterMap);
+	vector<box_structure>* boxStructures = res->boxStructures;
+	printf("Originally found %lu objects\n", boxStructures->size());			
+
+	while (g_hash_table_iter_next (&iter, &key, &value)){
+		int32_t* kk = (int32_t *)key;
+		
+		if(processedClusters.find(*kk) != processedClusters.end()){ // Check the clusters that have not already processed
+			IntArrayList* list = (IntArrayList *)value;
+			vector<int32_t> l1(list->size, -1);
+			int first = -1;
+			KeyPoint first_kp;
+//#pragma omp parallel for	
+			for(int32_t i = 0; i < list->size; i++){
+				KeyPoint& kp = res->keypoints->at(i);
+				for(uint j = 0; j < boxStructures->size(); j++){
+					box_structure& stru = boxStructures->at(j);
+					if(stru.box.contains(kp.pt)){
+						l1[i] = j;
+						stru.points.push_back(kp);
+						if(first == -1){
+							first = j;
+						}
+						break;
+					}
+					
+					if(first != -1){
+						first_kp = kp;
+						break;
+					}
+				}
+			}
+			box_structure& stru = boxStructures->at(first);
+			vector<KeyPoint> kps;
+			getListKeypoints(*(res->keypoints), list, kps);
+			cout << stru.box << " \n" << stru.hist << endl;
+			addToBoxStructure(boxStructures, kps, first_kp, stru, frame);
+		}		
+	}
+	
+	printf("Now has found %lu objects\n", boxStructures->size());
 }
 
 
@@ -494,10 +540,12 @@ bool processOptions(vocount& vcount, CommandLineParser& parser, VideoCapture& ca
 	return true;
 }
 
-void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame){
+void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool extend){
 	vector<vector<box_structure>> b_structures;
+	set<int32_t> processedClusters;
 	
 	for(map_kp::iterator it = res->finalPointClusters->begin(); it != res->finalPointClusters->end(); ++it){
+		processedClusters.insert(it->first);
 		IntArrayList *roiPoints = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, &(it->first));
 		vector<vector<KeyPoint>> kps;
 		if(roiPoints->size > 1){
@@ -540,13 +588,13 @@ void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame){
 				res->boxStructures->push_back(*it);
 			} else{ /// The rect exist s merge the points
 				box_structure& strct = res->boxStructures->at(idx);
-				
-				//if(){
-				//}
-				
 				strct.points.insert(strct.points.begin(), it->points.begin(), it->points.end());
 			}
 		}
+	}
+	
+	if(extend){								
+		extendBoxClusters(frame, res, processedClusters);
 	}
 }
 
@@ -962,8 +1010,7 @@ void calculateHistogram(box_structure& bst){
     // Use the o-th and 1-st channels
     int channels[] = { 0, 1 };
     /// Calculate the histograms for the HSV images
-    //calcHist(const Mat* images, int nimages, const int* channels, InputArray mask, OutputArray hist, int dims, const int* histSize, const float** ranges, bool uniform = true, bool accumulate = false);
-    //calcHist(cv::Mat*, int, int [2], cv::Mat, cv::Mat [3], int, int [2], const float* [2], bool, bool)
     calcHist( &bst.hsv, 1, channels, Mat(), bst.hist, 2, histSize, ranges, true, false );
     normalize( bst.hist, bst.hist, 0, 1, NORM_MINMAX, -1, Mat() );
+    //bst.hist = bst.hist.clone();
 }

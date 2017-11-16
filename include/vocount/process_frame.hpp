@@ -252,7 +252,7 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
  * Find clusters that have points inside one of the bounding boxes
  * 
  */ 
-void extendBoxClusters(Mat& frame, vector<box_structure>* boxStructures, vector<KeyPoint>& keypoints, map_kp* finalPointClusters, IntIntListMap* clusterMap, IntDoubleListMap* distanceMap);
+void extendBoxClusters(Mat& frame, results_t* res, set<int32_t>& processedClusters);
 
 /**
  * 
@@ -270,6 +270,6 @@ void expandClusters(results_t* res);
  * 
  * 
  */ 
-void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame);
+void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool extend);
   
 #endif
