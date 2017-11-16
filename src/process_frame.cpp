@@ -202,7 +202,7 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 			
 			if(n_rect.x < 0 || n_rect.y < 0 || (n_rect.x + n_rect.width) >= frame.cols || (n_rect.y + n_rect.height) >= frame.rows){
 				//cout << "Skipping " << n_rect << endl;
-				continue;
+				//continue;
 			}
 			
 			// check that the rect does not already exist
@@ -212,7 +212,7 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 				bst.box = n_rect;
 				bst.points.push_back(point);
 								
-				//cout << mbs.box << " : " << n_rect;
+				cout << frame.size() << " -- " << mbs.box << " : " << n_rect;
 				
 				if(n_rect.x < 0){
 					n_rect.width += n_rect.x;
@@ -232,15 +232,22 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 					n_rect.height = frame.rows - n_rect.y;
 				}
 				
-				//double area1 = bst.box.width * bst.box.width; 
-				//double area2 = n_rect.width * n_rect.width;
-				//double ratio = area2/area1;
-				//if(ratio < 0.5){
-					//cout << "Ratio is " << ratio<< " Skipping " << n_rect << endl;
-					//continue;
-				//}
+				if(n_rect.height < 1 || n_rect.width < 1){
+					continue;
+				}
 				
-				//cout << " (" << n_rect << ") compare ";
+				double area1 = bst.box.width * bst.box.width; 
+				double area2 = n_rect.width * n_rect.width;
+				double ratio = area2/area1;
+				if(ratio < 0.2){
+					cout << "Ratio is " << ratio<< " Skipping " << n_rect << endl;
+					continue;
+				}
+				
+				cout << " (" << n_rect << ") compare ";
+				
+				//if(n_rect.x < 0 || ){
+				//}
 								
 				bst.img_ = frame(n_rect);
 				calculateHistogram(bst);
@@ -250,11 +257,12 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 				cvtColor(mbs.img_, g1, COLOR_RGB2GRAY);
 				cvtColor(bst.img_, g2, COLOR_RGB2GRAY);
 				bst.momentsCompare = matchShapes(g1, g2, CONTOURS_MATCH_I3, 0);
-				//cout << " (" << n_rect << ") compare " << bst.histCompare << " moments compare " << bst.momentsCompare << endl;
+				cout << " (" << n_rect << ") compare " << bst.histCompare << " moments compare " << bst.momentsCompare << endl;
 				//if(bst.momentsCompare > 0.05){
 					//cout << "Skipping for low similarity" << endl;
 					//continue;
 				//}
+								
 				boxStructures->push_back(bst);
 			} else{
 				(*boxStructures)[idx].points.push_back(point);
@@ -532,42 +540,13 @@ void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame){
 				res->boxStructures->push_back(*it);
 			} else{ /// The rect exist s merge the points
 				box_structure& strct = res->boxStructures->at(idx);
+				
+				//if(){
+				//}
+				
 				strct.points.insert(strct.points.begin(), it->points.begin(), it->points.end());
 			}
 		}
-	}
-}
-
-/**
- * Creates box_structure objects from final point clusters
- * 
- */ 
-void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, vector<Rect2d>& rois, vector<box_structure>* boxStructures, Mat& frame){
-	box_structure mbs;
-	mbs.box = rois[0];
-	mbs.img_ = frame(mbs.box);
-	calculateHistogram(mbs);
-	mbs.histCompare = compareHist(mbs.hist, mbs.hist, CV_COMP_CORREL);
-	Mat g1;
-	cvtColor(mbs.img_, g1, COLOR_RGB2GRAY);
-	mbs.momentsCompare = matchShapes(g1, g1, CONTOURS_MATCH_I3, 0);
-	boxStructures->push_back(mbs);
-	//cout << "First box : " << boxStructures->at(0).box << " - " << boxStructures->at(0).momentsCompare << endl;
-
-	for(map_kp::iterator it = finalPointClusters->begin(); it != finalPointClusters->end(); ++it){
-		vector<KeyPoint>& kps = it->second;
-		KeyPoint kp;
-		// here we are looking for the point that is inside the roi for use as a point
-		// of reference with the other cluster points
-		for(vector<KeyPoint>::iterator itr = kps.begin(); itr != kps.end(); ++itr){
-			if(rois[0].contains(itr->pt)){
-				kp = *itr;
-				break;
-			}
-		}
-		
-		mbs.points.push_back(kp);
-		addToBoxStructure(boxStructures, it->second, kp, mbs, frame);
 	}
 }
 

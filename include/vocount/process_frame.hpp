@@ -34,6 +34,7 @@ static String clusterSum = "Cluster Sum";
 static String clusterAverage = "Cluster Avg.";
 static String boxEst = "Box Est.";
 static 	String truthCount = "Actual";
+static String validityStr = "Validity";
 
 typedef struct {
 	int minPts = -1;
@@ -177,11 +178,6 @@ int32_t findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rec
  *
  */
 bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
-
-/**
- *
- */
-void boxStructure(map_kp* finalPointClusters, vector<KeyPoint>& keypoints, vector<Rect2d>& rois, vector<box_structure>* boxStructures, Mat& frame);
 
 /**
  *

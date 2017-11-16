@@ -24,7 +24,8 @@ void printEstimates(ofstream& myfile, map<String, int32_t>* estimates){
 	myfile << estimates->at(clusterSum) << ",";
 	myfile << estimates->at(clusterAverage) << ",";
 	myfile << estimates->at(boxEst) << ",";
-	myfile << estimates->at(truthCount) << "\n";
+	myfile << estimates->at(truthCount) << ",";
+	myfile << estimates->at(validityStr) << "\n";
 	
 	myfile.flush();
 
@@ -163,6 +164,7 @@ void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints
 		(*(res->odata))[clusterAverage] = avg;
 		(*(res->odata))[boxEst] = res->boxStructures->size();
 		(*(res->odata))[frameNum] = i;
+		(*(res->odata))[validityStr] = res->validity;
 
 		if((size_t)i >= vcount.truth.size()){
 			(*(res->odata))[truthCount] = 0;

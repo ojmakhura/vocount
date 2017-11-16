@@ -32,10 +32,13 @@ static void help(){
 			"     [-w=<dataset width>]       		# the number of frames to use for dataset size\n"
 			"     [-t=<truth count dir>]			# The folder that contains binary images for each frame in the video with objects tagged \n"
 			"     [-s]       						# select roi from the first \n"
-			"     [-k]       						# raw keypoints\n"
+			"     [-d]       						# raw descriptors\n"
 			"     [-i]       						# image space clustering\n"
 			"     [-f]       						# filtered keypoints\n"
 			"     [-c]       						# cluster analysis method \n"
+			"     [-df]       						# Combine descriptor clustering and filtered descriptors clustering\n"
+			"     [-di]       						# Combine descriptor clustering and image index based clustering\n"
+			"     [-dfi]       					# Combine descriptor clustering, filtered descriptors and index based clustering\n"
 	        "\n" );
 }
 
@@ -82,7 +85,7 @@ int main(int argc, char** argv) {
 					"{help ||}{o||}{n|1|}"
 					"{v||}{video||}{w|1|}{s||}"
 					"{i||}{c||}{t||}{l||}{ta|BOOSTING|}"
-					"{k||}{f||}");
+					"{d||}{f||}{df||}{di||}{dfi||}");
 
 
 	if (parser.has("help")) {
@@ -117,7 +120,7 @@ int main(int argc, char** argv) {
 		keypointsDir = createDirectory(vcount.destFolder, "keypoints");
 		selectedDir = createDirectory(vcount.destFolder, "selected");
 		
-		if(parser.has("k")){
+		if(parser.has("d") || parser.has("di") || parser.has("df") || parser.has("dfi")){
 			String name = keypointsDir + "/estimates.csv";
 			vcount.descriptorsEstimatesFile.open(name.c_str());
 			vcount.descriptorsEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
@@ -127,7 +130,7 @@ int main(int argc, char** argv) {
 			vcount.descriptorsClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
 		}
 				
-		if(parser.has("f")){
+		if(parser.has("f") || parser.has("df") || parser.has("dfi")){
 			String name = selectedDir + "/estimates.csv";
 			vcount.selDescEstimatesFile.open(name.c_str());
 			vcount.selDescEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
@@ -137,10 +140,10 @@ int main(int argc, char** argv) {
 			vcount.selDescClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
 		}
 		
-		if(parser.has("i")){
+		if(parser.has("i") || parser.has("di") || parser.has("dfi")){
 			String name = indexDir + "/estimates.csv";
 			vcount.indexEstimatesFile.open(name.c_str());
-			vcount.indexEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
+			vcount.indexEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual, Validity\n";
 			
 			name = indexDir + "/ClusterEstimates.csv";
 			vcount.indexClusterFile.open(name.c_str());
@@ -220,14 +223,13 @@ int main(int argc, char** argv) {
 
 			f.hasRoi = vcount.roiExtracted;
 			
-			if(parser.has("k")){
+			if(parser.has("d") || parser.has("di") || parser.has("df") || parser.has("dfi")){
 				f.centerFeature = findROIFeature(f.keypoints, f.descriptors, f.rois, f.roiFeatures, f.roiDesc);
 				Mat dset = getDescriptorDataset(vcount.frameHistory, vcount.step, f.descriptors);
 
 				results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true);
 				printf("Result confidence = %d\n", res1->validity);
 				generateFinalPointClusters(f.roiFeatures, res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);			
-				//boxStructure(res1->finalPointClusters, f.keypoints, f.rois, res1->boxStructures, frame);
 				getBoxStructure(res1, f.rois, frame);
 				//extendBoxClusters(frame, res1->boxStructures, f.keypoints, res1->finalPointClusters, res1->clusterMap, res1->distancesMap);
 				generateClusterImages(f.frame, res1);
@@ -332,7 +334,7 @@ int main(int argc, char** argv) {
 					findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.rois, colourSel.roiFeatures, roiDesc);					
 					printf("colourSel.selectedKeypoints.size = %lu selDesc.rows = %d\n", colourSel.selectedKeypoints.size(), selDesc.rows);
 					
-					if(parser.has("i")){
+					if(parser.has("i") || parser.has("di") || parser.has("dfi")){
 						printf("Clustering selected keypoints in image space\n");
 						Mat ds = getImageSpaceDataset(colourSel.selectedKeypoints);
 						results_t* idxClusterRes = do_cluster(NULL, ds, colourSel.selectedKeypoints, 1, 3, true);
@@ -352,7 +354,7 @@ int main(int argc, char** argv) {
 					/// Create a dataset of descriptors based on the selected colour model
 					/// 
 					/****************************************************************************************************/
-					if(parser.has("f")){
+					if(parser.has("f") || parser.has("df") || parser.has("dfi")){
 						//dataset = colourSel.selectedDesc.clone();
 						printf("Clustering selected keypoints in descriptor space\n\n\n");
 						results_t* selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true);
@@ -360,7 +362,6 @@ int main(int argc, char** argv) {
 													selDescRes->finalPointClusters, selDescRes->labels, 
 													selDescRes->keypoints);
 						getBoxStructure(selDescRes, f.rois, frame);								
-						//boxStructure(selDescRes->finalPointClusters, colourSel.selectedKeypoints, f.rois, selDescRes->boxStructures, frame);
 						//extendBoxClusters(frame, selDescRes->boxStructures, colourSel.selectedKeypoints, selDescRes->finalPointClusters, 
 						//					selDescRes->clusterMap, selDescRes->distancesMap);
 						generateClusterImages(f.frame, selDescRes);
