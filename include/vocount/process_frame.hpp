@@ -221,7 +221,7 @@ Mat getImageSpaceDataset(vector<KeyPoint> keypoint);
 /**
  *
  */
-results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_minPts, bool mapDistances);
+results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_minPts, bool mapDistances, bool singleRun);
 
 /**
  * Takes a hash table of cluster point indices anc creates a map

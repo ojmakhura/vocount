@@ -228,8 +228,8 @@ int main(int argc, char** argv) {
 				f.centerFeature = findROIFeature(f.keypoints, f.descriptors, f.rois, f.roiFeatures, f.roiDesc);
 				Mat dset = getDescriptorDataset(vcount.frameHistory, vcount.step, f.descriptors);
 
-				results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true);
-				printf("Result confidence = %d\n", res1->validity);
+				results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true, true);
+				//printf("Result confidence = %d\n", res1->validity);
 				generateFinalPointClusters(f.roiFeatures, res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);			
 				getBoxStructure(res1, f.rois, frame, false);
 				generateClusterImages(f.frame, res1);
@@ -260,7 +260,7 @@ int main(int argc, char** argv) {
 					colourSel = detectColourSelectionMinPts(frame, f.descriptors, f.keypoints);
 					//Mat kimg = drawKeyPoints(f.frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
 					//display("Selected Keypoints 11", kimg);
-					printf("Finding value of minPts = %d with colourSel.selectedPts as %d from %lu\n", colourSel.minPts, colourSel.selectedDesc.rows, f.keypoints.size());
+					//printf("Finding value of minPts = %d with colourSel.selectedPts as %d from %lu\n", colourSel.minPts, colourSel.selectedDesc.rows, f.keypoints.size());
 				
 				} else {
 					framed ff = vcount.frameHistory[vcount.frameHistory.size()-1];
@@ -305,8 +305,7 @@ int main(int argc, char** argv) {
 								mSize = it->second.size();
 							}
 						}
-						currSelClusters.insert(selC);
-						printf("Prev cluster %d has been found in current frame as %d and has msize = %lu\n", cluster, selC, mSize);			
+						currSelClusters.insert(selC);			
 					}
 						
 					// Need to clear the previous table map
@@ -323,7 +322,6 @@ int main(int argc, char** argv) {
 					/****************************************************************************************************/
 						
 					Mat selDesc;
-					printf("f.keypoints = %lu and f.descriptors = %d \n", f.keypoints.size(), f.descriptors.rows);
 					for (set<int32_t>::iterator itt = colourSel.selectedClusters.begin(); itt != colourSel.selectedClusters.end(); ++itt) {
 						
 						int cluster = *itt;
@@ -334,28 +332,27 @@ int main(int argc, char** argv) {
 					colourSel.selectedDesc = selDesc.clone();
 					
 					vector<Mat> roiDesc;
-					findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.rois, colourSel.roiFeatures, roiDesc);					
-					printf("colourSel.selectedKeypoints.size = %lu selDesc.rows = %d\n", colourSel.selectedKeypoints.size(), selDesc.rows);
+					findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.rois, colourSel.roiFeatures, roiDesc);			
 					
 					if(parser.has("i") || parser.has("di") || parser.has("dfi")){
+						printf("Clustering selected keypoints in image space\n\n\n");
 						Mat ds = getImageSpaceDataset(colourSel.selectedKeypoints);
-						results_t* idxClusterRes = do_cluster(NULL, ds, colourSel.selectedKeypoints, 1, 3, true);
+						results_t* idxClusterRes = do_cluster(NULL, ds, colourSel.selectedKeypoints, 1, 3, true, true);
 						set<int> ss(idxClusterRes->labels->begin(), idxClusterRes->labels->end());
 						printf("We found %lu objects by index points clustering.\n", ss.size() - 1);
 						getKeypointMap(idxClusterRes->clusterMap, &colourSel.selectedKeypoints, *(idxClusterRes->finalPointClusters));
-						//int lb = 0;
-						//IntArrayList *zero = (IntArrayList *) g_hash_table_lookup(idxClusterRes->clusterMap, &lb);
 						
 						f.results["im_space"] = idxClusterRes;						
 						if(parser.has("di") || parser.has("dfi")){
 						}
 						
 						if(parser.has("o")){
-							generateClusterImages(f.frame, idxClusterRes);
+							generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, idxClusterRes, f.i);
 							Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
 							printImage(indexDir, vcount.frameCount, "frame_kp", frm);
-							printf("idxClusterRes->keyPointImages has %lu and clusterMap has %d\n", idxClusterRes->keyPointImages->size(), g_hash_table_size(idxClusterRes->clusterMap));
 							printImages(indexFrameDir, idxClusterRes->keyPointImages, vcount.frameCount);
+							printEstimates(vcount.indexEstimatesFile, idxClusterRes->odata);
+							printClusterEstimates(vcount.indexClusterFile, idxClusterRes->odata, idxClusterRes->cest);	
 						}
 						
 					}				
@@ -369,7 +366,7 @@ int main(int argc, char** argv) {
 					if(parser.has("f") || parser.has("df") || parser.has("dfi")){
 						//dataset = colourSel.selectedDesc.clone();
 						printf("Clustering selected keypoints in descriptor space\n\n\n");
-						results_t* selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true);
+						results_t* selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true, true);
 						generateFinalPointClusters(colourSel.roiFeatures, selDescRes->clusterMap, selDescRes->roiClusterPoints, 
 													selDescRes->finalPointClusters, selDescRes->labels, 
 													selDescRes->keypoints);
@@ -406,6 +403,14 @@ int main(int argc, char** argv) {
 		}
 
 		maintaintHistory(vcount, f);
+	}
+
+#pragma omp parallel for
+	for(uint i = 0; i < vcount.frameHistory.size(); i++){
+		framed& f1 = vcount.frameHistory[i];
+		for(map<String, results_t*>::iterator it = f1.results.begin(); it != f1.results.end(); ++it){
+			cleanResult(it->second);
+		}
 	}
 
     if(vcount.print){

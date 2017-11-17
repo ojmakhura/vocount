@@ -134,20 +134,24 @@ void printImages(String& folder, map<String, Mat>* images, int count){
 }
 
 void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<vector<int32_t>>& roiFeatures, results_t* res, int i){
-	if (vcount.print && g_hash_table_size(res->roiClusterPoints) > 0) {
-
-		(*(res->odata))[sampleSize] = roiFeatures[0].size();
-
+	if (vcount.print) {
 		int selSampleSize = 0;
-
-		GHashTableIter iter;
-		gpointer key;
-		gpointer value;
-		g_hash_table_iter_init (&iter, res->roiClusterPoints);
-		
-		while (g_hash_table_iter_next (&iter, &key, &value)){
-			IntArrayList* list = (IntArrayList*)value;
-			selSampleSize += list->size;
+		if(g_hash_table_size(res->roiClusterPoints) > 0){
+			(*(res->odata))[sampleSize] = roiFeatures[0].size();
+			GHashTableIter iter;
+			gpointer key;
+			gpointer value;
+			g_hash_table_iter_init (&iter, res->roiClusterPoints);
+			
+			while (g_hash_table_iter_next (&iter, &key, &value)){
+				IntArrayList* list = (IntArrayList*)value;
+				selSampleSize += list->size;
+			}
+			(*(res->odata))[boxEst] = res->boxStructures->size();
+		} else{
+			(*(res->odata))[sampleSize] = 0;
+			res->total = 0;
+			(*(res->odata))[boxEst] = g_hash_table_size(res->clusterMap) - 1;
 		}
 
 		(*(res->odata))[selectedSampleSize] = selSampleSize;
@@ -157,7 +161,6 @@ void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints
 		(*(res->odata))[clusterSum] = res->total;
 		int32_t avg = res->total / res->keyPointImages->size();
 		(*(res->odata))[clusterAverage] = avg;
-		(*(res->odata))[boxEst] = res->boxStructures->size();
 		(*(res->odata))[frameNum] = i;
 		(*(res->odata))[validityStr] = res->validity;
 

@@ -377,7 +377,7 @@ void maintaintHistory(vocount& voc, framed& f){
 		framed& f1 = voc.frameHistory.front();
 		
 		for(map<String, results_t*>::iterator it = f1.results.begin(); it != f1.results.end(); ++it){
-			printf("Cleaning results %s\n", it->first.c_str());
+			//printf("Cleaning results %s\n", it->first.c_str());
 			cleanResult(it->second);
 		}
 		
@@ -456,7 +456,6 @@ double calcDistanceL1(Point2f f1, Point2f f2){
  * Find the roi features and at the same time find the central feature.
  */
 int32_t findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d>& rois, vector<vector<int32_t>>& roiFeatures, vector<Mat>& roiDesc){
-	printf("f.rois has %lu\n", rois.size());
 	roiFeatures.reserve(rois.size());
 	roiDesc.reserve(rois.size());
 	
@@ -844,7 +843,7 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 					} else{
 						colourSelection.selectedDesc.push_back(xx);
 					}
-					printf("%%%%%%%%%%%%%% added cluster %d of size %d\n", *k, list->size);
+					//printf("%%%%%%%%%%%%%% added cluster %d of size %d\n", *k, list->size);
 					break;
 				} else if (c == 'q'){
 					break;
@@ -898,7 +897,7 @@ results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints){
 	return res;
 }
 
-results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_minPts, bool analyse){
+results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_minPts, bool analyse, bool singleRun){
 	
 	//results_t res;
 	if(res == NULL){
@@ -939,11 +938,15 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 			res->validity = hdbscan_analyse_stats(res->stats);
 		}
 		
+		if(singleRun){
+			break;
+		}
+		
 		i++;
 	}
 	res->ogsize = keypoints.size();
 
-	printf("------- Selected max clustering size = %d and cluster table has %d\n", res->minPts, g_hash_table_size(res->clusterMap));
+	//printf("------- Selected max clustering size = %d and cluster table has %d\n", res->minPts, g_hash_table_size(res->clusterMap));
 	
 	return res;
 }
