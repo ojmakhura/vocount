@@ -284,7 +284,7 @@ void extendBoxClusters(Mat& frame, results_t* res, set<int32_t>& processedCluste
 	gpointer value;
 	g_hash_table_iter_init (&iter, res->clusterMap);
 	vector<box_structure>* boxStructures = res->boxStructures;
-	printf("Originally found %lu objects\n", boxStructures->size());			
+	//printf("Originally found %lu objects\n", boxStructures->size());			
 
 	while (g_hash_table_iter_next (&iter, &key, &value)){
 		int32_t* kk = (int32_t *)key;
@@ -322,9 +322,8 @@ void extendBoxClusters(Mat& frame, results_t* res, set<int32_t>& processedCluste
 		}		
 	}
 	
-	printf("Now has found %lu objects\n", boxStructures->size());
+	//printf("Now has found %lu objects\n", boxStructures->size());
 }
-
 
 /**
  *
@@ -753,13 +752,8 @@ void getKeypointMap(IntIntListMap* listMap, vector<KeyPoint>* keypoints, map_kp&
 
 	while (g_hash_table_iter_next (&iter, &key, &value)){
 		IntArrayList* clusterLabels = (IntArrayList*)value;
-		//int32_t* idxList = (int32_t* )clusterLabels->data;
 		int32_t* k = (int32_t *) key;
 		getListKeypoints(*keypoints, clusterLabels, mp[*k]);
-		/*for(int i = 0; i < clusterLabels->size; i++){
-			int idx = idxList[i];
-			mp[k].push_back((*keypoints)[idx]);
-		}*/
 	}
 }
 

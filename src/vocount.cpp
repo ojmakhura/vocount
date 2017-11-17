@@ -160,6 +160,7 @@ int main(int argc, char** argv) {
     	String selectedFrameDir;
 
         if(parser.has("o")){
+			printImage(vcount.destFolder, vcount.frameCount, "frame", frame);
     		colourFrameDir = createDirectory(colourDir, to_string(vcount.frameCount));
     		indexFrameDir = createDirectory(indexDir, to_string(vcount.frameCount));
     		keypointsFrameDir = createDirectory(keypointsDir, to_string(vcount.frameCount));
@@ -242,6 +243,9 @@ int main(int argc, char** argv) {
 				f.results["descriptors"] = res1;
 				
 				if(parser.has("o")){
+					Mat frm = drawKeyPoints(frame, f.keypoints, Scalar(0, 0, 255), -1);
+					printImage(keypointsDir, vcount.frameCount, "frame_kp", frm);
+					
 					generateOutputData(vcount, f.frame, f.keypoints, f.roiFeatures, res1, f.i);
 					printImages(keypointsFrameDir, res1->keyPointImages, vcount.frameCount);
 					printEstimates(vcount.descriptorsEstimatesFile, res1->odata);
@@ -334,19 +338,26 @@ int main(int argc, char** argv) {
 					printf("colourSel.selectedKeypoints.size = %lu selDesc.rows = %d\n", colourSel.selectedKeypoints.size(), selDesc.rows);
 					
 					if(parser.has("i") || parser.has("di") || parser.has("dfi")){
-						printf("Clustering selected keypoints in image space\n");
 						Mat ds = getImageSpaceDataset(colourSel.selectedKeypoints);
 						results_t* idxClusterRes = do_cluster(NULL, ds, colourSel.selectedKeypoints, 1, 3, true);
 						set<int> ss(idxClusterRes->labels->begin(), idxClusterRes->labels->end());
 						printf("We found %lu objects by index points clustering.\n", ss.size() - 1);
-						int lb = 0;
-						IntArrayList *zero = (IntArrayList *) g_hash_table_lookup(idxClusterRes->clusterMap, &lb);
-						printf("Cluster 0 has %d elements\n", zero->size);
+						getKeypointMap(idxClusterRes->clusterMap, &colourSel.selectedKeypoints, *(idxClusterRes->finalPointClusters));
+						//int lb = 0;
+						//IntArrayList *zero = (IntArrayList *) g_hash_table_lookup(idxClusterRes->clusterMap, &lb);
 						
-						f.results["im_space"] = idxClusterRes;
-						
+						f.results["im_space"] = idxClusterRes;						
 						if(parser.has("di") || parser.has("dfi")){
 						}
+						
+						if(parser.has("o")){
+							generateClusterImages(f.frame, idxClusterRes);
+							Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
+							printImage(indexDir, vcount.frameCount, "frame_kp", frm);
+							printf("idxClusterRes->keyPointImages has %lu and clusterMap has %d\n", idxClusterRes->keyPointImages->size(), g_hash_table_size(idxClusterRes->clusterMap));
+							printImages(indexFrameDir, idxClusterRes->keyPointImages, vcount.frameCount);
+						}
+						
 					}				
 					
 					/****************************************************************************************************/
@@ -362,22 +373,21 @@ int main(int argc, char** argv) {
 						generateFinalPointClusters(colourSel.roiFeatures, selDescRes->clusterMap, selDescRes->roiClusterPoints, 
 													selDescRes->finalPointClusters, selDescRes->labels, 
 													selDescRes->keypoints);
-						getBoxStructure(selDescRes, f.rois, frame, true);								
-						//extendBoxClusters(frame, selDescRes->boxStructures, colourSel.selectedKeypoints, selDescRes->finalPointClusters, 
-						//					selDescRes->clusterMap, selDescRes->distancesMap);
+						getBoxStructure(selDescRes, f.rois, frame, false);								
 						generateClusterImages(f.frame, selDescRes);
 						createBoxStructureImages(selDescRes->boxStructures, selDescRes->keyPointImages);
-						int lb = 0;
-						IntArrayList *zero = (IntArrayList *) g_hash_table_lookup(selDescRes->clusterMap, &lb);
-						printf("Cluster 0 has %d elements\n", zero->size);
+						//int lb = 0;
+						//IntArrayList *zero = (IntArrayList *) g_hash_table_lookup(selDescRes->clusterMap, &lb);
+						//printf("Cluster 0 has %d elements\n", zero->size);
 						cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 						selDescRes->total = countPrint(selDescRes->roiClusterPoints, selDescRes->finalPointClusters, 
 														selDescRes->cest, selDescRes->selectedFeatures, selDescRes->lsize);
 						cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 													
-						f.results["sel_keypoints"] = selDescRes;
 						
 						if(parser.has("o")){
+							Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
+							printImage(selectedDir, vcount.frameCount, "frame_kp", frm);
 							generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, selDescRes, f.i);
 							printImages(selectedFrameDir, selDescRes->keyPointImages, vcount.frameCount);
 							printEstimates(vcount.selDescEstimatesFile, selDescRes->odata);
@@ -387,6 +397,7 @@ int main(int argc, char** argv) {
 						if(parser.has("df") || parser.has("dfi")){
 							
 						}
+						f.results["sel_keypoints"] = selDescRes;
 					}
 				}
 			}

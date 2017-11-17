@@ -136,11 +136,6 @@ void printImages(String& folder, map<String, Mat>* images, int count){
 void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<vector<int32_t>>& roiFeatures, results_t* res, int i){
 	if (vcount.print && g_hash_table_size(res->roiClusterPoints) > 0) {
 
-		printImage(vcount.destFolder, vcount.frameCount, "frame", frame);
-
-		Mat ff = drawKeyPoints(frame, keypoints, Scalar(0, 0, 255), -1);
-		printImage(vcount.destFolder, vcount.frameCount, "frame_kp", ff);
-
 		(*(res->odata))[sampleSize] = roiFeatures[0].size();
 
 		int selSampleSize = 0;
