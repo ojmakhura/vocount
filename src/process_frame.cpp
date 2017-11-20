@@ -351,8 +351,11 @@ void generateClusterImages(Mat frame, results_t* res){
 		double rc = ddata[1]/ddata[0];
 		double rd = ddata[3]/ddata[2];
 		
-		double *rcm = (double *)g_hash_table_lookup(res->stats, strdup(get_max_cr()));
-		double *rdm = (double *)g_hash_table_lookup(res->stats, strdup(get_max_dr()));
+		//TODO: Clean this memory leak
+		const char* maxCrStr = get_max_cr();
+		const char* maxDrStr = get_max_dr();
+		double *rcm = (double *)g_hash_table_lookup(res->stats, maxCrStr);
+		double *rdm = (double *)g_hash_table_lookup(res->stats, maxDrStr);
 		
 		double fc = ((*rcm - rc) / (*rcm)) * 100;
 		double fd = ((*rdm - rd) / (*rdm)) * 100;
@@ -618,8 +621,7 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
 	(*keyPointImages)[ss] = img_bounds;
 }
 
-void getFrameTruth(String truthFolder, vector<int32_t>& truth){
-	//map<int, int> trueCount;
+void getFrameTruth(String truthFolder, map<int, int>& truth){
 	DIR*     dir;
 	dirent*  pdir;
 	dir = opendir(truthFolder.c_str());     // open current directory
@@ -639,7 +641,7 @@ void getFrameTruth(String truthFolder, vector<int32_t>& truth){
 
 			char* pch = strtok (pdir->d_name," ");
 			int fnum = atoi(pch)-1;
-			truth.insert(truth.begin() + fnum, int(max));
+			truth[fnum] = int(max);
 		}
 		pdir = readdir(dir);
 	}
@@ -778,12 +780,13 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 	map_kp clusterKeyPointsMap;
 	selection_t colourSelection;
 	colourSelection.minPts = 2;
-
+	hdbscan scan(3, DATATYPE_FLOAT);
+	scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);	
+	
 	for(int i = 3; i < 30; i++){
 
 		printf("\n\n >>>>>>>>>>>> Clustering for minPts = %d\n", i);
-		hdbscan scan(i, DATATYPE_FLOAT);
-		scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);		
+			
 		set<int> lsetkps(scan.clusterLabels, scan.clusterLabels + scan.numPoints);	
 			
 		IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);		
@@ -810,7 +813,7 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 			}
 		}
 		hdbscan_destroy_distance_map_table(distancesMap);
-
+		scan.reRun(i + 1);
 	}
 	
 	colourSelection.clusterKeypointIdx = clusterKeypointIdxMap;
@@ -946,7 +949,7 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 	}
 	res->ogsize = keypoints.size();
 
-	//printf("------- Selected max clustering size = %d and cluster table has %d\n", res->minPts, g_hash_table_size(res->clusterMap));
+	printf("Selected max clustering size = %d and cluster table has %d\n", res->minPts, g_hash_table_size(res->clusterMap));
 	
 	return res;
 }

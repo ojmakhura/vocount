@@ -100,7 +100,7 @@ typedef struct VOCOUNT{
     map<int32_t, map<String, int32_t> > stats;
     map<int32_t, vector<int32_t> > clusterEstimates;
 	vector<framed> frameHistory;
-    vector<int32_t> truth;
+    map<int32_t, int32_t> truth;
     String trackerAlgorithm;
     ofstream descriptorsClusterFile, descriptorsEstimatesFile;
     ofstream selDescClusterFile, selDescEstimatesFile;
@@ -187,7 +187,7 @@ void generateFinalPointClusters(vector<vector<int32_t>>& roiFeatures, IntIntList
 /**
  * Get the true count of objects from the given folder. The
  */
-void getFrameTruth(String truthFolder, vector<int32_t>& truth);
+void getFrameTruth(String truthFolder, map<int, int>& truth);
 
 /**
  *

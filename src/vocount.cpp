@@ -366,7 +366,7 @@ int main(int argc, char** argv) {
 					if(parser.has("f") || parser.has("df") || parser.has("dfi")){
 						//dataset = colourSel.selectedDesc.clone();
 						printf("Clustering selected keypoints in descriptor space\n\n\n");
-						results_t* selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true, true);
+						results_t* selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true, false);
 						generateFinalPointClusters(colourSel.roiFeatures, selDescRes->clusterMap, selDescRes->roiClusterPoints, 
 													selDescRes->finalPointClusters, selDescRes->labels, 
 													selDescRes->keypoints);
@@ -403,6 +403,10 @@ int main(int argc, char** argv) {
 		}
 
 		maintaintHistory(vcount, f);
+	}
+	
+	if(colourSel.clusterKeypointIdx != NULL){
+		hdbscan_destroy_cluster_table(colourSel.clusterKeypointIdx);
 	}
 
 #pragma omp parallel for
