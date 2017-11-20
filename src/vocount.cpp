@@ -342,9 +342,7 @@ int main(int argc, char** argv) {
 						printf("We found %lu objects by index points clustering.\n", ss.size() - 1);
 						getKeypointMap(idxClusterRes->clusterMap, &colourSel.selectedKeypoints, *(idxClusterRes->finalPointClusters));
 						generateClusterImages(f.frame, idxClusterRes);
-						f.results["im_space"] = idxClusterRes;						
-						if(parser.has("di") || parser.has("dfi")){
-						}
+						f.results["im_space"] = idxClusterRes;		
 						
 						if(parser.has("o")){
 							generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, idxClusterRes, f.i);
@@ -353,6 +351,10 @@ int main(int argc, char** argv) {
 							printImages(indexFrameDir, idxClusterRes->keyPointImages, vcount.frameCount);
 							printEstimates(vcount.indexEstimatesFile, idxClusterRes->odata);
 							printClusterEstimates(vcount.indexClusterFile, idxClusterRes->odata, idxClusterRes->cest);	
+						}
+								
+						if(parser.has("di") || parser.has("dfi")){
+						
 						}
 						
 					}				
