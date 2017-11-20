@@ -341,7 +341,7 @@ int main(int argc, char** argv) {
 						set<int> ss(idxClusterRes->labels->begin(), idxClusterRes->labels->end());
 						printf("We found %lu objects by index points clustering.\n", ss.size() - 1);
 						getKeypointMap(idxClusterRes->clusterMap, &colourSel.selectedKeypoints, *(idxClusterRes->finalPointClusters));
-						
+						generateClusterImages(f.frame, idxClusterRes);
 						f.results["im_space"] = idxClusterRes;						
 						if(parser.has("di") || parser.has("dfi")){
 						}
