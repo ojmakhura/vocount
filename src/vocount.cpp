@@ -405,9 +405,9 @@ int main(int argc, char** argv) {
 		maintaintHistory(vcount, f);
 	}
 	
-	if(colourSel.clusterKeypointIdx != NULL){
+	/*if(colourSel.clusterKeypointIdx != NULL){
 		hdbscan_destroy_cluster_table(colourSel.clusterKeypointIdx);
-	}
+	}*/
 
 #pragma omp parallel for
 	for(uint i = 0; i < vcount.frameHistory.size(); i++){
