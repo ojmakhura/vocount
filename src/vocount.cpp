@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
 	String keypointsDir;
 	String selectedDir;
 
-    Ptr<Feature2D> detector = SURF::create(500);
+    Ptr<Feature2D> detector = SURF::create(200);
     MultiTracker trackers;
 	vector<Ptr<Tracker>> algorithms;
 
@@ -223,12 +223,12 @@ int main(int argc, char** argv) {
 			// Create clustering dataset
 
 			f.hasRoi = vcount.roiExtracted;
-			
+			results_t* res1;
 			if(parser.has("d") || parser.has("di") || parser.has("df") || parser.has("dfi")){
 				f.centerFeature = findROIFeature(f.keypoints, f.descriptors, f.rois, f.roiFeatures, f.roiDesc);
 				Mat dset = getDescriptorDataset(vcount.frameHistory, vcount.step, f.descriptors);
 
-				results_t* res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true, true);
+				res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true, true);
 				//printf("Result confidence = %d\n", res1->validity);
 				generateFinalPointClusters(f.roiFeatures, res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);			
 				getBoxStructure(res1, f.rois, frame, false);
@@ -354,9 +354,55 @@ int main(int argc, char** argv) {
 						}
 								
 						if(parser.has("di") || parser.has("dfi")){
-						
-						}
-						
+							vector<int32_t> boxLabel(colourSel.selectedKeypoints.size(), -1);
+							
+						#pragma omp parallel for
+							for(uint i = 0; i < colourSel.selectedKeypoints.size(); i++){
+								KeyPoint kp = colourSel.selectedKeypoints[i];
+								vector<int32_t> tmpids;
+								for(uint j = 0; j < res1->boxStructures->size(); j++){
+									box_structure& bs = res1->boxStructures->at(j);
+									if(bs.box.contains(kp.pt)){
+										tmpids.push_back(j);
+										//boxLabel[i] = j;
+										//break;
+									}
+								}
+								//printf("tmpids has %lu size\n", tmpids.size());
+								if(!tmpids.empty()){
+									double minMoments = res1->boxStructures->at(tmpids[0]).momentsCompare;
+									int minIdx = tmpids[0];
+									
+									for(uint j = 0; j < tmpids.size(); j++){
+										double mm = res1->boxStructures->at(tmpids[j]).momentsCompare;
+										
+										if(mm < minMoments){
+											minMoments = mm;
+											minIdx = tmpids[j];
+										}
+									}
+									
+									boxLabel[i] = minIdx;
+								}					
+							}
+							set<int32_t> lst(boxLabel.begin(), boxLabel.end());
+							//int cou = 0;
+							vector<box_structure> bsts;
+							Mat fdi = f.frame.clone();
+							for(set<int32_t>::iterator it = lst.begin(); it != lst.end(); ++it){
+								int32_t bidx = *it;
+								if(bidx != -1){
+									bsts.push_back(res1->boxStructures->at(bidx));
+								}
+							}
+							
+							map<String, Mat> keyPointImages;
+							keyPointImages["img_allkps"] = idxClusterRes->keyPointImages->at("img_allkps");
+							createBoxStructureImages(&bsts, &keyPointImages);
+							String bidest = "/mnt/2TB/programming/phd/workspace/_vocount/out/wx02/di";
+							printImages(bidest, &keyPointImages, vcount.frameCount);
+							printf("Combination di found %lu objects\n", lst.size());
+						}						
 					}				
 					
 					/****************************************************************************************************/

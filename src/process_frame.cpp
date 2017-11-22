@@ -181,6 +181,170 @@ int rectExist(vector<box_structure>& structures, Rect& r){
 	return -1;
 }
 
+void trimRect(Rect& r, int rows, int cols){
+	if(r.x < 0){
+		r.width += r.x;
+		r.x = 0;
+	}
+				
+	if(r.y < 0){
+		r.height += r.y;
+		r.y = 0;
+	}
+				
+	if((r.x + r.width) >= cols){
+		r.width = cols - r.x;
+	}
+				
+	if((r.y + r.height) >= rows){
+		r.height = rows - r.y;
+	}
+}
+
+bool stabiliseRect(Mat& frame, const Rect& templ_r, Rect& proposed){
+	Mat result;
+	
+	Rect new_r = proposed;
+	int half_h = new_r.height/2;
+	int half_w = new_r.width/2;
+	new_r.x -= half_w/2;
+	new_r.y -= half_h/2;
+	new_r.width += half_w; //new_r.width;
+	new_r.height += half_h; //new_r.height;
+	
+	trimRect(new_r, frame.rows, frame.cols);
+	//cout << "Trimmed new_r  = " << new_r << endl;
+	if(new_r.height < 1 || new_r.width < 1){
+		return false;
+	}
+	
+	Mat img = frame(new_r);
+	Mat templ = frame(templ_r);
+	
+	if(img.rows < templ.rows && img.cols < templ.cols){
+		return false;
+	}
+	
+	int result_cols =  img.cols - templ.cols + 1;
+	int result_rows = img.rows - templ.rows + 1;
+	
+	//printf("result dims (%d, %d)\n", result_rows, result_cols);
+	
+	if(result_rows < 2 || result_cols < 2){
+		return false;
+	}
+
+	result.create( result_rows, result_cols, CV_32FC1 );
+	matchTemplate( img, templ, result, TM_SQDIFF);
+	normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
+	double minVal; double maxVal; Point minLoc; Point maxLoc;
+	Point matchLoc;
+	minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
+	matchLoc = minLoc;
+	//cout << "matchLoc is " << matchLoc << endl;
+	proposed.x = matchLoc.x + new_r.x;
+	proposed.y = matchLoc.y + new_r.y;
+	//cout << "Proposed is now " << proposed << endl;
+	//trimRect(proposed, frame.rows, frame.cols);
+	
+	return true;
+}
+
+bool stabiliseRectByMoments(Mat& frame, const Rect& templ_r, Rect& proposed){
+	//printf("stabiliseRectByMoments(Mat& frame, const Rect& templ_r, Rect& proposed)\n");
+	Mat gray;
+	cvtColor(frame, gray, COLOR_RGB2GRAY);
+	Rect center = proposed;
+	//bool centerIsMin = false;
+	
+	Mat templImg = gray(templ_r);
+	int min = -1;
+	double minMom;
+	
+	do {
+		vector<Rect> rects;
+		trimRect(center, frame.rows, frame.cols);
+		Mat centerImg = gray(center);	
+		double momCompare;
+		if(min == -1){
+			momCompare = matchShapes(templImg, centerImg, CONTOURS_MATCH_I3, 0);
+			minMom = momCompare;
+		} else{
+			min = -1;
+		}
+		
+		//cout << "-1 : " << momCompare << " ";
+		
+		Rect top = center;
+		top.y -= 1;
+		trimRect(top, frame.rows, frame.cols);
+		rects.push_back(top);
+				
+		Rect bottom = center;
+		bottom.y += 1;
+		trimRect(bottom, frame.rows, frame.cols);
+		rects.push_back(bottom);
+				
+		Rect right = center;
+		right.x += 1;
+		trimRect(right, frame.rows, frame.cols);
+		rects.push_back(right);
+		
+		Rect left = center;
+		left.x -= 1;
+		trimRect(left, frame.rows, frame.cols);
+		rects.push_back(left);
+		
+		Rect topLeft = center;
+		topLeft.y -= 1;
+		topLeft.x -= 1;
+		trimRect(topLeft, frame.rows, frame.cols);
+		rects.push_back(topLeft);
+				
+		Rect bottomLeft = center;
+		topLeft.y += 1;
+		topLeft.x -= 1;
+		trimRect(bottomLeft, frame.rows, frame.cols);
+		rects.push_back(bottomLeft);
+		
+		Rect topRight = center;
+		topLeft.y -= 1;
+		topLeft.x += 1;
+		trimRect(topRight, frame.rows, frame.cols);
+		rects.push_back(topRight);
+		
+		Rect bottomRight = center;
+		topLeft.y += 1;
+		topLeft.x += 1;
+		trimRect(bottomRight, frame.rows, frame.cols);
+		rects.push_back(bottomRight);
+		
+		for(uint i = 0; i < rects.size(); i++){			
+			if(rects[i].height < 1 || rects[i].width < 1){
+				continue;
+			}
+			Mat m = gray(rects[i]);
+			momCompare = matchShapes(templImg, m, CONTOURS_MATCH_I3, 0);
+			//cout <<  i << " : " << momCompare << " ";
+			if(momCompare < minMom){
+				min = i;
+				minMom = momCompare;
+			}
+		}
+		
+		//cout << endl;
+		
+		if(min != -1){
+			center = rects[min];
+		}
+		
+	} while(min != -1);
+	
+	proposed.x = center.x;
+	proposed.y = center.y;
+	
+	return true;
+}
 
 /**
  * 
@@ -206,6 +370,12 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 				//cout << "Skipping " << n_rect << endl;
 				//continue;
 			//}
+			//cout << n_rect ;
+			//if(!stabiliseRectByMoments(frame, mbs.box, n_rect)){
+				//cout << endl;
+				//continue;
+			//}
+			//cout << " stabilised to " << n_rect << endl;
 			
 			// check that the rect does not already exist
 			int idx = rectExist(*boxStructures, n_rect);
@@ -215,25 +385,8 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 				bst.points.push_back(point);
 								
 				//cout << mbs.box << " : " << n_rect;
-				
-				if(n_rect.x < 0){
-					n_rect.width += n_rect.x;
-					n_rect.x = 0;
-				}
-				
-				if(n_rect.y < 0){
-					n_rect.height += n_rect.y;
-					n_rect.y = 0;
-				}
-				
-				if((n_rect.x + n_rect.width) >= frame.cols){
-					n_rect.width = frame.cols - n_rect.x;
-				}
-				
-				if((n_rect.y + n_rect.height) >= frame.rows){
-					n_rect.height = frame.rows - n_rect.y;
-				}
-				
+				trimRect(n_rect, frame.rows, frame.cols);
+								
 				if(n_rect.height < 1 || n_rect.width < 1){
 					continue;
 				}
@@ -250,7 +403,7 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 				
 				//if(n_rect.x < 0 || ){
 				//}
-								
+				
 				bst.img_ = frame(n_rect);
 				calculateHistogram(bst);
 				bst.histCompare = compareHist(mbs.hist, bst.hist, CV_COMP_CORREL);
