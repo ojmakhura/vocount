@@ -346,6 +346,72 @@ bool stabiliseRectByMoments(Mat& frame, const Rect& templ_r, Rect& proposed){
 	return true;
 }
 
+void partition(vector<int32_t>& clusters, vector<double>& sortData, size_t left, size_t right){
+	
+}
+
+void doQuickSort(vector<int32_t>& clusters, vector<double>& sortData, size_t left, size_t right){
+	int i = left, j = right;
+    int tmp;
+    int pivot = sortData[(left + right) / 2];
+    
+    
+}
+
+void clustersQuickSort(vector<int32_t>& clusters, vector<double>& sortData){
+	doQuickSort(clusters, sortData, 0, clusters.size());
+}
+
+void sortClustersByLength(IntIntListMap* clusterMap, vector<int32_t>& clusters){
+	
+	vector<double> length;
+	bool empty = clusters.empty();
+	
+	GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	g_hash_table_iter_init (&iter, clusterMap);
+
+	while (g_hash_table_iter_next (&iter, &key, &value)){
+		int32_t* k = (int32_t *)key;
+		IntArrayList *lst = (IntArrayList *)value;
+		double rd = lst->size;;
+		
+		if(empty){
+			clusters.push_back(*k);
+			length.push_back(rd);
+		} else{
+			
+		}
+		
+		
+	}
+	
+}
+
+
+void sortClustersByDistance(IntIntListMap* clusterMap, IntDoubleListMap* distancesMap, vector<int32_t>& clusters){
+	vector<double> distances;
+	
+	if(clusters.empty()){
+		GHashTableIter iter;
+		gpointer key;
+		gpointer value;
+		g_hash_table_iter_init (&iter, distancesMap);
+
+		while (g_hash_table_iter_next (&iter, &key, &value)){
+			int32_t* k = (int32_t *)key;
+			DoubleArrayList *lst = (DoubleArrayList *)value;
+			double *ddata = (double *)lst->data;
+			double rd = ddata[3]/ddata[2];
+			
+			clusters.push_back(*k);
+			distances.push_back(rd);
+		}
+	}
+
+}
+
 /**
  * 
  * 
