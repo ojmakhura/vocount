@@ -346,16 +346,45 @@ bool stabiliseRectByMoments(Mat& frame, const Rect& templ_r, Rect& proposed){
 	return true;
 }
 
-void partition(vector<int32_t>& clusters, vector<double>& sortData, size_t left, size_t right){
-	
-}
-
-void doQuickSort(vector<int32_t>& clusters, vector<double>& sortData, size_t left, size_t right){
+void quickSort(vector<int32_t>& clusters, vector<double>& sortData, size_t left, size_t right){
 	int i = left, j = right;
-    int tmp;
-    int pivot = sortData[(left + right) / 2];
+    int32_t c_temp;
+    double d_temp;
+    double pivot = sortData[(left + right) / 2];
     
-    
+    /* Partition */
+    while(i <= j){
+		while(sortData[i] < pivot){
+			i++;
+		}
+		
+		while(sortData[j] > pivot){
+			j--;
+		}
+		
+		if(i <= j){
+			c_temp = clusters[i];			
+			d_temp = sortData[i];
+			
+			clusters[i] = clusters[j];
+			sortData[i] = sortData[j];
+			
+			clusters[j] = c_temp;
+			sortData[j] = d_temp;
+			
+			j++;
+			i--;
+		}
+	}
+	
+	/* recursion */
+    if(left < j){
+		quickSort(clusters, sortData, left, j);
+	}
+	
+	if(i > right){
+		quickSort(clusters, sortData, i, right);
+	}
 }
 
 void clustersQuickSort(vector<int32_t>& clusters, vector<double>& sortData){
