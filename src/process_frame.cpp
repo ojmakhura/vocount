@@ -127,21 +127,20 @@ double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vec
 	return total;
 }
 
-void generateFinalPointClusters(vector<vector<int32_t>>& roiFeatures, IntIntListMap* clusterMap, IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<int32_t>* labels, vector<KeyPoint>* keypoints){
+void generateFinalPointClusters(vector<vector<int32_t>>& roiFeatures, results_t* res){
 	set<int32_t> st;
 	for(uint i = 0; i < roiFeatures.size(); i++){
 		for (vector<int32_t>::iterator it = roiFeatures[i].begin(); it != roiFeatures[i].end(); ++it) {
 			int* key;
-			int k = labels->at(*it);
-			//res->objectClusters->insert(k);
+			int k = res->labels->at(*it);
 			key = &k;
-			IntArrayList* list = (IntArrayList *)g_hash_table_lookup(roiClusterPoints, key);
+			IntArrayList* list = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, key);
 			
 			if(list == NULL){
 				key = (int *)malloc(sizeof(int));
 				*key = k;
 				list = int_array_list_init_size(roiFeatures[i].size());
-				g_hash_table_insert(roiClusterPoints, key, list);
+				g_hash_table_insert(res->roiClusterPoints, key, list);
 				st.insert(k);
 			}
 					
@@ -153,9 +152,19 @@ void generateFinalPointClusters(vector<vector<int32_t>>& roiFeatures, IntIntList
 	for (set<int32_t>::iterator it = st.begin(); it != st.end(); ++it){
 		int32_t key = *it;
 		if (key != 0) {
-			IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(clusterMap, &key);			
-			getListKeypoints(*keypoints, l1, (*(finalPointClusters))[key]);
+			int_array_list_append(res->objectClusters, key);
 		}		
+	}
+	
+	res->objectClusters = hdbscan_sort_by_similarity(res->distancesMap, res->objectClusters, INTRA_DISTANCE_TYPE);
+	
+	int32_t *data = (int32_t *)res->objectClusters->data;
+	for(int32_t i = res->objectClusters->size - 1; i >= 0; i--){		
+		IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(res->clusterMap, data+i);			
+		getListKeypoints(*(res->keypoints), l1, (*(res->finalPointClusters))[*(data+i)]);
+		
+		//distance_values *dv = (distance_values *)g_hash_table_lookup(res->distancesMap, data+i);
+		//printf("%d : %f\n", data[i], dv->dr_confidence);
 	}
 }
 
@@ -346,101 +355,6 @@ bool stabiliseRectByMoments(Mat& frame, const Rect& templ_r, Rect& proposed){
 	return true;
 }
 
-void quickSort(vector<int32_t>& clusters, vector<double>& sortData, size_t left, size_t right){
-	int i = left, j = right;
-    int32_t c_temp;
-    double d_temp;
-    double pivot = sortData[(left + right) / 2];
-    
-    /* Partition */
-    while(i <= j){
-		while(sortData[i] < pivot){
-			i++;
-		}
-		
-		while(sortData[j] > pivot){
-			j--;
-		}
-		
-		if(i <= j){
-			c_temp = clusters[i];			
-			d_temp = sortData[i];
-			
-			clusters[i] = clusters[j];
-			sortData[i] = sortData[j];
-			
-			clusters[j] = c_temp;
-			sortData[j] = d_temp;
-			
-			j++;
-			i--;
-		}
-	}
-	
-	/* recursion */
-    if(left < j){
-		quickSort(clusters, sortData, left, j);
-	}
-	
-	if(i > right){
-		quickSort(clusters, sortData, i, right);
-	}
-}
-
-void clustersQuickSort(vector<int32_t>& clusters, vector<double>& sortData){
-	doQuickSort(clusters, sortData, 0, clusters.size());
-}
-
-void sortClustersByLength(IntIntListMap* clusterMap, vector<int32_t>& clusters){
-	
-	vector<double> length;
-	bool empty = clusters.empty();
-	
-	GHashTableIter iter;
-	gpointer key;
-	gpointer value;
-	g_hash_table_iter_init (&iter, clusterMap);
-
-	while (g_hash_table_iter_next (&iter, &key, &value)){
-		int32_t* k = (int32_t *)key;
-		IntArrayList *lst = (IntArrayList *)value;
-		double rd = lst->size;;
-		
-		if(empty){
-			clusters.push_back(*k);
-			length.push_back(rd);
-		} else{
-			
-		}
-		
-		
-	}
-	
-}
-
-
-void sortClustersByDistance(IntIntListMap* clusterMap, IntDoubleListMap* distancesMap, vector<int32_t>& clusters){
-	vector<double> distances;
-	
-	if(clusters.empty()){
-		GHashTableIter iter;
-		gpointer key;
-		gpointer value;
-		g_hash_table_iter_init (&iter, distancesMap);
-
-		while (g_hash_table_iter_next (&iter, &key, &value)){
-			int32_t* k = (int32_t *)key;
-			DoubleArrayList *lst = (DoubleArrayList *)value;
-			double *ddata = (double *)lst->data;
-			double rd = ddata[3]/ddata[2];
-			
-			clusters.push_back(*k);
-			distances.push_back(rd);
-		}
-	}
-
-}
-
 /**
  * 
  * 
@@ -594,24 +508,12 @@ void generateClusterImages(Mat frame, results_t* res){
 		string s = to_string(it->first);
 		ss += s.c_str();
 		//int32_t label = it->first;
-		DoubleArrayList *lst = (DoubleArrayList *)g_hash_table_lookup(res->distancesMap, &(it->first));
-		double *ddata = (double *)lst->data;
-		double rc = ddata[1]/ddata[0];
-		double rd = ddata[3]/ddata[2];
-		
-		//TODO: Clean this memory leak
-		const char* maxCrStr = get_max_cr();
-		const char* maxDrStr = get_max_dr();
-		double *rcm = (double *)g_hash_table_lookup(res->stats, maxCrStr);
-		double *rdm = (double *)g_hash_table_lookup(res->stats, maxDrStr);
-		
-		double fc = ((*rcm - rc) / (*rcm)) * 100;
-		double fd = ((*rdm - rd) / (*rdm)) * 100;
+		distance_values *dv = (distance_values *)g_hash_table_lookup(res->distancesMap, &(it->first));
 				
 		ss += "-";
-		ss += to_string((int)fc);
+		ss += to_string((int)dv->cr_confidence);
 		ss += "-";
-		ss += to_string((int)fd);
+		ss += to_string((int)dv->dr_confidence);
 		(*(res->keyPointImages))[ss] = kimg;
 		kp.insert(kp.end(), it->second.begin(), it->second.end());
 	}
@@ -706,53 +608,59 @@ double calcDistanceL1(Point2f f1, Point2f f2){
 /**
  * Find the roi features and at the same time find the central feature.
  */
-int32_t findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d>& rois, vector<vector<int32_t>>& roiFeatures, vector<Mat>& roiDesc){
+void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d>& rois, vector<vector<int32_t>>& roiFeatures, vector<Mat>& roiDesc, vector<int32_t>& centerFeatures){
 	roiFeatures.reserve(rois.size());
 	roiDesc.reserve(rois.size());
+	centerFeatures.reserve(rois.size());
 	
 	for(uint i = 0; i < rois.size(); i++){
 		roiFeatures.push_back(vector<int32_t>());
 		roiDesc.push_back(Mat());
+		centerFeatures.push_back(-1);
 	}
 	
-	Rect2d r = rois[0];
+	for(uint x = 0; x < rois.size(); x++){
+		Rect2d r = rois[x];
 
-	Point2f p;
+		Point2f p;
 
-	p.x = (r.x + r.width)/2.0f;
-	p.y = (r.y + r.height)/2.0f;
-	double distance;
-	int32_t centerFeature = -1;
-	for(uint i = 0; i < keypoints.size(); ++i){
-		uint j = 0;
-		
-		while(j < rois.size()){		
-		
-			if(rois[j].contains(keypoints[i].pt)){
-				roiFeatures[j].push_back(i);
+		p.x = (r.x + r.width)/2.0f;
+		p.y = (r.y + r.height)/2.0f;
+		double distance;
+		int32_t centerFeature = -1;
+		for(uint i = 0; i < keypoints.size(); ++i){
+			uint j = 0;
+			
+			while(j < rois.size()){		
+			
+				if(rois[j].contains(keypoints[i].pt)){
+					roiFeatures[j].push_back(i);
 
-				// find the center feature index
-				if(centerFeature == -1){
-					centerFeature = i;
-					distance = calcDistanceL1(p, keypoints[i].pt);
-				} else {
-					double d1 = calcDistanceL1(p, keypoints[i].pt);
-
-					if(d1 < distance){
-						distance = d1;
+					// find the center feature index
+					if(centerFeature == -1){
 						centerFeature = i;
-					}
-				}
+						distance = calcDistanceL1(p, keypoints[i].pt);
+					} else {
+						double d1 = calcDistanceL1(p, keypoints[i].pt);
 
-				// create the roi descriptor
-				roiDesc[j].push_back(descriptors.row(i));
-				
+						if(d1 < distance){
+							distance = d1;
+							centerFeature = i;
+						}
+					}
+
+					// create the roi descriptor
+					roiDesc[j].push_back(descriptors.row(i));
+					
+				}
+				j++;
 			}
-			j++;
 		}
+		centerFeatures[x] = centerFeature;
+		break;
 	}
 	//printf("roiDesc had %d rows\n", roiDesc.rows);
-	return centerFeature;
+	//return centerFeature;
 }
 
 bool processOptions(vocount& vcount, CommandLineParser& parser, VideoCapture& cap){
@@ -792,16 +700,18 @@ bool processOptions(vocount& vcount, CommandLineParser& parser, VideoCapture& ca
 void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool extend){
 	vector<vector<box_structure>> b_structures;
 	set<int32_t> processedClusters;
+	int32_t *data = (int32_t *)res->objectClusters->data;
 	
-	for(map_kp::iterator it = res->finalPointClusters->begin(); it != res->finalPointClusters->end(); ++it){
-		processedClusters.insert(it->first);
-		IntArrayList *roiPoints = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, &(it->first));
+	for(int32_t i = res->objectClusters->size - 1; i >= 0; i--){
+		int32_t key = data[i];
+		processedClusters.insert(key);
+		IntArrayList *roiPoints = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, &(key));
 		vector<vector<KeyPoint>> kps;
 		if(roiPoints->size > 1){
-			IntArrayList *cPoints = (IntArrayList *)g_hash_table_lookup(res->clusterMap, &(it->first));
+			IntArrayList *cPoints = (IntArrayList *)g_hash_table_lookup(res->clusterMap, &(key));
 			splitROICluster(roiPoints, cPoints, *(res->dataset), kps, *(res->keypoints));
 		} else{
-			kps.push_back(it->second);
+			kps.push_back(res->finalPointClusters->at(key));
 		}
 		
 		vector<box_structure> str2;
@@ -825,7 +735,7 @@ void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool exte
 				}
 			}
 			mbs.points.push_back(kp);
-			addToBoxStructure(&str2, it->second, kp, mbs, frame);
+			addToBoxStructure(&str2, res->finalPointClusters->at(key), kp, mbs, frame);
 		}
 		b_structures.push_back(str2);
 	}
@@ -1127,15 +1037,14 @@ results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints){
 	res->keypoints = new vector<KeyPoint>(keypoints.begin(), keypoints.end());
 	res->finalPointClusters = new map_kp();
 	res->odata = new map<String, int32_t>();
-	res->labels = new vector<int32_t>();
+	res->labels = new vector<int32_t>(res->keypoints->size());
 	res->boxStructures = new vector<box_structure>();
 	res->cest = new vector<int32_t>();
 	res->keyPointImages = new map<String, Mat>();
-	res->objectClusters = new set<int32_t>();
+	res->objectClusters = int_array_list_init();
 		
     res->clusterMap = NULL;		 								/// maps labels to the keypoint indices
     res->roiClusterPoints = g_hash_table_new(g_int_hash, g_int_equal);								/// cluster labels for the region of interest mapped to the roi points in the cluster
-    res->stats = NULL;											/// Statistical values for the clusters
     res->distancesMap = NULL;									/// Min and Max distance table for each cluster
     
 	res->lsize = 0;
@@ -1166,9 +1075,9 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 			hdbscan_destroy_cluster_table(res->clusterMap);
 		}
 		
-		if(res->stats != NULL){
-			hdbscan_destroy_stats_map(res->stats);
-		}
+		//if(res->stats != NULL){
+		//	hdbscan_destroy_stats_map(res->stats);
+		//}
 		
 		if(res->distancesMap != NULL){
 			hdbscan_destroy_distance_map_table(res->distancesMap);
@@ -1185,8 +1094,8 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 		
 		if(analyse){
 			res->distancesMap = hdbscan_get_min_max_distances(&scan, res->clusterMap);
-			res->stats = hdbscan_calculate_stats(res->distancesMap);
-			res->validity = hdbscan_analyse_stats(res->stats);
+			hdbscan_calculate_stats(res->distancesMap, &(res->stats));
+			res->validity = hdbscan_analyse_stats(&(res->stats));
 		}
 		
 		if(singleRun){
@@ -1209,10 +1118,10 @@ void cleanResult(results_t* res){
 			res->clusterMap = NULL;
 		}
 		
-		if(res->stats != NULL){
+		/*if(res->stats != NULL){
 			hdbscan_destroy_stats_map(res->stats);
 			res->stats = NULL;
-		}
+		}*/
 		
 		if(res->distancesMap != NULL){
 			hdbscan_destroy_distance_map_table(res->distancesMap);
@@ -1229,6 +1138,8 @@ void cleanResult(results_t* res){
 			res->roiClusterPoints = NULL;
 		}
 		
+		int_array_list_delete(res->objectClusters);
+		
 		delete res->dataset;
 		delete res->keypoints;
 		delete res->finalPointClusters;
@@ -1237,7 +1148,6 @@ void cleanResult(results_t* res){
 		delete res->boxStructures;
 		delete res->cest;
 		delete res->keyPointImages;
-		delete res->objectClusters;
 		free(res);
 	}
 }

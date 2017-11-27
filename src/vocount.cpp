@@ -225,12 +225,12 @@ int main(int argc, char** argv) {
 			f.hasRoi = vcount.roiExtracted;
 			results_t* res1;
 			if(parser.has("d") || parser.has("di") || parser.has("df") || parser.has("dfi")){
-				f.centerFeature = findROIFeature(f.keypoints, f.descriptors, f.rois, f.roiFeatures, f.roiDesc);
+				findROIFeature(f.keypoints, f.descriptors, f.rois, f.roiFeatures, f.roiDesc, f.centerFeatures);
 				Mat dset = getDescriptorDataset(vcount.frameHistory, vcount.step, f.descriptors);
 
 				res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true, true);
 				//printf("Result confidence = %d\n", res1->validity);
-				generateFinalPointClusters(f.roiFeatures, res1->clusterMap, res1->roiClusterPoints, res1->finalPointClusters, res1->labels, res1->keypoints);			
+				generateFinalPointClusters(f.roiFeatures, res1);			
 				getBoxStructure(res1, f.rois, frame, false);
 				generateClusterImages(f.frame, res1);
 				createBoxStructureImages(res1->boxStructures, res1->keyPointImages);
@@ -332,7 +332,8 @@ int main(int argc, char** argv) {
 					colourSel.selectedDesc = selDesc.clone();
 					
 					vector<Mat> roiDesc;
-					findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.rois, colourSel.roiFeatures, roiDesc);			
+					vector<int32_t> ce;
+					findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.rois, colourSel.roiFeatures, roiDesc, ce);			
 					
 					if(parser.has("i") || parser.has("di") || parser.has("dfi")){
 						printf("Clustering selected keypoints in image space\n\n\n");
@@ -415,9 +416,7 @@ int main(int argc, char** argv) {
 						//dataset = colourSel.selectedDesc.clone();
 						printf("Clustering selected keypoints in descriptor space\n\n\n");
 						results_t* selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true, false);
-						generateFinalPointClusters(colourSel.roiFeatures, selDescRes->clusterMap, selDescRes->roiClusterPoints, 
-													selDescRes->finalPointClusters, selDescRes->labels, 
-													selDescRes->keypoints);
+						generateFinalPointClusters(colourSel.roiFeatures, selDescRes);
 						getBoxStructure(selDescRes, f.rois, frame, false);								
 						generateClusterImages(f.frame, selDescRes);
 						createBoxStructureImages(selDescRes->boxStructures, selDescRes->keyPointImages);

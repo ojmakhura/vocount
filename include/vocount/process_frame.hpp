@@ -58,15 +58,16 @@ typedef struct {
 	Mat* dataset;
     IntIntListMap* clusterMap = NULL;		 								/// maps labels to the keypoint indices
     IntIntListMap* roiClusterPoints = NULL;								/// cluster labels for the region of interest mapped to the roi points in the cluster
-    StringDoubleMap* stats = NULL;											/// Statistical values for the clusters
-    IntDoubleListMap* distancesMap = NULL;									/// Min and Max distance table for each cluster
+    clustering_stats stats;											/// Statistical values for the clusters
+    IntDistancesMap* distancesMap = NULL;									/// Min and Max distance table for each cluster
 	map_kp* finalPointClusters;
 	map<String, int32_t>* odata;											/// Output data
     vector<int32_t>* labels;												/// hdbscan cluster labels
 	vector<box_structure>* boxStructures;							/// Bounding boxes for the individual objects in the frame
 	vector<int32_t>* cest;
 	map<String, Mat>* keyPointImages;										/// images with cluster by cluster keypoints drawn
-	set<int32_t>* objectClusters;
+	IntArrayList* objectClusters;
+	IntArrayList* sortedAllClusters;
 	double lsize = 0;
 	double total = 0;
 	int32_t selectedFeatures = 0;
@@ -83,7 +84,7 @@ typedef struct FRAMED{
 	vector<KeyPoint> keypoints; 									/// Frame keypoints
 	vector<Rect2d> rois;														/// region of interest rectangle
 	vector<vector<int32_t>> roiFeatures;										/// indices of the features inside the roi
-	int centerFeature = -1;											/// index of the roi central feature
+	vector<int32_t> centerFeatures;											/// index of the roi central feature
 	vector<Mat> roiDesc;													/// region of interest descriptors
 	bool hasRoi = false;
 	map<String, results_t*> results;
@@ -172,7 +173,7 @@ vector<KeyPoint> getAllMatchedKeypoints(framed& f);
 /**
  *
  */
-int32_t findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d>& rois, vector<vector<int32_t>>& roiFeatures, vector<Mat>& roiDesc);
+void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d>& rois, vector<vector<int32_t>>& roiFeatures, vector<Mat>& roiDesc, vector<int32_t>& centerFeatures);
 
 /**
  *
@@ -182,7 +183,7 @@ bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
 /**
  *
  */
-void generateFinalPointClusters(vector<vector<int32_t>>& roiFeatures, IntIntListMap* clusterMap, IntIntListMap* roiClusterPoints, map_kp* finalPointClusters, vector<int32_t>* labels, vector<KeyPoint>* keypoints);
+void generateFinalPointClusters(vector<vector<int32_t>>& roiFeatures, results_t* res);
 
 /**
  * Get the true count of objects from the given folder. The
