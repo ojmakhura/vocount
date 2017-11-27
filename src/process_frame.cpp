@@ -5,8 +5,9 @@
  *      Author: ojmakh
  */
 
+//#include "samples_utility.hpp"
 #include "vocount/process_frame.hpp"
-#include <opencv2/tracking.hpp>
+//#include <opencv2/tracking.hpp>
 #include <fstream>
 #include <opencv/cv.hpp>
 #include <opencv2/imgproc.hpp>
@@ -162,9 +163,6 @@ void generateFinalPointClusters(vector<vector<int32_t>>& roiFeatures, results_t*
 	for(int32_t i = res->objectClusters->size - 1; i >= 0; i--){		
 		IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(res->clusterMap, data+i);			
 		getListKeypoints(*(res->keypoints), l1, (*(res->finalPointClusters))[*(data+i)]);
-		
-		//distance_values *dv = (distance_values *)g_hash_table_lookup(res->distancesMap, data+i);
-		//printf("%d : %f\n", data[i], dv->dr_confidence);
 	}
 }
 
@@ -479,7 +477,7 @@ void extendBoxClusters(Mat& frame, results_t* res, set<int32_t>& processedCluste
 			box_structure& stru = boxStructures->at(first);
 			vector<KeyPoint> kps;
 			getListKeypoints(*(res->keypoints), list, kps);
-			cout << stru.box << " \n" << stru.hist << endl;
+			//cout << stru.box << " \n" << stru.hist << endl;
 			addToBoxStructure(boxStructures, kps, first_kp, stru, frame);
 		}		
 	}
@@ -612,15 +610,20 @@ void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d
 	roiFeatures.reserve(rois.size());
 	roiDesc.reserve(rois.size());
 	centerFeatures.reserve(rois.size());
-	
+	printf("rois.size = %lu roiFeatures = %lu roiDesc = %lu\n", rois.size(), roiFeatures.size(), roiDesc.size());
+//#pragma omp parallel for	
 	for(uint i = 0; i < rois.size(); i++){
 		roiFeatures.push_back(vector<int32_t>());
 		roiDesc.push_back(Mat());
 		centerFeatures.push_back(-1);
 	}
-	
+	printf("rois.size = %lu roiFeatures = %lu roiDesc = %lu\n", rois.size(), roiFeatures.size(), roiDesc.size());
+
+	printf("keypoints = %lu, descriptors = %d\n", keypoints.size(), descriptors.rows);
+
+//#pragma omp parallel for	
 	for(uint x = 0; x < rois.size(); x++){
-		Rect2d r = rois[x];
+		Rect2d& r = rois[x];
 
 		Point2f p;
 
@@ -629,9 +632,9 @@ void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d
 		double distance;
 		int32_t centerFeature = -1;
 		for(uint i = 0; i < keypoints.size(); ++i){
-			uint j = 0;
 			
-			while(j < rois.size()){		
+			
+			for(uint j = 0; j < rois.size(); j++){		
 			
 				if(rois[j].contains(keypoints[i].pt)){
 					roiFeatures[j].push_back(i);
@@ -650,14 +653,14 @@ void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d
 					}
 
 					// create the roi descriptor
-					roiDesc[j].push_back(descriptors.row(i));
+					Mat t = descriptors.row(i);
+					roiDesc[j].push_back(t);
 					
 				}
-				j++;
 			}
 		}
 		centerFeatures[x] = centerFeature;
-		break;
+		//break;
 	}
 	//printf("roiDesc had %d rows\n", roiDesc.rows);
 	//return centerFeature;
@@ -1171,4 +1174,61 @@ void calculateHistogram(box_structure& bst){
     calcHist( &bst.hsv, 1, channels, Mat(), bst.hist, 2, histSize, ranges, true, false );
     normalize( bst.hist, bst.hist, 0, 1, NORM_MINMAX, -1, Mat() );
     //bst.hist = bst.hist.clone();
+}
+
+cv::Ptr<cv::Tracker> createTrackerByName(cv::String name)
+{
+    cv::Ptr<cv::Tracker> tracker;
+
+    if (name == "KCF")
+        tracker = cv::TrackerKCF::create();
+    else if (name == "TLD")
+        tracker = cv::TrackerTLD::create();
+    else if (name == "BOOSTING")
+        tracker = cv::TrackerBoosting::create();
+    else if (name == "MEDIAN_FLOW")
+        tracker = cv::TrackerMedianFlow::create();
+    else if (name == "MIL")
+        tracker = cv::TrackerMIL::create();
+    else if (name == "GOTURN")
+        tracker = cv::TrackerGOTURN::create();
+    else
+        CV_Error(cv::Error::StsBadArg, "Invalid tracking algorithm name\n");
+
+    return tracker;
+}
+
+void findNewROIs(Mat& frame, vector<Ptr<Tracker>>& trackers, vector<Rect2d>& newRects, vector<box_structure>* boxStructures, String trackerName){
+
+#pragma omp parallel for
+	for(size_t i = 0; i < boxStructures->size(); i++){
+		
+		double maxIntersect = 0.0;
+		//int maxIndex = -1;
+		box_structure& bs = boxStructures->at(i);
+		
+		for(size_t j = 0; j < newRects.size(); j++){
+			Rect r1 = newRects[j];
+			Rect r2 = r1 & bs.box;
+			double sect = ((double)r2.area()/r1.area()) * 100;
+			if(sect > maxIntersect){
+				//maxIndex = i;
+				maxIntersect = sect;
+			}
+		}
+		
+		bool valid = 0 <= bs.box.x && 0 <= bs.box.width 
+						&& bs.box.x + bs.box.width <= frame.cols 
+						&& 0 <= bs.box.y && 0 <= bs.box.height 
+						&& bs.box.y + bs.box.height <= frame.rows;
+		#pragma omp critical
+		if(maxIntersect < 95.0 && valid){
+			size_t x = newRects.size();
+			newRects.push_back(bs.box);
+			trackers.push_back(createTrackerByName(trackerName));
+			trackers[x]->init( frame, newRects[x] );
+			printf("Created tracker at %lu\n", x);
+		}
+
+	}
 }

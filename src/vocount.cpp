@@ -10,7 +10,6 @@
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/optflow.hpp>
 #include <opencv2/core/utility.hpp>
-#include <opencv2/tracking.hpp>
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/ximgproc/segmentation.hpp>
 #include <ctime>
@@ -42,28 +41,6 @@ static void help(){
 	        "\n" );
 }
 
-inline cv::Ptr<cv::Tracker> createTrackerByName(cv::String name)
-{
-    cv::Ptr<cv::Tracker> tracker;
-
-    if (name == "KCF")
-        tracker = cv::TrackerKCF::create();
-    else if (name == "TLD")
-        tracker = cv::TrackerTLD::create();
-    else if (name == "BOOSTING")
-        tracker = cv::TrackerBoosting::create();
-    else if (name == "MEDIAN_FLOW")
-        tracker = cv::TrackerMedianFlow::create();
-    else if (name == "MIL")
-        tracker = cv::TrackerMIL::create();
-    else if (name == "GOTURN")
-        tracker = cv::TrackerGOTURN::create();
-    else
-        CV_Error(cv::Error::StsBadArg, "Invalid tracking algorithm name\n");
-
-    return tracker;
-}
-
 int main(int argc, char** argv) {
 	ocl::setUseOpenCL(true);
 	Mat frame;
@@ -76,10 +53,11 @@ int main(int argc, char** argv) {
 	String indexDir;
 	String keypointsDir;
 	String selectedDir;
-
-    Ptr<Feature2D> detector = SURF::create(200);
-    MultiTracker trackers;
-	vector<Ptr<Tracker>> algorithms;
+	vector<Rect2d> rois;
+    Ptr<Feature2D> detector = SURF::create(1000);
+    //MultiTracker trackers;
+    vector<Ptr<Tracker>> trackers;
+	//vector<Ptr<Tracker>> algorithms;
 
 	cv::CommandLineParser parser(argc, argv,
 					"{help ||}{o||}{n|1|}"
@@ -192,31 +170,31 @@ int main(int argc, char** argv) {
 			f.rois.push_back(boundingBox);
 			
 			for(size_t i = 0; i < f.rois.size(); i++){
-				algorithms.push_back(createTrackerByName(vcount.trackerAlgorithm));
+				trackers.push_back(createTrackerByName(vcount.trackerAlgorithm));
+				trackers[i]->init( frame, f.rois[i] );
 			}
 			
-			trackers.add(algorithms, f2, f.rois);
+			//trackers.add(_trackers, f2, f.rois);
 			vcount.roiExtracted = true;
 
 		} 
 
 		if (vcount.roiExtracted ){
-					
-			f.rois.clear();
-			f.rois.reserve(trackers.getObjects().size());
-			trackers.update(f.frame);
+			f.rois.resize(1);
+			printf("rois size = %lu\n", f.rois.size());
 			RNG rng(12345);
 			Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));
-			for(size_t i = 0; i < trackers.getObjects().size(); i++){
-				rectangle(frame, trackers.getObjects()[i], value, 2, 8, 0);
-				f.rois.push_back(trackers.getObjects()[i]);
-			}			
+			for(size_t i = 0; i < trackers.size(); i++){
+				trackers[i]->update(frame, f.rois[i]);
+				rectangle(frame, f.rois[i], value, 2, 8, 0);
+				break;
+			}
 		}
 
 		display("frame", frame);
 
 		if (!f.descriptors.empty()) {
-
+			vector<Rect2d> foundRects;
 			cout << "################################################################################" << endl;
 			cout << "                              " << f.i << endl;
 			cout << "################################################################################" << endl;
@@ -229,9 +207,8 @@ int main(int argc, char** argv) {
 				Mat dset = getDescriptorDataset(vcount.frameHistory, vcount.step, f.descriptors);
 
 				res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true, true);
-				//printf("Result confidence = %d\n", res1->validity);
-				generateFinalPointClusters(f.roiFeatures, res1);			
-				getBoxStructure(res1, f.rois, frame, false);
+				generateFinalPointClusters(f.roiFeatures, res1);	
+				getBoxStructure(res1, f.rois, frame, true);
 				generateClusterImages(f.frame, res1);
 				createBoxStructureImages(res1->boxStructures, res1->keyPointImages);
 				//printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
@@ -251,6 +228,12 @@ int main(int argc, char** argv) {
 					printEstimates(vcount.descriptorsEstimatesFile, res1->odata);
 					printClusterEstimates(vcount.descriptorsClusterFile, res1->odata, res1->cest);	
 				}
+				/*
+				if(res1->validity == 4){
+					vector<Ptr<Tracker>> ts;
+					findNewROIs(frame, trackers, f.rois, res1->boxStructures, vcount.trackerAlgorithm);
+					printf("(foundRects, res->boxStructures) = (%lu, %lu)\n", foundRects.size(), res1->boxStructures->size());
+				}*/
 			}
 			
 			if(vcount.frameHistory.size() > 0 && (parser.has("i") || parser.has("f") || parser.has("di") || parser.has("df") || parser.has("dfi"))){
@@ -438,18 +421,17 @@ int main(int argc, char** argv) {
 							printClusterEstimates(vcount.selDescClusterFile, selDescRes->odata, selDescRes->cest);	
 						}
 						
-						if(parser.has("df") || parser.has("dfi")){
-							
-						}
+						//findNewROIs(foundRects, selDescRes->boxStructures);
+						//printf("(foundRects, selDescRes->boxStructures) = (%lu, %lu)\n", foundRects.size(), selDescRes->boxStructures->size());
+						
 						f.results["sel_keypoints"] = selDescRes;
 					}
 				}
-			}
-			
-			
+			}		
 		}
 
 		maintaintHistory(vcount, f);
+		
 	}
 	
 	/*if(colourSel.clusterKeypointIdx != NULL){

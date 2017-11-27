@@ -9,6 +9,7 @@
 #define PROCESS_FRAME_HPP_
 #include <hdbscan/hdbscan.hpp>
 #include <opencv/cv.hpp>
+#include <opencv2/tracking.hpp>
 #include <opencv2/ximgproc/segmentation.hpp>
 #include <vector>
 #include <map>
@@ -272,5 +273,16 @@ void expandClusters(results_t* res);
  * 
  */ 
 void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool extend);
+
+/**
+ * 
+ * 
+ */
+void findNewROIs(Mat& frame, vector<Ptr<Tracker>>& trackers, vector<Rect2d>& newRects, vector<box_structure>* boxStructures, String trackerName);
+
+/**
+ * 
+ */ 
+cv::Ptr<cv::Tracker> createTrackerByName(cv::String name);
   
 #endif
