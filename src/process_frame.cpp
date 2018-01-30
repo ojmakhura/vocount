@@ -756,7 +756,7 @@ void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool exte
 	}
 	
 	if(extend){								
-		extendBoxClusters(frame, res, processedClusters);
+		//extendBoxClusters(frame, res, processedClusters);
 	}
 }
 

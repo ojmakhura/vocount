@@ -403,9 +403,7 @@ int main(int argc, char** argv) {
 						getBoxStructure(selDescRes, f.rois, frame, false);								
 						generateClusterImages(f.frame, selDescRes);
 						createBoxStructureImages(selDescRes->boxStructures, selDescRes->keyPointImages);
-						//int lb = 0;
-						//IntArrayList *zero = (IntArrayList *) g_hash_table_lookup(selDescRes->clusterMap, &lb);
-						//printf("Cluster 0 has %d elements\n", zero->size);
+						
 						cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 						selDescRes->total = countPrint(selDescRes->roiClusterPoints, selDescRes->finalPointClusters, 
 														selDescRes->cest, selDescRes->selectedFeatures, selDescRes->lsize);
@@ -421,9 +419,6 @@ int main(int argc, char** argv) {
 							printClusterEstimates(vcount.selDescClusterFile, selDescRes->odata, selDescRes->cest);	
 						}
 						
-						//findNewROIs(foundRects, selDescRes->boxStructures);
-						//printf("(foundRects, selDescRes->boxStructures) = (%lu, %lu)\n", foundRects.size(), selDescRes->boxStructures->size());
-						
 						f.results["sel_keypoints"] = selDescRes;
 					}
 				}
@@ -434,10 +429,6 @@ int main(int argc, char** argv) {
 		
 	}
 	
-	/*if(colourSel.clusterKeypointIdx != NULL){
-		hdbscan_destroy_cluster_table(colourSel.clusterKeypointIdx);
-	}*/
-
 #pragma omp parallel for
 	for(uint i = 0; i < vcount.frameHistory.size(); i++){
 		framed& f1 = vcount.frameHistory[i];
