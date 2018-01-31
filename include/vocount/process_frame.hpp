@@ -58,15 +58,16 @@ typedef struct {
 	vector<KeyPoint>* keypoints;
 	Mat* dataset;
     IntIntListMap* clusterMap = NULL;		 								/// maps labels to the keypoint indices
-    IntIntListMap* roiClusterPoints = NULL;								/// cluster labels for the region of interest mapped to the roi points in the cluster
-    clustering_stats stats;											/// Statistical values for the clusters
+    IntIntListMap* roiClusterPoints = NULL;									/// cluster labels for the region of interest mapped to the roi points in the cluster
+    clustering_stats stats;													/// Statistical values for the clusters
     IntDistancesMap* distancesMap = NULL;									/// Min and Max distance table for each cluster
 	map_kp* finalPointClusters;
 	map<String, int32_t>* odata;											/// Output data
     vector<int32_t>* labels;												/// hdbscan cluster labels
-	vector<box_structure>* boxStructures;							/// Bounding boxes for the individual objects in the frame
+	vector<box_structure>* boxStructures;									/// Bounding boxes for the individual objects in the frame
 	vector<int32_t>* cest;
-	map<String, Mat>* keyPointImages;										/// images with cluster by cluster keypoints drawn
+	map<String, Mat>* selectedClustersImages;										/// images with cluster by cluster keypoints drawn
+	map<String, Mat>* leftoverClusterImages;								/// images with leftover clusters
 	IntArrayList* objectClusters;
 	IntArrayList* sortedAllClusters;
 	double lsize = 0;
@@ -248,7 +249,7 @@ void cleanResult(results_t* res);
  * Given a vector of box structures, the function draws the rectangles around the identified object locations
  * 
  */ 
-void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, Mat>* keyPointImages);
+void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, Mat>* selectedClustersImages);
 
 /**
  * Find clusters that have points inside one of the bounding boxes

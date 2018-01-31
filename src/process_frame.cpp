@@ -512,14 +512,14 @@ void generateClusterImages(Mat frame, results_t* res){
 		ss += to_string((int)dv->cr_confidence);
 		ss += "-";
 		ss += to_string((int)dv->dr_confidence);
-		(*(res->keyPointImages))[ss] = kimg;
+		(*(res->selectedClustersImages))[ss] = kimg;
 		kp.insert(kp.end(), it->second.begin(), it->second.end());
 	}
 
 	Mat mm = drawKeyPoints(frame, kp, Scalar(0, 0, 255), -1);
 
 	String ss = "img_allkps";
-	(*(res->keyPointImages))[ss] = mm;
+	(*(res->selectedClustersImages))[ss] = mm;
 }
 
 void maintaintHistory(vocount& voc, framed& f){
@@ -764,12 +764,12 @@ void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool exte
  * Given a vector of box structures, the function draws the rectangles around the identified object locations
  * 
  */ 
-void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, Mat>* keyPointImages){
+void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, Mat>* selectedClustersImages){
 	
 	printf("boxStructure found %lu objects\n\n", boxStructures->size());
 	String ss = "img_bounds";
 
-	Mat img_bounds = (*keyPointImages)["img_allkps"].clone();
+	Mat img_bounds = (*selectedClustersImages)["img_allkps"].clone();
 	for (size_t i = 0; i < boxStructures->size(); i++) {
 		box_structure b = (*boxStructures)[i];
 		RNG rng(12345);
@@ -779,7 +779,7 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
 		//Point center = (b.box.br() + b.box.tl())/2;
 		//circle(img_bounds, center, 4, Scalar(255, 255, 255), CV_FILLED, 10, 0);
 	}
-	(*keyPointImages)[ss] = img_bounds;
+	(*selectedClustersImages)[ss] = img_bounds;
 }
 
 void getFrameTruth(String truthFolder, map<int, int>& truth){
@@ -1043,7 +1043,8 @@ results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints){
 	res->labels = new vector<int32_t>(res->keypoints->size());
 	res->boxStructures = new vector<box_structure>();
 	res->cest = new vector<int32_t>();
-	res->keyPointImages = new map<String, Mat>();
+	res->selectedClustersImages = new map<String, Mat>();
+	res->leftoverClusterImages = new map<String, Mat>();
 	res->objectClusters = int_array_list_init();
 		
     res->clusterMap = NULL;		 								/// maps labels to the keypoint indices
@@ -1150,7 +1151,8 @@ void cleanResult(results_t* res){
 		delete res->labels;
 		delete res->boxStructures;
 		delete res->cest;
-		delete res->keyPointImages;
+		delete res->selectedClustersImages;
+		delete res->leftoverClusterImages;
 		free(res);
 	}
 }

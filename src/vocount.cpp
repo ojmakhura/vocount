@@ -210,7 +210,7 @@ int main(int argc, char** argv) {
 				generateFinalPointClusters(f.roiFeatures, res1);	
 				getBoxStructure(res1, f.rois, frame, true);
 				generateClusterImages(f.frame, res1);
-				createBoxStructureImages(res1->boxStructures, res1->keyPointImages);
+				createBoxStructureImages(res1->boxStructures, res1->selectedClustersImages);
 				//printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
 				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				res1->total = countPrint(res1->roiClusterPoints, res1->finalPointClusters, res1->cest, res1->selectedFeatures, res1->lsize);
@@ -221,10 +221,9 @@ int main(int argc, char** argv) {
 				
 				if(parser.has("o")){
 					Mat frm = drawKeyPoints(frame, f.keypoints, Scalar(0, 0, 255), -1);
-					printImage(keypointsDir, vcount.frameCount, "frame_kp", frm);
-					
+					printImage(keypointsDir, vcount.frameCount, "frame_kp", frm);					
 					generateOutputData(vcount, f.frame, f.keypoints, f.roiFeatures, res1, f.i);
-					printImages(keypointsFrameDir, res1->keyPointImages, vcount.frameCount);
+					printImages(keypointsFrameDir, res1->selectedClustersImages, vcount.frameCount);
 					printEstimates(vcount.descriptorsEstimatesFile, res1->odata);
 					printClusterEstimates(vcount.descriptorsClusterFile, res1->odata, res1->cest);	
 				}
@@ -332,7 +331,7 @@ int main(int argc, char** argv) {
 							generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, idxClusterRes, f.i);
 							Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
 							printImage(indexDir, vcount.frameCount, "frame_kp", frm);
-							printImages(indexFrameDir, idxClusterRes->keyPointImages, vcount.frameCount);
+							printImages(indexFrameDir, idxClusterRes->selectedClustersImages, vcount.frameCount);
 							printEstimates(vcount.indexEstimatesFile, idxClusterRes->odata);
 							printClusterEstimates(vcount.indexClusterFile, idxClusterRes->odata, idxClusterRes->cest);	
 						}
@@ -380,11 +379,11 @@ int main(int argc, char** argv) {
 								}
 							}
 							
-							map<String, Mat> keyPointImages;
-							keyPointImages["img_allkps"] = idxClusterRes->keyPointImages->at("img_allkps");
-							createBoxStructureImages(&bsts, &keyPointImages);
+							map<String, Mat> selectedClustersImages;
+							selectedClustersImages["img_allkps"] = idxClusterRes->selectedClustersImages->at("img_allkps");
+							createBoxStructureImages(&bsts, &selectedClustersImages);
 							String bidest = "/mnt/2TB/programming/phd/workspace/_vocount/out/wx02/di";
-							printImages(bidest, &keyPointImages, vcount.frameCount);
+							printImages(bidest, &selectedClustersImages, vcount.frameCount);
 							printf("Combination di found %lu objects\n", lst.size());
 						}						
 					}				
@@ -402,7 +401,7 @@ int main(int argc, char** argv) {
 						generateFinalPointClusters(colourSel.roiFeatures, selDescRes);
 						getBoxStructure(selDescRes, f.rois, frame, false);								
 						generateClusterImages(f.frame, selDescRes);
-						createBoxStructureImages(selDescRes->boxStructures, selDescRes->keyPointImages);
+						createBoxStructureImages(selDescRes->boxStructures, selDescRes->selectedClustersImages);
 						
 						cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 						selDescRes->total = countPrint(selDescRes->roiClusterPoints, selDescRes->finalPointClusters, 
@@ -414,7 +413,7 @@ int main(int argc, char** argv) {
 							Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
 							printImage(selectedDir, vcount.frameCount, "frame_kp", frm);
 							generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, selDescRes, f.i);
-							printImages(selectedFrameDir, selDescRes->keyPointImages, vcount.frameCount);
+							printImages(selectedFrameDir, selDescRes->selectedClustersImages, vcount.frameCount);
 							printEstimates(vcount.selDescEstimatesFile, selDescRes->odata);
 							printClusterEstimates(vcount.selDescClusterFile, selDescRes->odata, selDescRes->cest);	
 						}
