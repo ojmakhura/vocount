@@ -6,6 +6,10 @@
 #include <QImage>
 #include <QWaitCondition>
 
+namespace Ui {
+class VUIPlayer;
+}
+
 class VUIPlayer : public QThread
 {
 
@@ -19,10 +23,10 @@ public:
     //Destructor
     ~VUIPlayer();
     //Load a video from memory
-    bool loadVideo(String filename);
-    void Play();
+    bool loadVideo(QString filename);
+    void play();
     //Stop the video
-    void Stop();
+    void stop();
     //check if the player has been stopped
     bool isStopped() const;
     void pause();

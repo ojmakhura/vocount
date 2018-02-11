@@ -5,9 +5,7 @@
  *      Author: ojmakh
  */
 
-//#include "samples_utility.hpp"
 #include "vocount/process_frame.hpp"
-//#include <opencv2/tracking.hpp>
 #include <fstream>
 #include <opencv/cv.hpp>
 #include <opencv2/imgproc.hpp>
@@ -533,44 +531,6 @@ void maintaintHistory(vocount& voc, framed& f){
 		}
 		
 		voc.frameHistory.erase(voc.frameHistory.begin());
-	}
-}
-
-void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out) {
-	CV_Assert(gray.channels() == 1);
-	if (!flow.empty()) {
-
-		if(out.empty()){
-			out = Mat(flow.rows, flow.cols, flow.type());
-		}
-
-		Mat flow_split[2];
-		Mat magnitude, angle;
-		Mat hsv_split[3], hsv;
-		split(flow, flow_split);
-		cartToPolar(flow_split[0], flow_split[1], magnitude, angle, true);
-		normalize(magnitude, magnitude, 0, 255, NORM_MINMAX);
-		normalize(angle, angle, 0, 255, NORM_MINMAX);
-
-		hsv_split[0] = angle; // already in degrees - no normalization needed
-		Mat x;
-		if(gray.empty()){
-			x = Mat::ones(angle.size(), angle.type());
-		} else{
-			gray.convertTo(x, angle.type());
-		}
-		hsv_split[1] = x.clone();
-		hsv_split[2] = magnitude;
-		merge(hsv_split, 3, hsv);
-		cvtColor(hsv, out, COLOR_HSV2BGR);
-		normalize(out, out, 0, 255, NORM_MINMAX); // Normalise the matrix in the 0 - 255 range
-
-		Mat n;
-		out.convertTo(n, CV_8UC3); // Convert to 3 channel uchar matrix
-		n.copyTo(out);
-
-		// Normalise the flow within the range 0 ... 1
-		normalize(flow, flow, 0, 1, NORM_MINMAX);
 	}
 }
 

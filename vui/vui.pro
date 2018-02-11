@@ -29,8 +29,8 @@ SOURCES += \
         src/vuiplayer.cpp
 
 HEADERS += \
-        include/vuiwindow.h \
-        include/vuiplayer.h
+        include/vuiplayer.h \
+        include/vuiwindow.h
 
 FORMS += \
         forms/vuiwindow.ui
@@ -44,3 +44,6 @@ QMAKE_CXXFLAGS+= -std=c++11 \
                 -O3 -march=native
 QMAKE_LFLAGS +=  -std=c++11 \
                 -O3 -march=native
+
+RESOURCES += \
+    icons.qrc

@@ -100,6 +100,12 @@ typedef struct VOCOUNT{
 	bool roiExtracted = false;
 	bool interactive = false;
 	bool print = false;
+	bool dClustering,											/// Descriptor space clustering
+		 iSClustering,											/// Image space clustering
+		 fdClustering,											/// Filtered descriptor clustering	
+		 dnfClustering,											/// Combine descriptor and filtered desctiptor clustering
+		 dniClustering,											/// Combine descriptor and image space clustering
+		 difClustering;											/// Combine descriptor, filtered descriptor and image space clustering
     map<int32_t, map<String, int32_t> > stats;
     map<int32_t, vector<int32_t> > clusterEstimates;
 	vector<framed> frameHistory;
@@ -146,16 +152,6 @@ void generateClusterImages(Mat frame, results_t* res);
  *
  */
 double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vector<int32_t>* cest, int32_t& selectedFeatures, double& lsize);
-
-/**
- *
- */
-void runSegmentation(vocount& vcount, framed& f, Ptr<GraphSegmentation> graphSegmenter, Ptr<DenseOpticalFlow> flowAlgorithm);
-
-/**
- *
- */
-void mergeFlowAndImage(Mat& flow, Mat& gray, Mat& out);
 
 /**
  *
