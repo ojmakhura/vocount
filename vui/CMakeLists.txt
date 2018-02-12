@@ -23,7 +23,7 @@ include_directories(${Qt5Widgets_INCLUDES})
 #
 # project main
 #
-set(TARGET ${CMAKE_PROJECT_NAME})
+set(TARGET ${PROJECT_NAME})
 
 set(VUI_CPPSRC 
 	${VUI_SRC_DIR}/main.cpp
@@ -43,5 +43,5 @@ QT5_ADD_RESOURCES( RES_SOURCES ${RESOURCES} )
 QT5_WRAP_CPP( MOC_SRCS ${MOC_HEADERS} )
 
 add_executable(${TARGET} ${VUI_CPPSRC} ${MOC_SRCS} ${RES_SOURCES})
-target_link_libraries(${TARGET} ${Qt5Widgets_LIBRARIES})
-include_directories( ${VUI_INCLUDE_DIR} ${CMAKE_BINARY_DIR} )
+target_link_libraries(${TARGET} ${VOCOUNT_LIB} ${Qt5Widgets_LIBRARIES})
+include_directories( ${VUI_INCLUDE_DIR} ${CMAKE_BINARY_DIR} ${HDBSCAN_INCLUDE_DIR} ${GLIB2_INCLUDE_DIRS} ${LISTLIB_INCLUDE_DIR} ${GNULIB_INCLUDE_DIR})

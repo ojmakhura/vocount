@@ -6,6 +6,47 @@
  */
 #include "vocount/print_utils.hpp"
 
+void createOutputDirectories(vocount& vcount, vsettings& settings){
+	
+	createDirectory(settings.destFolder, "");
+
+	settings.colourDir = createDirectory(settings.destFolder, "colour");
+	settings.indexDir = createDirectory(settings.destFolder, "index");
+	settings.keypointsDir = createDirectory(settings.destFolder, "keypoints");
+	settings.selectedDir = createDirectory(settings.destFolder, "selected");
+		
+	if(parser.has("d") || parser.has("di") || parser.has("df") || parser.has("dfi")){
+		String name = settings.keypointsDir + "/estimates.csv";
+		vcount.descriptorsEstimatesFile.open(name.c_str());
+		vcount.descriptorsEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
+			
+		name = settings.keypointsDir + "/ClusterEstimates.csv";
+		vcount.descriptorsClusterFile.open(name.c_str());
+		vcount.descriptorsClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
+	}
+				
+	if(parser.has("f") || parser.has("df") || parser.has("dfi")){
+		String name = settings.selectedDir + "/estimates.csv";
+		vcount.selDescEstimatesFile.open(name.c_str());
+		vcount.selDescEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
+		
+		name = settings.selectedDir + "/ClusterEstimates.csv";
+		vcount.selDescClusterFile.open(name.c_str());
+		vcount.selDescClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
+	}
+		
+	if(parser.has("i") || parser.has("di") || parser.has("dfi")){
+		String name = settings.indexDir + "/estimates.csv";
+		vcount.indexEstimatesFile.open(name.c_str());
+		vcount.indexEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual, Validity\n";
+		
+		name = settings.indexDir + "/ClusterEstimates.csv";
+		vcount.indexClusterFile.open(name.c_str());
+		vcount.indexClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
+	}
+	
+}
+
 void printImage(String folder, int idx, String name, Mat img) {
 	stringstream sstm;
 
@@ -115,7 +156,7 @@ String createDirectory(String& mainFolder, String subfolder){
 	String command = "mkdir \'";
 	command += sokp;
 	command += "\'";
-	printf(command.c_str());
+	printf("%c", command.c_str());
 	printf("\n");
 	const int dir_err2 = system(command.c_str());
 	if (-1 == dir_err2) {

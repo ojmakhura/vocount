@@ -11,11 +11,10 @@ set (VOCOUNT_VERSION ${VOCOUNT_VERSION_MAJOR}.${VOCOUNT_VERSION_MINOR}.${VOCOUNT
 set(INSTALL_LIB_DIR lib CACHE PATH "Installation directory for libraries")
 set(INSTALL_BIN_DIR bin CACHE PATH "Installation directory for executables")
 set(INSTALL_INCLUDE_DIR include CACHE PATH "Installation directory for header files")
-
 set(HDBSCAN_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 set(HDBSCAN_INCLUDE_DIR ${HDBSCAN_LIB_DIR}/include)
-
 set(VOCOUNT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set( VOCOUNT_LIB ${CMAKE_PROJECT_NAME})
 
 #ensure we have pkg-config in the system
 find_package(PkgConfig)
@@ -41,4 +40,6 @@ find_package( Hdbscan REQUIRED )
 find_package(GSL REQUIRED) 
 
 add_subdirectory(src)
+add_subdirectory(console)
+add_subdirectory(vui)
  

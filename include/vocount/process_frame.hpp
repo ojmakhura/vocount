@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include "vocount/print_utils.hpp"
 
 using namespace cv;
 using namespace std;
@@ -95,27 +96,46 @@ typedef struct FRAMED{
 typedef struct VOCOUNT{
     int frameCount = 0;
     int colourMinPts;
-	String destFolder, inputPath;
-	int step, rsize;											/// How many frames to use in the dataset
 	bool roiExtracted = false;
-	bool interactive = false;
 	bool print = false;
+    map<int32_t, map<String, int32_t> > stats;
+    map<int32_t, vector<int32_t> > clusterEstimates;
+	vector<framed> frameHistory;
+    map<int32_t, int32_t> truth;
+    ofstream descriptorsClusterFile, descriptorsEstimatesFile;
+    ofstream selDescClusterFile, selDescEstimatesFile;
+    ofstream indexClusterFile, indexEstimatesFile;
+} vocount;
+
+typedef struct VSETTINGS{
+	String destFolder, inputPath, outputPath, truthFolder;
+    String trackerAlgorithm;    
+	String colourDir;
+	String indexDir;
+	String keypointsDir;
+	String selectedDir;
+	int step, rsize;											/// How many frames to use in the dataset
+	bool interactive = false;
 	bool dClustering,											/// Descriptor space clustering
 		 iSClustering,											/// Image space clustering
 		 fdClustering,											/// Filtered descriptor clustering	
 		 dnfClustering,											/// Combine descriptor and filtered desctiptor clustering
 		 dniClustering,											/// Combine descriptor and image space clustering
 		 difClustering;											/// Combine descriptor, filtered descriptor and image space clustering
-    map<int32_t, map<String, int32_t> > stats;
-    map<int32_t, vector<int32_t> > clusterEstimates;
-	vector<framed> frameHistory;
-    map<int32_t, int32_t> truth;
-    String trackerAlgorithm;
-    ofstream descriptorsClusterFile, descriptorsEstimatesFile;
-    ofstream selDescClusterFile, selDescEstimatesFile;
-    ofstream indexClusterFile, indexEstimatesFile;
-} vocount;
+	
+} vsettings;
 
+
+/**
+ * 
+ * 
+ */
+ void help();
+ 
+/**
+ * 
+ * 
+ */  
 results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints);
 
 /**
@@ -176,7 +196,7 @@ void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d
 /**
  *
  */
-bool processOptions(vocount& voc, CommandLineParser& parser, VideoCapture& cap);
+bool processOptions(vocount& vcount, vsettings& settings, CommandLineParser& parser, VideoCapture& cap);
 
 /**
  *
@@ -281,5 +301,17 @@ void findNewROIs(Mat& frame, vector<Ptr<Tracker>>& trackers, vector<Rect2d>& new
  * 
  */ 
 cv::Ptr<cv::Tracker> createTrackerByName(cv::String name);
+
+/**
+ * 
+ * 
+ */ 
+void processKeypoints(vocount& vcount, vsettings& settings, Mat& frame);
+
+/**
+ * 
+ * 
+ */
+void finalise(vocount& vcount); 
   
 #endif

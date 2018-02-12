@@ -32,6 +32,9 @@ public:
     void pause();
     void resume();
     bool isPaused();
+
+private:
+
 };
 
 #endif // VUIPLAYER_H

@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+#include "vuiplayer.h"
+
 namespace Ui {
 class VUIWindow;
 }
@@ -30,6 +32,7 @@ private slots:
 
 private:
     Ui::VUIWindow *ui;
+    Ui::VUIPlayer *player;
 };
 
 #endif // VUIWINDOW_H
