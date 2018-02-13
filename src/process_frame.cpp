@@ -15,25 +15,6 @@
 using namespace std;
 
 
-static void help(){
-	printf( "This is a programming for estimating the number of objects in the video.\n"
-	        "Usage: vocount\n"
-	        "     [-v][-video]=<video>         	   	# Video file to read\n"
-	        "     [-o=<output dir>]     		   	# the directly where to write to frame images\n"
-			"     [-n=<sample size>]       			# the number of frames to use for sample size\n"
-			"     [-w=<dataset width>]       		# the number of frames to use for dataset size\n"
-			"     [-t=<truth count dir>]			# The folder that contains binary images for each frame in the video with objects tagged \n"
-			"     [-s]       						# select roi from the first \n"
-			"     [-d]       						# raw descriptors\n"
-			"     [-i]       						# image space clustering\n"
-			"     [-f]       						# filtered keypoints\n"
-			"     [-c]       						# cluster analysis method \n"
-			"     [-df]       						# Combine descriptor clustering and filtered descriptors clustering\n"
-			"     [-di]       						# Combine descriptor clustering and image index based clustering\n"
-			"     [-dfi]       					# Combine descriptor clustering, filtered descriptors and index based clustering\n"
-	        "\n" );
-}
-
 
 void display(char const* screen, const InputArray& m) {
 	if (!m.empty()) {
@@ -647,55 +628,6 @@ void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d
 	//return centerFeature;
 }
 
-bool processOptions(vocount& vcount, vsettings& settings, CommandLineParser& parser, VideoCapture& cap){
-		
-	if (parser.has("help")) {
-		help();
-		return 0;
-	}
-
-	if (parser.has("o")) {
-		settings.destFolder = parser.get<String>("o");
-		settings.print = true;
-		printf("Will print to %s\n", vcount.destFolder.c_str());
-		//createOutputDirectories(vcount)
-	}
-
-	if (parser.has("v") || parser.has("video")) {
-
-		settings.inputPath =
-				parser.has("v") ?
-						parser.get<String>("v") : parser.get<String>("video");
-		cap.open(settings.inputPath);
-	} else {
-		printf("You did not provide the video stream to open.");
-		return false;
-	}
-
-	if (parser.has("w")) {
-
-		String s = parser.get<String>("w");
-		settings.step = atoi(s.c_str());
-	} else {
-		settings.step = 1;
-	}
-
-	if (parser.has("n")) {
-		String s = parser.get<String>("n");
-		settings.rsize = atoi(s.c_str());
-	}
-
-	if(parser.has("t")){
-		settings.truthFolder = parser.get<String>("t");
-		getFrameTruth(settings.truthFolder, vcount.truth);
-	}
-	
-	if(parser.has("ta")){
-		settings.trackerAlgorithm = parser.get<String>("ta");
-	}
-	return true;
-}
-
 void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool extend){
 	vector<vector<box_structure>> b_structures;
 	set<int32_t> processedClusters;
@@ -1231,7 +1163,7 @@ void findNewROIs(Mat& frame, vector<Ptr<Tracker>>& trackers, vector<Rect2d>& new
 	}
 }
 
-void processKeypoints(vocount& vcount, vsettings& settings, selection_t& colourSel, Mat& frame){
+void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, Mat& frame){
 	
 	vcount.frameCount++;
 	framed f, index_f, sel_f;
@@ -1245,13 +1177,9 @@ void processKeypoints(vocount& vcount, vsettings& settings, selection_t& colourS
 	sel_f.frame = f.frame;
 
 	cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
-	detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
-
-	// Listen for a key pressed
-	char c = (char) waitKey(20);
-	if (c == 'q') {
-		break;
-	} else if (c == 's' || (parser.has("s") && !vcount.roiExtracted)) { // select a roi if c has een pressed or if the program was run with -s option
+	vcount.detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
+	
+	if (settings.selectROI && !vcount.roiExtracted) { // select a roi if c has been pressed or if the program was run with -s option
 			
 		Mat f2 = frame.clone();
 		Rect2d boundingBox = selectROI("Select ROI", f2);
@@ -1259,38 +1187,38 @@ void processKeypoints(vocount& vcount, vsettings& settings, selection_t& colourS
 		f.rois.push_back(boundingBox);
 			
 		for(size_t i = 0; i < f.rois.size(); i++){
-			trackers.push_back(createTrackerByName(vcount.trackerAlgorithm));
-			trackers[i]->init( frame, f.rois[i] );
+			vcount.trackers.push_back(createTrackerByName(settings.trackerAlgorithm));
+			vcount.trackers[i]->init( frame, f.rois[i] );
 		}
 			
 		//trackers.add(_trackers, f2, f.rois);
 		vcount.roiExtracted = true;
-
-	} 
+		settings.selectROI = false;
+	}
 
 	if (vcount.roiExtracted ){
 		f.rois.resize(1);
 		printf("rois size = %lu\n", f.rois.size());
 		RNG rng(12345);
 		Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));
-		for(size_t i = 0; i < trackers.size(); i++){
-			trackers[i]->update(frame, f.rois[i]);
+		for(size_t i = 0; i < vcount.trackers.size(); i++){
+			vcount.trackers[i]->update(frame, f.rois[i]);
 			rectangle(frame, f.rois[i], value, 2, 8, 0);
 			break;
 		}
 	}
 	
-    String colourFrameDir;
-   	String indexFrameDir;
-   	String keypointsFrameDir;
-    String selectedFrameDir;
+    //String colourFrameDir;
+   	String iSpaceFrameDir;
+   	String descriptorFrameDir;
+    String selectedDescFrameDir;
     	
     if(settings.print){
-		printImage(vcount.settings, vcount.frameCount, "frame", frame);
-    	colourFrameDir = createDirectory(colourDir, to_string(vcount.frameCount));
-    	indexFrameDir = createDirectory(indexDir, to_string(vcount.frameCount));
-    	keypointsFrameDir = createDirectory(keypointsDir, to_string(vcount.frameCount));
-    	selectedFrameDir = createDirectory(selectedDir, to_string(vcount.frameCount));
+		printImage(settings.outputFolder, vcount.frameCount, "frame", frame);
+    	//colourFrameDir = createDirectory(settings.colourDir, to_string(vcount.frameCount));
+    	iSpaceFrameDir = createDirectory(settings.imageSpaceDir, to_string(vcount.frameCount));
+    	descriptorFrameDir = createDirectory(settings.descriptorDir, to_string(vcount.frameCount));
+    	selectedDescFrameDir = createDirectory(settings.filteredDescDir, to_string(vcount.frameCount));
     }
         
 	if (!f.descriptors.empty()) {
@@ -1302,11 +1230,11 @@ void processKeypoints(vocount& vcount, vsettings& settings, selection_t& colourS
 		// Create clustering dataset
 		f.hasRoi = vcount.roiExtracted;
 		results_t* res1;
-		if(parser.has("d") || parser.has("di") || parser.has("df") || parser.has("dfi")){
-			clusterDescriptors(vcount, f, res1, keypointsFrameDir, keypointsDir);
+		if(settings.dClustering || settings.diClustering || settings.dfClustering || settings.dfiClustering){
+			clusterDescriptors(vcount, settings, f, res1, iSpaceFrameDir, settings.imageSpaceDir);
 		}
 		
-		if(vcount.frameHistory.size() > 0 && (parser.has("i") || parser.has("f") || parser.has("di") || parser.has("df") || parser.has("dfi"))){
+		if(vcount.frameHistory.size() > 0 && (settings.isClustering || settings.fdClustering || settings.diClustering || settings.dfClustering || settings.dfiClustering)){
 			
 			if(colourSel.minPts == -1){
 				printf("Finding proper value of minPts\n");
@@ -1386,7 +1314,7 @@ void processKeypoints(vocount& vcount, vsettings& settings, selection_t& colourS
 				vector<int32_t> ce;
 				findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.rois, colourSel.roiFeatures, roiDesc, ce);			
 					
-				if(parser.has("i") || parser.has("di") || parser.has("dfi")){
+				if(settings.isClustering || settings.diClustering || settings.dfiClustering){
 					printf("Clustering selected keypoints in image space\n\n\n");
 					Mat ds = getImageSpaceDataset(colourSel.selectedKeypoints);
 					results_t* idxClusterRes = do_cluster(NULL, ds, colourSel.selectedKeypoints, 1, 3, true, true);
@@ -1396,16 +1324,16 @@ void processKeypoints(vocount& vcount, vsettings& settings, selection_t& colourS
 					generateClusterImages(f.frame, idxClusterRes);
 					f.results["im_space"] = idxClusterRes;		
 					
-					if(parser.has("o")){
+					if(settings.print){
 						generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, idxClusterRes, f.i);
-						Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
-						printImage(indexDir, vcount.frameCount, "frame_kp", frm);
-						printImages(indexFrameDir, idxClusterRes->selectedClustersImages, vcount.frameCount);
+						Mat frm = drawKeyPoints(f.frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
+						printImage(settings.imageSpaceDir, vcount.frameCount, "frame_kp", frm);
+						printImages(iSpaceFrameDir, idxClusterRes->selectedClustersImages, vcount.frameCount);
 						printEstimates(vcount.indexEstimatesFile, idxClusterRes->odata);
 						printClusterEstimates(vcount.indexClusterFile, idxClusterRes->odata, idxClusterRes->cest);	
 					}
 							
-					if(parser.has("di") || parser.has("dfi")){
+					if(settings.diClustering || settings.dfiClustering){
 						vector<int32_t> boxLabel(colourSel.selectedKeypoints.size(), -1);
 						
 					#pragma omp parallel for
@@ -1463,7 +1391,7 @@ void processKeypoints(vocount& vcount, vsettings& settings, selection_t& colourS
 				/// Create a dataset of descriptors based on the selected colour model
 				/// 
 				/****************************************************************************************************/
-				if(parser.has("f") || parser.has("df") || parser.has("dfi")){
+				if(settings.fdClustering || settings.dfClustering || settings.dfiClustering){
 					//dataset = colourSel.selectedDesc.clone();
 					printf("Clustering selected keypoints in descriptor space\n\n\n");
 					results_t* selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true, false);
@@ -1478,11 +1406,11 @@ void processKeypoints(vocount& vcount, vsettings& settings, selection_t& colourS
 					cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 												
 						
-					if(parser.has("o")){
+					if(settings.print){
 						Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
-						printImage(selectedDir, vcount.frameCount, "frame_kp", frm);
+						printImage(settings.filteredDescDir, vcount.frameCount, "frame_kp", frm);
 						generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, selDescRes, f.i);
-						printImages(selectedFrameDir, selDescRes->selectedClustersImages, vcount.frameCount);
+						printImages(selectedDescFrameDir, selDescRes->selectedClustersImages, vcount.frameCount);
 						printEstimates(vcount.selDescEstimatesFile, selDescRes->odata);
 						printClusterEstimates(vcount.selDescClusterFile, selDescRes->odata, selDescRes->cest);	
 					}
@@ -1495,37 +1423,37 @@ void processKeypoints(vocount& vcount, vsettings& settings, selection_t& colourS
 	maintaintHistory(vcount, f);
 }
 
-void clusterDescriptors(vocount& vcount, framed& f, results_t* res, String& keypointsFrameDir, String& keypointsDir){
+void clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, results_t* res, String& keypointsFrameDir, String& keypointsDir){
 	
 	findROIFeature(f.keypoints, f.descriptors, f.rois, f.roiFeatures, f.roiDesc, f.centerFeatures);
-	Mat dset = getDescriptorDataset(vcount.frameHistory, vcount.step, f.descriptors);
+	Mat dset = getDescriptorDataset(vcount.frameHistory, settings.step, f.descriptors);
 
-	res1 = do_cluster(NULL, f.descriptors, f.keypoints, vcount.step, 3, true, true);
-	generateFinalPointClusters(f.roiFeatures, res1);	
-	getBoxStructure(res1, f.rois, frame, true);
+	res = do_cluster(NULL, f.descriptors, f.keypoints, settings.step, 3, true, true);
+	generateFinalPointClusters(f.roiFeatures, res);	
+	getBoxStructure(res, f.rois, f.frame, true);
 	generateClusterImages(f.frame, res);
 	createBoxStructureImages(res->boxStructures, res->selectedClustersImages);
 	//printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
 	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-	res1->total = countPrint(res->roiClusterPoints, res->finalPointClusters, res->cest, res->selectedFeatures, res->lsize);
+	res->total = countPrint(res->roiClusterPoints, res->finalPointClusters, res->cest, res->selectedFeatures, res->lsize);
 	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 
 	f.results["descriptors"] = res;
 				
-	if(parser.has("o")){
-		Mat frm = drawKeyPoints(frame, f.keypoints, Scalar(0, 0, 255), -1);
+	if(settings.print){
+		Mat frm = drawKeyPoints(f.frame, f.keypoints, Scalar(0, 0, 255), -1);
 		printImage(keypointsDir, vcount.frameCount, "frame_kp", frm);					
 		generateOutputData(vcount, f.frame, f.keypoints, f.roiFeatures, res, f.i);
-		printImages(keypointsFrameDir, res1->selectedClustersImages, vcount.frameCount);
+		printImages(keypointsFrameDir, res->selectedClustersImages, vcount.frameCount);
 		printEstimates(vcount.descriptorsEstimatesFile, res->odata);
 		printClusterEstimates(vcount.descriptorsClusterFile, res->odata, res->cest);	
 	}
 	/*
 	if(res1->validity == 4){
 		vector<Ptr<Tracker>> ts;
-		findNewROIs(frame, trackers, f.rois, res1->boxStructures, vcount.trackerAlgorithm);
-		printf("(foundRects, res->boxStructures) = (%lu, %lu)\n", foundRects.size(), res1->boxStructures->size());
+		findNewROIs(frame, trackers, f.rois, res->boxStructures, vcount.trackerAlgorithm);
+		printf("(foundRects, res->boxStructures) = (%lu, %lu)\n", foundRects.size(), res->boxStructures->size());
 	}*/
 }
 
@@ -1539,7 +1467,7 @@ void finalise(vocount& vcount){
 		}
 	}
 
-    if(vcount.print){
+    //if(vcount.print){
 		if(vcount.descriptorsClusterFile.is_open()){
 			vcount.descriptorsClusterFile.close();
 		}
@@ -1563,5 +1491,5 @@ void finalise(vocount& vcount){
 		if(vcount.indexEstimatesFile.is_open()){
 			vcount.indexEstimatesFile.close();
 		}
-    }
+    //}
 }

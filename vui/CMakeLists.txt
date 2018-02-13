@@ -15,10 +15,10 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-find_package(Qt5 COMPONENTS Widgets Core REQUIRED)
+find_package(Qt5 COMPONENTS Widgets REQUIRED)
 
 add_definitions(${Qt5Widgets_DEFINITIONS})
-include_directories(${Qt5Widgets_INCLUDES})
+#include_directories(${Qt5Widgets_INCLUDES})
 
 #
 # project main
@@ -43,5 +43,8 @@ QT5_ADD_RESOURCES( RES_SOURCES ${RESOURCES} )
 QT5_WRAP_CPP( MOC_SRCS ${MOC_HEADERS} )
 
 add_executable(${TARGET} ${VUI_CPPSRC} ${MOC_SRCS} ${RES_SOURCES})
-target_link_libraries(${TARGET} ${VOCOUNT_LIB} ${Qt5Widgets_LIBRARIES})
-include_directories( ${VUI_INCLUDE_DIR} ${CMAKE_BINARY_DIR} ${HDBSCAN_INCLUDE_DIR} ${GLIB2_INCLUDE_DIRS} ${LISTLIB_INCLUDE_DIR} ${GNULIB_INCLUDE_DIR})
+target_link_libraries(${TARGET} ${VOCOUNT_LIB} )# ${Qt5Widgets_LIBRARIES})
+include_directories( ${VOCOUNT_INCLUDE_DIR} ${VUI_INCLUDE_DIR} ${CMAKE_BINARY_DIR} ${HDBSCAN_INCLUDE_DIRS} ${GLIB2_INCLUDE_DIRS} ${LISTLIB_INCLUDE_DIR} ${GNULIB_INCLUDE_DIR})
+qt5_use_modules(${TARGET} Widgets)
+
+# ${Qt5Widgets_INCLUDES})

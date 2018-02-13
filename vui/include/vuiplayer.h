@@ -5,10 +5,10 @@
 #include <QThread>
 #include <QImage>
 #include <QWaitCondition>
+#include <opencv/cv.hpp>
+#include "vocount/process_frame.hpp"
 
-namespace Ui {
-class VUIPlayer;
-}
+using namespace cv;
 
 class VUIPlayer : public QThread
 {
@@ -18,12 +18,12 @@ protected:
     void msleep(int ms);
 
 public:
-    VUIPlayer();
-    VUIPlayer(QObject *parent = 0);
+    vsettings settings;
+    bool initialised = false;
+    
+    explicit VUIPlayer(QObject *parent = 0);
     //Destructor
     ~VUIPlayer();
-    //Load a video from memory
-    bool loadVideo(QString filename);
     void play();
     //Stop the video
     void stop();
@@ -32,8 +32,17 @@ public:
     void pause();
     void resume();
     bool isPaused();
+    void initPlayer();
 
 private:
+	Mat frame;
+	VideoCapture cap;
+    vocount vcount;
+    selection_t colourSel;
+    bool _paused = false;
+    bool _stop = false;
+    QMutex mutex;
+    QWaitCondition condition;
 
 };
 

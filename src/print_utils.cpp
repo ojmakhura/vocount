@@ -5,44 +5,56 @@
  *      Author: ojmakh
  */
 #include "vocount/print_utils.hpp"
+#include <QDir>
 
 void createOutputDirectories(vocount& vcount, vsettings& settings){
 	
-	createDirectory(settings.destFolder, "");
-
-	settings.colourDir = createDirectory(settings.destFolder, "colour");
-	settings.indexDir = createDirectory(settings.destFolder, "index");
-	settings.keypointsDir = createDirectory(settings.destFolder, "keypoints");
-	settings.selectedDir = createDirectory(settings.destFolder, "selected");
+	if(settings.print){
+		createDirectory(settings.outputFolder, "");
 		
-	if(parser.has("d") || parser.has("di") || parser.has("df") || parser.has("dfi")){
-		String name = settings.keypointsDir + "/estimates.csv";
-		vcount.descriptorsEstimatesFile.open(name.c_str());
-		vcount.descriptorsEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
-			
-		name = settings.keypointsDir + "/ClusterEstimates.csv";
-		vcount.descriptorsClusterFile.open(name.c_str());
-		vcount.descriptorsClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
-	}
+		if(settings.dClustering){
+			settings.descriptorDir = createDirectory(settings.outputFolder, "descriptors");
+		}
+		
+		if(settings.isClustering){
+			settings.imageSpaceDir = createDirectory(settings.outputFolder, "image_space");
+		}
 				
-	if(parser.has("f") || parser.has("df") || parser.has("dfi")){
-		String name = settings.selectedDir + "/estimates.csv";
-		vcount.selDescEstimatesFile.open(name.c_str());
-		vcount.selDescEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
+		if(settings.fdClustering){
+			settings.filteredDescDir = createDirectory(settings.outputFolder, "filtered_descriptors");
+		}
 		
-		name = settings.selectedDir + "/ClusterEstimates.csv";
-		vcount.selDescClusterFile.open(name.c_str());
-		vcount.selDescClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
-	}
-		
-	if(parser.has("i") || parser.has("di") || parser.has("dfi")){
-		String name = settings.indexDir + "/estimates.csv";
-		vcount.indexEstimatesFile.open(name.c_str());
-		vcount.indexEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual, Validity\n";
-		
-		name = settings.indexDir + "/ClusterEstimates.csv";
-		vcount.indexClusterFile.open(name.c_str());
-		vcount.indexClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
+		//settings.selectedDir = createDirectory(settings.outputFolder, "selected");
+			
+		if(settings.dClustering || settings.diClustering || settings.fdClustering || settings.dfiClustering){
+			String name = settings.imageSpaceDir + "/estimates.csv";
+			vcount.descriptorsEstimatesFile.open(name.c_str());
+			vcount.descriptorsEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
+				
+			name = settings.imageSpaceDir + "/ClusterEstimates.csv";
+			vcount.descriptorsClusterFile.open(name.c_str());
+			vcount.descriptorsClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
+		}
+					
+		if(settings.fdClustering || settings.dfiClustering || settings.dfiClustering){
+			String name = settings.filteredDescDir + "/estimates.csv";
+			vcount.selDescEstimatesFile.open(name.c_str());
+			vcount.selDescEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
+			
+			name = settings.filteredDescDir + "/ClusterEstimates.csv";
+			vcount.selDescClusterFile.open(name.c_str());
+			vcount.selDescClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
+		}
+			
+		if(settings.isClustering || settings.diClustering || settings.dfiClustering){
+			String name = settings.imageSpaceDir + "/estimates.csv";
+			vcount.indexEstimatesFile.open(name.c_str());
+			vcount.indexEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual, Validity\n";
+			
+			name = settings.imageSpaceDir + "/ClusterEstimates.csv";
+			vcount.indexClusterFile.open(name.c_str());
+			vcount.indexClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
+		}
 	}
 	
 }
@@ -149,22 +161,30 @@ void printStatistics(map<int32_t, map<String, double>>& stats, String& folder){
 }
 
 String createDirectory(String& mainFolder, String subfolder){
-	String sokp = mainFolder;
-	sokp += "/";
-	sokp += subfolder;
+	String dest = mainFolder;
+	dest += "/";
+	dest += subfolder;
+	
+	if(!QDir(dest.c_str()).exists()){
+		if(!QDir().mkpath(dest.c_str())){
+			
+			printf("Error creating directory!n");
+			exit(1);
+		}
+	}
 
-	String command = "mkdir \'";
+	/*String command = "mkdir \'";
 	command += sokp;
 	command += "\'";
-	printf("%c", command.c_str());
+	printf("%s\n", command.c_str());
 	printf("\n");
 	const int dir_err2 = system(command.c_str());
 	if (-1 == dir_err2) {
 		printf("Error creating directory!n");
 		exit(1);
-	}
+	}*/
 
-	return sokp;
+	return dest;
 
 }
 
@@ -175,7 +195,7 @@ void printImages(String& folder, map<String, Mat>* images, int count){
 }
 
 void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<vector<int32_t>>& roiFeatures, results_t* res, int i){
-	if (vcount.print) {
+	//if (vcount.print) {
 		int selSampleSize = 0;
 		if(g_hash_table_size(res->roiClusterPoints) > 0){
 			(*(res->odata))[sampleSize] = roiFeatures[0].size();
@@ -198,9 +218,9 @@ void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints
 		(*(res->odata))[selectedSampleSize] = selSampleSize;
 		(*(res->odata))[featureSize] = res->ogsize;
 		(*(res->odata))[selectedFeatureSize] = res->selectedFeatures;
-		(*(res->odata))[numClusters] = res->keyPointImages->size();
+		(*(res->odata))[numClusters] = res->selectedClustersImages->size();
 		(*(res->odata))[clusterSum] = res->total;
-		int32_t avg = res->total / res->keyPointImages->size();
+		int32_t avg = res->total / res->selectedClustersImages->size();
 		(*(res->odata))[clusterAverage] = avg;
 		(*(res->odata))[frameNum] = i;
 		(*(res->odata))[validityStr] = res->validity;
@@ -210,6 +230,6 @@ void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints
 		} else{
 			(*(res->odata))[truthCount] = vcount.truth[i-1];
 		}
-	}
+	//}
 }
 

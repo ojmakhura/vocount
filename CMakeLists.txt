@@ -22,6 +22,13 @@ find_package(PkgConfig)
 # lookup gli-2.0 in pkg-config
 pkg_check_modules(GLIB2 REQUIRED glib-2.0>=2.36.0)
 
+# Find QT 5 Core module
+
+find_package(Qt5 COMPONENTS Core REQUIRED)
+
+add_definitions(${Qt5Core_DEFINITIONS})
+#include_directories(${Qt5Core_INCLUDES})
+
 OPTION (USE_OpenMP "Use OpenMP" ON)
 IF(USE_OpenMP)
   FIND_PACKAGE(OpenMP)
@@ -34,7 +41,7 @@ ENDIF()
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g3 -Wall -fmessage-length=0 -fPIC")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g3 -Wall -fmessage-length=0 -fPIC")
 
-# find the OpenCV libraries
+# find the necessary libraries
 find_package( OpenCV REQUIRED )
 find_package( Hdbscan REQUIRED )
 find_package(GSL REQUIRED) 

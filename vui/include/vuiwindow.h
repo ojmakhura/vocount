@@ -18,21 +18,23 @@ public:
     ~VUIWindow();
 
 private slots:
-    void on_exitButton_clicked();
-
-    void on_stopButton_clicked();
-
-    void on_runButton_clicked();
-
     void on_videoSelectButton_clicked();
 
     void on_outputFolderButton_clicked();
 
     void on_truthFolderButton_clicked();
 
+    void on_actionPlay_triggered();
+
+    void on_actionStop_triggered();
+
+    void on_actionExit_triggered();
+
+    void on_actionPause_triggered();
+
 private:
     Ui::VUIWindow *ui;
-    Ui::VUIPlayer *player;
+    VUIPlayer *player;
 };
 
 #endif // VUIWINDOW_H

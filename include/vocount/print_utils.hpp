@@ -7,8 +7,8 @@
 
 #ifndef PRINT_UTILS_HPP_
 #define PRINT_UTILS_HPP_
-#include "process_frame.hpp"
-#include <iostream>
+
+#include "vocount/vtypes.hpp"
 
 void printEstimates(ofstream& myfile, map<String, int32_t>* estimates);
 
