@@ -1,9 +1,0 @@
--I/mnt/2TB/programming/phd/workspace/vocount/vui
--I/mnt/2TB/programming/phd/workspace/vocount/build/vui
--DQT_CORE_LIB
--DQT_WIDGETS_LIB
--DQT_GUI_LIB
--DQT_CORE_LIB
--o
-/mnt/2TB/programming/phd/workspace/vocount/build/vui/include/moc_vuiwindow.cpp
-/mnt/2TB/programming/phd/workspace/vocount/vui/include/vuiwindow.h

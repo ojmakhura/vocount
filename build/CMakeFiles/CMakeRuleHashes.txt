@@ -1,4 +1,0 @@
-# Hashes of file build rules.
-a220ad9c3d099f0487e382ee8d2b7b96 vui/CMakeFiles/vui_autogen
-9436a4cd6733e85d0cf6e964fbe27034 vui/include/moc_vuiwindow.cpp
-3d3ee1c42607b8a95b058189adf19307 vui/qrc_icons.cpp
