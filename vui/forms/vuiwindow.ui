@@ -18,7 +18,7 @@
     <property name="geometry">
      <rect>
       <x>100</x>
-      <y>170</y>
+      <y>210</y>
       <width>451</width>
       <height>25</height>
      </rect>
@@ -169,6 +169,32 @@
      </property>
     </widget>
    </widget>
+   <widget class="QSplitter" name="splitter_2">
+    <property name="geometry">
+     <rect>
+      <x>100</x>
+      <y>170</y>
+      <width>221</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
+    </property>
+    <widget class="QLabel" name="trackerLabel">
+     <property name="text">
+      <string>Tracker</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="trackerComboBox">
+     <property name="currentText">
+      <string/>
+     </property>
+     <property name="maxVisibleItems">
+      <number>24</number>
+     </property>
+    </widget>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
@@ -265,7 +291,7 @@
      <normaloff>:/icons/icons/pause1.png</normaloff>:/icons/icons/pause1.png</iconset>
    </property>
    <property name="text">
-    <string>Pause</string>
+    <string>Pa&amp;use</string>
    </property>
    <property name="toolTip">
     <string>Pause Video</string>

@@ -206,6 +206,6 @@ void finalise(vocount& vcount);
  * 
  * 
  */
-void clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, results_t* res, String& keypointsFrameDir, String& keypointsDir); 
+results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, String& keypointsFrameDir, String& keypointsDir); 
   
 #endif

@@ -13,6 +13,12 @@ VUIWindow::VUIWindow(QWidget *parent) :
 {
     player = new VUIPlayer();
     ui->setupUi(this);
+    ui->trackerComboBox->addItem("BOOSTING");
+    ui->trackerComboBox->addItem("KCF");
+    ui->trackerComboBox->addItem("TLD");
+    ui->trackerComboBox->addItem("MEDIANFLOW");
+    ui->trackerComboBox->addItem("GOTURN");
+    ui->trackerComboBox->addItem("MIL");
 }
 
 VUIWindow::~VUIWindow()
@@ -63,7 +69,14 @@ void VUIWindow::on_actionPlay_triggered()
     if(!this->player->initialised){
         this->player->initPlayer();
         this->player->initialised = true;
-        ui->actionStop->setEnabled(true);
+        ui->actionStop->setEnabled(true);        
+        player->settings.trackerAlgorithm = ui->trackerComboBox->currentText().toStdString().data();
+        ui->trackerComboBox->setEnabled(false);
+        player->settings.dClustering = ui->descriptorSpaceBox->isChecked();
+        player->settings.fdClustering = ui->filteredDescriptorBox->isChecked();
+        player->settings.isClustering = ui->imageSpaceBox->isChecked();
+        player->settings.rsize = ui->sampleSizeEdit->text().toInt();
+        player->settings.step = 1;
     }
 
     ui->actionPause->setEnabled(true);

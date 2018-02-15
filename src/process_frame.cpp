@@ -1157,7 +1157,6 @@ void findNewROIs(Mat& frame, vector<Ptr<Tracker>>& trackers, vector<Rect2d>& new
 			newRects.push_back(bs.box);
 			trackers.push_back(createTrackerByName(trackerName));
 			trackers[x]->init( frame, newRects[x] );
-			printf("Created tracker at %lu\n", x);
 		}
 
 	}
@@ -1185,6 +1184,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		Rect2d boundingBox = selectROI("Select ROI", f2);
 		destroyWindow("Select ROI");
 		f.rois.push_back(boundingBox);
+		cout << boundingBox << endl;
 			
 		for(size_t i = 0; i < f.rois.size(); i++){
 			vcount.trackers.push_back(createTrackerByName(settings.trackerAlgorithm));
@@ -1198,7 +1198,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 
 	if (vcount.roiExtracted ){
 		f.rois.resize(1);
-		printf("rois size = %lu\n", f.rois.size());
+		//printf("rois size = %lu\n", f.rois.size());
 		RNG rng(12345);
 		Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));
 		for(size_t i = 0; i < vcount.trackers.size(); i++){
@@ -1231,7 +1231,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		f.hasRoi = vcount.roiExtracted;
 		results_t* res1;
 		if(settings.dClustering || settings.diClustering || settings.dfClustering || settings.dfiClustering){
-			clusterDescriptors(vcount, settings, f, res1, iSpaceFrameDir, settings.imageSpaceDir);
+			res1 = clusterDescriptors(vcount, settings, f, iSpaceFrameDir, settings.imageSpaceDir);
 		}
 		
 		if(vcount.frameHistory.size() > 0 && (settings.isClustering || settings.fdClustering || settings.diClustering || settings.dfClustering || settings.dfiClustering)){
@@ -1423,12 +1423,11 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 	maintaintHistory(vcount, f);
 }
 
-void clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, results_t* res, String& keypointsFrameDir, String& keypointsDir){
+results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, String& keypointsFrameDir, String& keypointsDir){
 	
 	findROIFeature(f.keypoints, f.descriptors, f.rois, f.roiFeatures, f.roiDesc, f.centerFeatures);
 	Mat dset = getDescriptorDataset(vcount.frameHistory, settings.step, f.descriptors);
-
-	res = do_cluster(NULL, f.descriptors, f.keypoints, settings.step, 3, true, true);
+	results_t* res = do_cluster(NULL, f.descriptors, f.keypoints, settings.step, 3, true, true);
 	generateFinalPointClusters(f.roiFeatures, res);	
 	getBoxStructure(res, f.rois, f.frame, true);
 	generateClusterImages(f.frame, res);
@@ -1455,6 +1454,8 @@ void clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, results
 		findNewROIs(frame, trackers, f.rois, res->boxStructures, vcount.trackerAlgorithm);
 		printf("(foundRects, res->boxStructures) = (%lu, %lu)\n", foundRects.size(), res->boxStructures->size());
 	}*/
+	
+	return res;
 }
 
 void finalise(vocount& vcount){
