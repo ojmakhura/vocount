@@ -34,7 +34,6 @@ void VUIWindow::on_videoSelectButton_clicked()
 
     if(!filename.isEmpty()){        
         ui->actionPlay->setEnabled(true);
-        this->player->settings.inputVideo = filename.toStdString().data();
         ui->videoSelectEdit->setText(filename);
     }
 }
@@ -47,8 +46,6 @@ void VUIWindow::on_outputFolderButton_clicked()
                                                     | QFileDialog::DontResolveSymlinks);
     if(!dir.isEmpty()){
         ui->outFolderSelectEdit->setText(dir);
-        this->player->settings.outputFolder = dir.toStdString().data();
-        this->player->settings.print = true;
     }
 }
 
@@ -60,16 +57,28 @@ void VUIWindow::on_truthFolderButton_clicked()
                                                     | QFileDialog::DontResolveSymlinks);
     if(!dir.isEmpty()){
         ui->truthFolderSelectEdit->setText(dir);
-        this->player->settings.truthFolder = dir.toStdString().data();
     }
 }
 
 void VUIWindow::on_actionPlay_triggered()
 {
     if(!this->player->initialised){
-        this->player->initPlayer();
         this->player->initialised = true;
-        ui->actionStop->setEnabled(true);        
+        ui->actionStop->setEnabled(true);
+
+        // player settings
+        this->player->settings.inputVideo = ui->videoSelectEdit->text().toStdString().c_str();
+
+        if(!ui->outFolderSelectEdit->text().isEmpty()){
+            this->player->settings.outputFolder = ui->outFolderSelectEdit->text().toStdString().c_str();
+            this->player->settings.print = true;
+        }
+
+        if(!ui->truthFolderSelectEdit->text().isEmpty()){
+            this->player->settings.truthFolder = ui->truthFolderSelectEdit->text().toStdString().c_str();
+
+        }
+
         player->settings.trackerAlgorithm = ui->trackerComboBox->currentText().toStdString().data();
         ui->trackerComboBox->setEnabled(false);
         player->settings.dClustering = ui->descriptorSpaceBox->isChecked();
@@ -77,6 +86,8 @@ void VUIWindow::on_actionPlay_triggered()
         player->settings.isClustering = ui->imageSpaceBox->isChecked();
         player->settings.rsize = ui->sampleSizeEdit->text().toInt();
         player->settings.step = 1;
+
+        this->player->initPlayer();
     }
 
     ui->actionPause->setEnabled(true);

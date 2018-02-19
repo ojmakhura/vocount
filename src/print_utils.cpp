@@ -11,27 +11,31 @@ void createOutputDirectories(vocount& vcount, vsettings& settings){
 	
 	if(settings.print){
 		createDirectory(settings.outputFolder, "");
+		printf("Created %s directory.\n", settings.outputFolder.c_str());
 		
 		if(settings.dClustering){
 			settings.descriptorDir = createDirectory(settings.outputFolder, "descriptors");
+			printf("Created descriptors directory at %s.\n", settings.descriptorDir.c_str());
 		}
 		
 		if(settings.isClustering){
 			settings.imageSpaceDir = createDirectory(settings.outputFolder, "image_space");
+			printf("Created image_space directory at %s.\n", settings.imageSpaceDir.c_str());
 		}
 				
 		if(settings.fdClustering){
 			settings.filteredDescDir = createDirectory(settings.outputFolder, "filtered_descriptors");
+			printf("Created filtered_descriptors directory at %s.\n", settings.filteredDescDir.c_str());
 		}
 		
 		//settings.selectedDir = createDirectory(settings.outputFolder, "selected");
 			
 		if(settings.dClustering || settings.diClustering || settings.fdClustering || settings.dfiClustering){
-			String name = settings.imageSpaceDir + "/estimates.csv";
+			String name = settings.descriptorDir + "/estimates.csv";
 			vcount.descriptorsEstimatesFile.open(name.c_str());
 			vcount.descriptorsEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
 				
-			name = settings.imageSpaceDir + "/ClusterEstimates.csv";
+			name = settings.descriptorDir + "/ClusterEstimates.csv";
 			vcount.descriptorsClusterFile.open(name.c_str());
 			vcount.descriptorsClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
 		}
@@ -63,6 +67,7 @@ void printImage(String folder, int idx, String name, Mat img) {
 	stringstream sstm;
 
 	sstm << folder.c_str() << "/" << idx << " " << name.c_str() << ".jpg";
+	//cout << "Trying to print %s\n" << sstm.str() << endl;
 	imwrite(sstm.str(), img);
 }
 
@@ -165,10 +170,12 @@ String createDirectory(String& mainFolder, String subfolder){
 	dest += "/";
 	dest += subfolder;
 	
+	QDir main(mainFolder.c_str());
+	
 	if(!QDir(dest.c_str()).exists()){
 		if(!QDir().mkpath(dest.c_str())){
 			
-			printf("Error creating directory!n");
+			printf("Error creating directory %s\n", dest.c_str());
 			exit(1);
 		}
 	}
@@ -225,10 +232,10 @@ void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints
 		(*(res->odata))[frameNum] = i;
 		(*(res->odata))[validityStr] = res->validity;
 
-		if((size_t)i >= vcount.truth.size()){
+		if((size_t)i > vcount.truth.size()){
 			(*(res->odata))[truthCount] = 0;
 		} else{
-			(*(res->odata))[truthCount] = vcount.truth[i-1];
+			(*(res->odata))[truthCount] = vcount.truth[i];
 		}
 	//}
 }

@@ -78,7 +78,7 @@ typedef struct {
 } results_t;
 
 typedef struct FRAMED{
-	int i;
+	int i = 0;
 	Mat descriptors,  												/// Frame descriptors
 		frame,														/// The frame
 		gray;													/// hdbscan cluster
@@ -116,12 +116,12 @@ typedef struct VSETTINGS{
 	bool interactive = false;
 	bool selectROI = false;
 	bool exit = false;
-	bool dClustering,											/// Descriptor space clustering
-		 isClustering,											/// Image space clustering
-		 fdClustering,											/// Filtered descriptor clustering	
-		 dfClustering,											/// Combine descriptor and filtered desctiptor clustering
-		 diClustering,											/// Combine descriptor and image space clustering
-		 dfiClustering;											/// Combine descriptor, filtered descriptor and image space clustering
+	bool dClustering = false,											/// Descriptor space clustering
+		 isClustering = false,											/// Image space clustering
+		 fdClustering = false,											/// Filtered descriptor clustering	
+		 dfClustering = false,											/// Combine descriptor and filtered desctiptor clustering
+		 diClustering = false,											/// Combine descriptor and image space clustering
+		 dfiClustering = false;											/// Combine descriptor, filtered descriptor and image space clustering
 	
 } vsettings;
 

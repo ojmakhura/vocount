@@ -42,9 +42,10 @@ void VUIPlayer::initPlayer(){
         printf("Video successfully opened.\n");
     }
 
-    if(this->settings.truthFolder.length() > 0){
+    if(!this->settings.truthFolder.empty()){
         getFrameTruth(settings.truthFolder, vcount.truth);
     }
+
     settings.rsize = 1;
     settings.selectROI = true;
 }
@@ -88,6 +89,9 @@ bool VUIPlayer::isPaused(){
 }
 
 void VUIPlayer::stop(){
+    this->initialised = false;
+    this->cap.release();
+    finalise(vcount);
     _stop = true;
 }
 

@@ -87,6 +87,19 @@ bool processOptions(vocount& vcount, vsettings& settings, CommandLineParser& par
 	if(parser.has("s")){
 		settings.selectROI = true;
 	}
+	
+	if(parser.has("d") || parser.has("df") || parser.has("di") || parser.has("dfi")){
+		settings.dClustering = true;
+	}
+	
+	if(parser.has("i") || parser.has("di") || parser.has("dfi")){
+		settings.isClustering = true;
+	}
+	
+	if(parser.has("f") || parser.has("df") || parser.has("dfi")){
+		settings.fdClustering = true;
+	}
+	
 	return true;
 }
 

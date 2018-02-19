@@ -11,6 +11,7 @@
 #include <opencv2/imgproc.hpp>
 #include <dirent.h>
 #include <gsl/gsl_statistics.h>
+#include <QDir>
 
 using namespace std;
 
@@ -572,16 +573,16 @@ void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d
 	roiFeatures.reserve(rois.size());
 	roiDesc.reserve(rois.size());
 	centerFeatures.reserve(rois.size());
-	printf("rois.size = %lu roiFeatures = %lu roiDesc = %lu\n", rois.size(), roiFeatures.size(), roiDesc.size());
+	//printf("rois.size = %lu roiFeatures = %lu roiDesc = %lu\n", rois.size(), roiFeatures.size(), roiDesc.size());
 //#pragma omp parallel for	
 	for(uint i = 0; i < rois.size(); i++){
 		roiFeatures.push_back(vector<int32_t>());
 		roiDesc.push_back(Mat());
 		centerFeatures.push_back(-1);
 	}
-	printf("rois.size = %lu roiFeatures = %lu roiDesc = %lu\n", rois.size(), roiFeatures.size(), roiDesc.size());
+	//printf("rois.size = %lu roiFeatures = %lu roiDesc = %lu\n", rois.size(), roiFeatures.size(), roiDesc.size());
 
-	printf("keypoints = %lu, descriptors = %d\n", keypoints.size(), descriptors.rows);
+	//printf("keypoints = %lu, descriptors = %d\n", keypoints.size(), descriptors.rows);
 
 //#pragma omp parallel for	
 	for(uint x = 0; x < rois.size(); x++){
@@ -711,28 +712,23 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
 }
 
 void getFrameTruth(String truthFolder, map<int, int>& truth){
-	DIR*     dir;
-	dirent*  pdir;
-	dir = opendir(truthFolder.c_str());     // open current directory
-	pdir = readdir(dir);
-	while (pdir) {
-	    
-		String s = pdir->d_name;
-	    if(s != "." && s != ".."){
-	        String full = truthFolder + "/";
-	        full = full + pdir->d_name;
-	        Mat image = imread(full, CV_LOAD_IMAGE_GRAYSCALE);
-			threshold(image, image, 200, 255, THRESH_BINARY);
-			Mat labels;
-			connectedComponents(image, labels, 8, CV_16U);
-			double min, max;
-			cv::minMaxLoc(labels, &min, &max);
+	
+	QDir tf(truthFolder.c_str());
+	QStringList fileList = tf.entryList(QDir::Files, QDir::Name);
+	for(int i = 0; i < fileList.size(); i++){
+		QString fileName = fileList.at(i);
+		QStringList tokens = fileName.split(' ');
+		
+		String full = truthFolder + "/" + fileName.toStdString();
+	    Mat image = imread(full, CV_LOAD_IMAGE_GRAYSCALE);
+		threshold(image, image, 200, 255, THRESH_BINARY);
+		Mat labels;
+		connectedComponents(image, labels, 8, CV_16U);
+		double min, max;
+		cv::minMaxLoc(labels, &min, &max);
 
-			char* pch = strtok (pdir->d_name," ");
-			int fnum = atoi(pch)-1;
-			truth[fnum] = int(max);
-		}
-		pdir = readdir(dir);
+		int fnum = tokens[0].toInt();
+		truth[fnum] = int(max);
 	}
 }
 
@@ -1184,7 +1180,6 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		Rect2d boundingBox = selectROI("Select ROI", f2);
 		destroyWindow("Select ROI");
 		f.rois.push_back(boundingBox);
-		cout << boundingBox << endl;
 			
 		for(size_t i = 0; i < f.rois.size(); i++){
 			vcount.trackers.push_back(createTrackerByName(settings.trackerAlgorithm));
@@ -1215,10 +1210,21 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
     	
     if(settings.print){
 		printImage(settings.outputFolder, vcount.frameCount, "frame", frame);
-    	//colourFrameDir = createDirectory(settings.colourDir, to_string(vcount.frameCount));
-    	iSpaceFrameDir = createDirectory(settings.imageSpaceDir, to_string(vcount.frameCount));
-    	descriptorFrameDir = createDirectory(settings.descriptorDir, to_string(vcount.frameCount));
-    	selectedDescFrameDir = createDirectory(settings.filteredDescDir, to_string(vcount.frameCount));
+    	
+		if(settings.isClustering){
+			iSpaceFrameDir = createDirectory(settings.imageSpaceDir, to_string(vcount.frameCount));
+			//printf("Created %s directory\n", iSpaceFrameDir.c_str());
+		}
+    	
+		if(settings.dClustering){
+			descriptorFrameDir = createDirectory(settings.descriptorDir, to_string(vcount.frameCount));
+			//printf("Created %s directory\n", descriptorFrameDir.c_str());
+		}
+		
+		if(settings.fdClustering){
+			selectedDescFrameDir = createDirectory(settings.filteredDescDir, to_string(vcount.frameCount));
+			//printf("Created %s directory\n", selectedDescFrameDir.c_str());
+		}
     }
         
 	if (!f.descriptors.empty()) {
@@ -1231,7 +1237,9 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		f.hasRoi = vcount.roiExtracted;
 		results_t* res1;
 		if(settings.dClustering || settings.diClustering || settings.dfClustering || settings.dfiClustering){
-			res1 = clusterDescriptors(vcount, settings, f, iSpaceFrameDir, settings.imageSpaceDir);
+			
+			//printf("iSpaceFrameDir = %s, settings.imageSpaceDir = %s\n", descriptorFrameDir.c_str(), settings.descriptorDir.c_str());
+			res1 = clusterDescriptors(vcount, settings, f, descriptorFrameDir, settings.descriptorDir);
 		}
 		
 		if(vcount.frameHistory.size() > 0 && (settings.isClustering || settings.fdClustering || settings.diClustering || settings.dfClustering || settings.dfiClustering)){
@@ -1432,7 +1440,7 @@ results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, S
 	getBoxStructure(res, f.rois, f.frame, true);
 	generateClusterImages(f.frame, res);
 	createBoxStructureImages(res->boxStructures, res->selectedClustersImages);
-	//printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
+	printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
 	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 	res->total = countPrint(res->roiClusterPoints, res->finalPointClusters, res->cest, res->selectedFeatures, res->lsize);
 	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
@@ -1441,11 +1449,15 @@ results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, S
 	f.results["descriptors"] = res;
 				
 	if(settings.print){
+		//printf("descriptors printing output\n");
 		Mat frm = drawKeyPoints(f.frame, f.keypoints, Scalar(0, 0, 255), -1);
+		//printf("printf frame_kp to %s\n", keypointsDir.c_str());
 		printImage(keypointsDir, vcount.frameCount, "frame_kp", frm);					
 		generateOutputData(vcount, f.frame, f.keypoints, f.roiFeatures, res, f.i);
 		printImages(keypointsFrameDir, res->selectedClustersImages, vcount.frameCount);
+		//printf("printf vcount.descriptorsEstimatesFile to %s\n", vcount.descriptorsEstimatesFile.c_str());
 		printEstimates(vcount.descriptorsEstimatesFile, res->odata);
+		//printf("printf vcount.descriptorsClusterFile to %s\n", vcount.descriptorsClusterFile.c_str());
 		printClusterEstimates(vcount.descriptorsClusterFile, res->odata, res->cest);	
 	}
 	/*
