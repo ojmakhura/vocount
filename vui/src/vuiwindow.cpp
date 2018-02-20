@@ -84,6 +84,9 @@ void VUIWindow::on_actionPlay_triggered()
         player->settings.dClustering = ui->descriptorSpaceBox->isChecked();
         player->settings.fdClustering = ui->filteredDescriptorBox->isChecked();
         player->settings.isClustering = ui->imageSpaceBox->isChecked();
+        player->settings.dfClustering = ui->descFilteredDescBox->isChecked();
+        player->settings.diClustering = ui->descImageSpaceBox->isChecked();
+        player->settings.dfiClustering = ui->combineAllBox->isChecked();
         player->settings.rsize = ui->sampleSizeEdit->text().toInt();
         player->settings.step = 1;
 
@@ -114,4 +117,39 @@ void VUIWindow::on_actionPause_triggered()
     ui->actionPlay->setEnabled(true);
     ui->actionPause->setEnabled(false);
     player->pause();
+}
+
+void VUIWindow::on_descFilteredDescBox_clicked()
+{
+    if(ui->descFilteredDescBox->isChecked()){
+        ui->descriptorSpaceBox->setChecked(true);
+        ui->filteredDescriptorBox->setChecked(true);
+    } else{
+        ui->descriptorSpaceBox->setChecked(false);
+        ui->filteredDescriptorBox->setChecked(false);
+    }
+}
+
+void VUIWindow::on_descImageSpaceBox_clicked()
+{
+    if(ui->descImageSpaceBox->isChecked()){
+        ui->descriptorSpaceBox->setChecked(true);
+        ui->imageSpaceBox->setChecked(true);
+    } else {
+        ui->descriptorSpaceBox->setChecked(false);
+        ui->imageSpaceBox->setChecked(false);
+    }
+}
+
+void VUIWindow::on_combineAllBox_clicked()
+{
+    if(ui->combineAllBox->isChecked()){
+        ui->descriptorSpaceBox->setChecked(true);
+        ui->filteredDescriptorBox->setChecked(true);
+        ui->imageSpaceBox->setChecked(true);
+    } else{
+        ui->descriptorSpaceBox->setChecked(false);
+        ui->filteredDescriptorBox->setChecked(false);
+        ui->imageSpaceBox->setChecked(false);
+    }
 }

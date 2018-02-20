@@ -1203,7 +1203,6 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		}
 	}
 	
-    //String colourFrameDir;
    	String iSpaceFrameDir;
    	String descriptorFrameDir;
     String selectedDescFrameDir;
@@ -1236,13 +1235,13 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		// Create clustering dataset
 		f.hasRoi = vcount.roiExtracted;
 		results_t* res1;
-		if(settings.dClustering || settings.diClustering || settings.dfClustering || settings.dfiClustering){
+		if(settings.dClustering){// || settings.diClustering || settings.dfClustering || settings.dfiClustering){
 			
 			//printf("iSpaceFrameDir = %s, settings.imageSpaceDir = %s\n", descriptorFrameDir.c_str(), settings.descriptorDir.c_str());
 			res1 = clusterDescriptors(vcount, settings, f, descriptorFrameDir, settings.descriptorDir);
 		}
 		
-		if(vcount.frameHistory.size() > 0 && (settings.isClustering || settings.fdClustering || settings.diClustering || settings.dfClustering || settings.dfiClustering)){
+		if(vcount.frameHistory.size() > 0 && (settings.isClustering || settings.fdClustering)){// || settings.diClustering || settings.dfClustering || settings.dfiClustering)){
 			
 			if(colourSel.minPts == -1){
 				printf("Finding proper value of minPts\n");
@@ -1322,7 +1321,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 				vector<int32_t> ce;
 				findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.rois, colourSel.roiFeatures, roiDesc, ce);			
 					
-				if(settings.isClustering || settings.diClustering || settings.dfiClustering){
+				if(settings.isClustering){// || settings.diClustering || settings.dfiClustering){
 					printf("Clustering selected keypoints in image space\n\n\n");
 					Mat ds = getImageSpaceDataset(colourSel.selectedKeypoints);
 					results_t* idxClusterRes = do_cluster(NULL, ds, colourSel.selectedKeypoints, 1, 3, true, true);

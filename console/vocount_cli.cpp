@@ -100,6 +100,18 @@ bool processOptions(vocount& vcount, vsettings& settings, CommandLineParser& par
 		settings.fdClustering = true;
 	}
 	
+	if(parser.has("df")){
+		settings.dfClustering = true;
+	}
+	
+	if(parser.has("di")){
+		settings.diClustering = true;
+	}
+	
+	if(parser.has("dfi")){
+		settings.dfiClustering = true;
+	}
+	
 	return true;
 }
 
@@ -143,21 +155,7 @@ int main(int argc, char** argv) {
 			break;
 		} else if (c == 's') { // select a roi if c has een pressed or if the program was run with -s option
 			settings.selectROI = true;
-			/*Mat f2 = frame.clone();
-			Rect2d boundingBox = selectROI("Select ROI", f2);
-			destroyWindow("Select ROI");
-			f.rois.push_back(boundingBox);
-				
-			for(size_t i = 0; i < f.rois.size(); i++){
-				vcount.trackers.push_back(createTrackerByName(settings.trackerAlgorithm));
-				vcount.trackers[i]->init( frame, f.rois[i] );
-			}
-				
-			//trackers.add(_trackers, f2, f.rois);
-			vcount.roiExtracted = true;
-			*/
 		} 
-		//detector->detectAndCompute(frame, Mat(), keypoints, descriptors);
 		processFrame(vcount, settings, colourSel, frame);		
 	}
 	

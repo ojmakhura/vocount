@@ -32,6 +32,12 @@ private slots:
 
     void on_actionPause_triggered();
 
+    void on_descFilteredDescBox_clicked();
+
+    void on_descImageSpaceBox_clicked();
+
+    void on_combineAllBox_clicked();
+
 private:
     Ui::VUIWindow *ui;
     VUIPlayer *player;

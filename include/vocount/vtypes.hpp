@@ -105,12 +105,16 @@ typedef struct VOCOUNT{
     ofstream descriptorsClusterFile, descriptorsEstimatesFile;
     ofstream selDescClusterFile, selDescEstimatesFile;
     ofstream indexClusterFile, indexEstimatesFile;
+    ofstream dfClusterFile, dfEstimatesFile;
+    ofstream diClusterFile, diEstimatesFile;
+    ofstream dfiClusterFile, dfiEstimatesFile;
 } vocount;
 
 typedef struct VSETTINGS{
 	String outputFolder, inputVideo, truthFolder;
     String trackerAlgorithm;    
-	String colourDir, imageSpaceDir, descriptorDir, filteredDescDir;
+	String colourDir, imageSpaceDir, descriptorDir, filteredDescDir,
+			dfComboDir, diComboDir, dfiComboDir;
 	int step, rsize;											/// How many frames to use in the dataset
 	bool print = false;
 	bool interactive = false;
