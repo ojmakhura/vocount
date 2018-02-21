@@ -129,20 +129,25 @@ double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vec
 	return total;
 }
 
+/**
+ * 
+ * 
+ */ 
 void generateFinalPointClusters(vector<vector<int32_t>>& roiFeatures, results_t* res){
-	set<int32_t> st;
+	set<int32_t> st;	// cluster for the roi features
 	for(uint i = 0; i < roiFeatures.size(); i++){
 		for (vector<int32_t>::iterator it = roiFeatures[i].begin(); it != roiFeatures[i].end(); ++it) {
-			int* key;
+			int* label;
 			int k = res->labels->at(*it);
-			key = &k;
-			IntArrayList* list = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, key);
+			label = &k;
+			IntArrayList* list = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, label);
 			
+			// If the record was not in the hash table, create a new record
 			if(list == NULL){
-				key = (int *)malloc(sizeof(int));
-				*key = k;
+				label = (int *)malloc(sizeof(int));
+				*label = k;
 				list = int_array_list_init_size(roiFeatures[i].size());
-				g_hash_table_insert(res->roiClusterPoints, key, list);
+				g_hash_table_insert(res->roiClusterPoints, label, list);
 				st.insert(k);
 			}
 					
@@ -163,7 +168,7 @@ void generateFinalPointClusters(vector<vector<int32_t>>& roiFeatures, results_t*
 	int32_t *data = (int32_t *)res->objectClusters->data;
 	for(int32_t i = res->objectClusters->size - 1; i >= 0; i--){		
 		IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(res->clusterMap, data+i);			
-		getListKeypoints(*(res->keypoints), l1, (*(res->finalPointClusters))[*(data+i)]);
+		getListKeypoints(*(res->keypoints), l1, (*(res->finalPointClusters))[data[i]]);
 	}
 }
 
@@ -483,7 +488,7 @@ void extendBoxClusters(Mat& frame, results_t* res, set<int32_t>& processedCluste
 		}		
 	}
 	
-	//printf("Now has found %lu objects\n", boxStructures->size());
+	printf("Now has found %lu objects\n", boxStructures->size());
 }
 
 /**
@@ -594,9 +599,7 @@ void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d
 		p.y = (r.y + r.height)/2.0f;
 		double distance;
 		int32_t centerFeature = -1;
-		for(uint i = 0; i < keypoints.size(); ++i){
-			
-			
+		for(uint i = 0; i < keypoints.size(); ++i){		
 			for(uint j = 0; j < rois.size(); j++){		
 			
 				if(rois[j].contains(keypoints[i].pt)){
@@ -685,7 +688,7 @@ void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool exte
 	}
 	
 	if(extend){								
-		//extendBoxClusters(frame, res, processedClusters);
+		extendBoxClusters(frame, res, processedClusters);
 	}
 }
 
@@ -1017,8 +1020,8 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 				
 		hdbscan scan(res->minPts, DATATYPE_FLOAT);
 		scan.run(res->dataset->ptr<float>(), res->dataset->rows, res->dataset->cols, TRUE);
-		res->labels->insert(res->labels->begin(), scan.clusterLabels, scan.clusterLabels+scan.numPoints);
-		res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);
+		res->labels->insert(res->labels->begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
+		res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, keypoints.size()); //scan.numPoints);
 		
 		if(analyse){
 			res->distancesMap = hdbscan_get_min_max_distances(&scan, res->clusterMap);
@@ -1212,17 +1215,14 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
     	
 		if(settings.isClustering){
 			iSpaceFrameDir = createDirectory(settings.imageSpaceDir, to_string(vcount.frameCount));
-			//printf("Created %s directory\n", iSpaceFrameDir.c_str());
 		}
     	
 		if(settings.dClustering){
 			descriptorFrameDir = createDirectory(settings.descriptorDir, to_string(vcount.frameCount));
-			//printf("Created %s directory\n", descriptorFrameDir.c_str());
 		}
 		
 		if(settings.fdClustering){
 			selectedDescFrameDir = createDirectory(settings.filteredDescDir, to_string(vcount.frameCount));
-			//printf("Created %s directory\n", selectedDescFrameDir.c_str());
 		}
     }
         
@@ -1235,10 +1235,11 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		// Create clustering dataset
 		f.hasRoi = vcount.roiExtracted;
 		results_t* res1;
-		if(settings.dClustering){// || settings.diClustering || settings.dfClustering || settings.dfiClustering){
-			
-			//printf("iSpaceFrameDir = %s, settings.imageSpaceDir = %s\n", descriptorFrameDir.c_str(), settings.descriptorDir.c_str());
-			res1 = clusterDescriptors(vcount, settings, f, descriptorFrameDir, settings.descriptorDir);
+		if(settings.dClustering){// || settings.diClustering || settings.dfClustering || settings.dfiClustering){	
+			findROIFeature(f.keypoints, f.descriptors, f.rois, f.roiFeatures, f.roiDesc, f.centerFeatures);	
+			Mat dset = getDescriptorDataset(vcount.frameHistory, settings.step, f.descriptors);	
+			res1 = clusterDescriptors(vcount, settings, f, dset, f.keypoints, descriptorFrameDir, settings.descriptorDir);
+			//res1 = clusterDescriptors(vcount, settings, f, descriptorFrameDir, settings.descriptorDir);
 		}
 		
 		if(vcount.frameHistory.size() > 0 && (settings.isClustering || settings.fdClustering)){// || settings.diClustering || settings.dfClustering || settings.dfiClustering)){
@@ -1246,9 +1247,6 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 			if(colourSel.minPts == -1){
 				printf("Finding proper value of minPts\n");
 				colourSel = detectColourSelectionMinPts(frame, f.descriptors, f.keypoints);
-				//Mat kimg = drawKeyPoints(f.frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
-				//display("Selected Keypoints 11", kimg);
-				//printf("Finding value of minPts = %d with colourSel.selectedPts as %d from %lu\n", colourSel.minPts, colourSel.selectedDesc.rows, f.keypoints.size());
 			
 			} else {
 				framed ff = vcount.frameHistory[vcount.frameHistory.size()-1];
@@ -1386,9 +1384,9 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 						map<String, Mat> selectedClustersImages;
 						selectedClustersImages["img_allkps"] = idxClusterRes->selectedClustersImages->at("img_allkps");
 						createBoxStructureImages(&bsts, &selectedClustersImages);
-						String bidest = "/mnt/2TB/programming/phd/workspace/_vocount/out/wx02/di";
-						printImages(bidest, &selectedClustersImages, vcount.frameCount);
-						printf("Combination di found %lu objects\n", lst.size());
+						//String bidest = "/mnt/2TB/programming/phd/workspace/_vocount/out/wx02/di";
+						//printImages(bidest, &selectedClustersImages, vcount.frameCount);
+						//printf("Combination di found %lu objects\n", lst.size());
 					}						
 				}				
 				
@@ -1401,19 +1399,20 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 				if(settings.fdClustering || settings.dfClustering || settings.dfiClustering){
 					//dataset = colourSel.selectedDesc.clone();
 					printf("Clustering selected keypoints in descriptor space\n\n\n");
-					results_t* selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true, false);
+					results_t* selDescRes;
+					//selDescRes = clusterDescriptors(vcount, settings, f, colourSel.selectedDesc, f.keypoints, descriptorFrameDir, settings.descriptorDir);
+					selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true, false);
 					generateFinalPointClusters(colourSel.roiFeatures, selDescRes);
-					getBoxStructure(selDescRes, f.rois, frame, false);								
-					generateClusterImages(f.frame, selDescRes);
-					createBoxStructureImages(selDescRes->boxStructures, selDescRes->selectedClustersImages);
+					getBoxStructure(selDescRes, f.rois, frame, false);	
 					
 					cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 					selDescRes->total = countPrint(selDescRes->roiClusterPoints, selDescRes->finalPointClusters, 
 													selDescRes->cest, selDescRes->selectedFeatures, selDescRes->lsize);
 					cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-												
-						
-					if(settings.print){
+					
+					if(settings.print){							
+						generateClusterImages(f.frame, selDescRes);
+						createBoxStructureImages(selDescRes->boxStructures, selDescRes->selectedClustersImages);
 						Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
 						printImage(settings.filteredDescDir, vcount.frameCount, "frame_kp", frm);
 						generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, selDescRes, f.i);
@@ -1423,6 +1422,8 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 					}
 					
 					f.results["sel_keypoints"] = selDescRes;
+					
+					
 				}
 			}
 		}		
@@ -1430,15 +1431,15 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 	maintaintHistory(vcount, f);
 }
 
-results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, String& keypointsFrameDir, String& keypointsDir){
+void combine(vocount& vcount, vsettings& settings, results_t* descriptorResults, results_t* seleDescriptorResults){
 	
-	findROIFeature(f.keypoints, f.descriptors, f.rois, f.roiFeatures, f.roiDesc, f.centerFeatures);
-	Mat dset = getDescriptorDataset(vcount.frameHistory, settings.step, f.descriptors);
-	results_t* res = do_cluster(NULL, f.descriptors, f.keypoints, settings.step, 3, true, true);
+}
+
+results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, Mat& dataset, vector<KeyPoint>& keypoints, String& keypointsFrameDir, String& keypointsDir){	
+	
+	results_t* res = do_cluster(NULL, dataset, keypoints, settings.step, 3, true, true);
 	generateFinalPointClusters(f.roiFeatures, res);	
 	getBoxStructure(res, f.rois, f.frame, true);
-	generateClusterImages(f.frame, res);
-	createBoxStructureImages(res->boxStructures, res->selectedClustersImages);
 	printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
 	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 	res->total = countPrint(res->roiClusterPoints, res->finalPointClusters, res->cest, res->selectedFeatures, res->lsize);
@@ -1448,15 +1449,13 @@ results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, S
 	f.results["descriptors"] = res;
 				
 	if(settings.print){
-		//printf("descriptors printing output\n");
-		Mat frm = drawKeyPoints(f.frame, f.keypoints, Scalar(0, 0, 255), -1);
-		//printf("printf frame_kp to %s\n", keypointsDir.c_str());
+		generateClusterImages(f.frame, res);
+		createBoxStructureImages(res->boxStructures, res->selectedClustersImages);
+		Mat frm = drawKeyPoints(f.frame, keypoints, Scalar(0, 0, 255), -1);
 		printImage(keypointsDir, vcount.frameCount, "frame_kp", frm);					
-		generateOutputData(vcount, f.frame, f.keypoints, f.roiFeatures, res, f.i);
+		generateOutputData(vcount, f.frame, keypoints, f.roiFeatures, res, f.i);
 		printImages(keypointsFrameDir, res->selectedClustersImages, vcount.frameCount);
-		//printf("printf vcount.descriptorsEstimatesFile to %s\n", vcount.descriptorsEstimatesFile.c_str());
 		printEstimates(vcount.descriptorsEstimatesFile, res->odata);
-		//printf("printf vcount.descriptorsClusterFile to %s\n", vcount.descriptorsClusterFile.c_str());
 		printClusterEstimates(vcount.descriptorsClusterFile, res->odata, res->cest);	
 	}
 	/*
