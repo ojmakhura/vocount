@@ -363,7 +363,7 @@ bool stabiliseRectByMoments(Mat& frame, const Rect& templ_r, Rect& proposed){
  * 
  * 
  */ 
-void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_points, KeyPoint first_p, box_structure& mbs, Mat& frame){
+void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_points, KeyPoint first_p, box_structure mbs, Mat& frame){
 	
 	for(uint j = 0; j < c_points.size(); j++){
 			
@@ -379,10 +379,10 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 			Point pp = pshift;
 			n_rect = n_rect + pp;
 						
-			//if(n_rect.x < 0 || n_rect.y < 0 || (n_rect.x + n_rect.width) >= frame.cols || (n_rect.y + n_rect.height) >= frame.rows){
+			if(n_rect.x < 0 || n_rect.y < 0 || (n_rect.x + n_rect.width) >= frame.cols || (n_rect.y + n_rect.height) >= frame.rows){
 				//cout << "Skipping " << n_rect << endl;
-				//continue;
-			//}
+				continue;
+			}
 			//cout << n_rect ;
 			//if(!stabiliseRectByMoments(frame, mbs.box, n_rect)){
 				//cout << endl;
@@ -411,20 +411,13 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 					//cout << "Ratio is " << ratio<< " Skipping " << n_rect << endl;
 					continue;
 				}
-				
-				//cout << " (" << n_rect << ") compare ";
-				
-				//if(n_rect.x < 0 || ){
-				//}
-				
+								
 				bst.img_ = frame(n_rect);
 				calculateHistogram(bst);
-				bst.histCompare = compareHist(mbs.hist, bst.hist, CV_COMP_CORREL);
+				cvtColor(bst.img_, bst.gray, COLOR_RGB2GRAY);
+				//bst.histCompare = compareHist(mbs.hist, bst.hist, CV_COMP_CORREL);
 				
-				Mat g1, g2;
-				cvtColor(mbs.img_, g1, COLOR_RGB2GRAY);
-				cvtColor(bst.img_, g2, COLOR_RGB2GRAY);
-				bst.momentsCompare = matchShapes(g1, g2, CONTOURS_MATCH_I3, 0);
+				bst.momentsCompare = matchShapes(mbs.gray, bst.gray, CONTOURS_MATCH_I3, 0);
 				//cout << " (" << n_rect << ") compare " << bst.histCompare << " moments compare " << bst.momentsCompare << endl;
 				//if(bst.momentsCompare > 0.05){
 					//cout << "Skipping for low similarity" << endl;
@@ -444,47 +437,51 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
  * 
  */ 
 void extendBoxClusters(Mat& frame, results_t* res, set<int32_t>& processedClusters){
-	
+	//printf("Extending box \n");
 	GHashTableIter iter;
 	gpointer key;
 	gpointer value;
 	g_hash_table_iter_init (&iter, res->clusterMap);
 	vector<box_structure>* boxStructures = res->boxStructures;
-	//printf("Originally found %lu objects\n", boxStructures->size());			
+	//printf("Originally found %lu objects\n", boxStructures->size());	
+	set<int32_t> remaining;		
 
 	while (g_hash_table_iter_next (&iter, &key, &value)){
 		int32_t* kk = (int32_t *)key;
-		
-		if(processedClusters.find(*kk) != processedClusters.end()){ // Check the clusters that have not already processed
+		//printf("Key  = %d\n", *kk);
+		if(*kk != 0 && processedClusters.find(*kk) == processedClusters.end()){ // Check the clusters that have not already processed
 			IntArrayList* list = (IntArrayList *)value;
-			vector<int32_t> l1(list->size, -1);
+			int32_t* ldata = (int32_t *)list->data;
 			int first = -1;
 			KeyPoint first_kp;
 //#pragma omp parallel for	
 			for(int32_t i = 0; i < list->size; i++){
-				KeyPoint& kp = res->keypoints->at(i);
+				
+				KeyPoint& kp = res->keypoints->at(ldata[i]);
 				for(uint j = 0; j < boxStructures->size(); j++){
 					box_structure& stru = boxStructures->at(j);
 					if(stru.box.contains(kp.pt)){
-						l1[i] = j;
 						stru.points.push_back(kp);
-						if(first == -1){
-							first = j;
-						}
-						break;
-					}
-					
-					if(first != -1){
-						first_kp = kp;
+						first = j;
 						break;
 					}
 				}
+					
+				if(first != -1){
+					first_kp = kp;
+					break;
+				}
 			}
-			box_structure& stru = boxStructures->at(first);
-			vector<KeyPoint> kps;
-			getListKeypoints(*(res->keypoints), list, kps);
-			//cout << stru.box << " \n" << stru.hist << endl;
-			addToBoxStructure(boxStructures, kps, first_kp, stru, frame);
+			
+			// Some clusters will not interact with the available boxes
+			if(first > -1){
+				box_structure& stru = boxStructures->at(first);
+				vector<KeyPoint>& kps = (*(res->finalPointClusters))[*kk];
+				getListKeypoints(*(res->keypoints), list, kps);
+				//cout << stru.box << endl;
+				//cout << stru.gray << endl;
+				addToBoxStructure(boxStructures, kps, first_kp, stru, frame);
+			}
 		}		
 	}
 	
@@ -511,7 +508,6 @@ void generateClusterImages(Mat frame, results_t* res){
 		String ss = "img_keypoints-";
 		string s = to_string(it->first);
 		ss += s.c_str();
-		//int32_t label = it->first;
 		distance_values *dv = (distance_values *)g_hash_table_lookup(res->distancesMap, &(it->first));
 				
 		ss += "-";
@@ -655,9 +651,9 @@ void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool exte
 		mbs.img_ = frame(mbs.box);
 		calculateHistogram(mbs);
 		mbs.histCompare = compareHist(mbs.hist, mbs.hist, CV_COMP_CORREL);
-		Mat g1;
-		cvtColor(mbs.img_, g1, COLOR_RGB2GRAY);
-		mbs.momentsCompare = matchShapes(g1, g1, CONTOURS_MATCH_I3, 0);
+		//Mat g1;
+		cvtColor(mbs.img_, mbs.gray, COLOR_RGB2GRAY);
+		mbs.momentsCompare = matchShapes(mbs.gray, mbs.gray, CONTOURS_MATCH_I3, 0);
 		str2.push_back(mbs);
 		
 		for(vector<vector<KeyPoint> >::iterator itr = kps.begin(); itr != kps.end(); ++itr){

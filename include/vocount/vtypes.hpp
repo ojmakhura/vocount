@@ -48,7 +48,7 @@ typedef struct {
 typedef struct _box_structure{
 	Rect box;
 	vector<KeyPoint> points;
-	Mat img_, hsv;
+	Mat img_, hsv, gray;
 	MatND hist;
 	double histCompare, momentsCompare;	
 } box_structure;
