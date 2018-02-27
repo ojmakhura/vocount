@@ -64,6 +64,7 @@ typedef struct {
 	map<String, int32_t>* odata;											/// Output data
     vector<int32_t>* labels;												/// hdbscan cluster labels
 	vector<box_structure>* boxStructures;									/// Bounding boxes for the individual objects in the frame
+	map<int32_t, vector<Rect2d>>* clusterStructures;
 	vector<int32_t>* cest;
 	map<String, Mat>* selectedClustersImages;										/// images with cluster by cluster keypoints drawn
 	map<String, Mat>* leftoverClusterImages;								/// images with leftover clusters
