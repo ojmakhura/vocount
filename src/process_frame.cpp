@@ -172,14 +172,14 @@ void generateFinalPointClusters(vector<vector<int32_t>>& roiFeatures, results_t*
 	}
 }
 
-int rectExist(vector<box_structure>& structures, Rect& r){
+int rectExist(vector<box_structure>& structures, box_structure& bst){
 
 	double maxIntersect = 0.0;
 	int maxIndex = -1;
 
 	for(uint i = 0; i < structures.size(); i++){
-		Rect r2 = r & structures[i].box;
-		double sect = ((double)r2.area()/r.area()) * 100;
+		Rect r2 = bst.box & structures[i].box;
+		double sect = ((double)r2.area()/bst.box.area()) * 100;
 		if(sect > maxIntersect){
 			maxIndex = i;
 			maxIntersect = sect;
@@ -214,7 +214,11 @@ void trimRect(Rect& r, int rows, int cols){
 	}
 }
 
-bool stabiliseRect(Mat& frame, const Rect& templ_r, Rect& proposed){
+/**
+ * Stabilise the proposed object location by using template matching
+ * to find the best possible location of maximum similarity
+ */ 
+bool stabiliseRect(Mat frame, Rect templ_r, Rect& proposed){
 	Mat result;
 	
 	Rect new_r = proposed;
@@ -232,6 +236,8 @@ bool stabiliseRect(Mat& frame, const Rect& templ_r, Rect& proposed){
 	}
 	
 	Mat img = frame(new_r);
+	trimRect(templ_r, frame.rows, frame.cols);
+	//cout << templ_r << endl;
 	Mat templ = frame(templ_r);
 	
 	if(img.rows < templ.rows && img.cols < templ.cols){
@@ -263,14 +269,14 @@ bool stabiliseRect(Mat& frame, const Rect& templ_r, Rect& proposed){
 	return true;
 }
 
-bool stabiliseRectByMoments(Mat& frame, const Rect& templ_r, Rect& proposed){
+bool stabiliseRectByMoments(Mat& frame, const box_structure templ_r, Rect& proposed){
 	//printf("stabiliseRectByMoments(Mat& frame, const Rect& templ_r, Rect& proposed)\n");
 	Mat gray;
 	cvtColor(frame, gray, COLOR_RGB2GRAY);
 	Rect center = proposed;
 	//bool centerIsMin = false;
 	
-	Mat templImg = gray(templ_r);
+	//Mat templImg = gray(templ_r);
 	int min = -1;
 	double minMom;
 	
@@ -280,7 +286,7 @@ bool stabiliseRectByMoments(Mat& frame, const Rect& templ_r, Rect& proposed){
 		Mat centerImg = gray(center);	
 		double momCompare;
 		if(min == -1){
-			momCompare = matchShapes(templImg, centerImg, CONTOURS_MATCH_I3, 0);
+			momCompare = matchShapes(templ_r.gray, centerImg, CONTOURS_MATCH_I3, 0);
 			minMom = momCompare;
 		} else{
 			min = -1;
@@ -337,7 +343,7 @@ bool stabiliseRectByMoments(Mat& frame, const Rect& templ_r, Rect& proposed){
 				continue;
 			}
 			Mat m = gray(rects[i]);
-			momCompare = matchShapes(templImg, m, CONTOURS_MATCH_I3, 0);
+			momCompare = matchShapes(templ_r.gray, m, CONTOURS_MATCH_I3, 0);
 			//cout <<  i << " : " << momCompare << " ";
 			if(momCompare < minMom){
 				min = i;
@@ -379,20 +385,20 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 			Point pp = pshift;
 			n_rect = n_rect + pp;
 						
-			if(n_rect.x < 0 || n_rect.y < 0 || (n_rect.x + n_rect.width) >= frame.cols || (n_rect.y + n_rect.height) >= frame.rows){
+			//if(n_rect.x < 0 || n_rect.y < 0 || (n_rect.x + n_rect.width) >= frame.cols || (n_rect.y + n_rect.height) >= frame.rows){
 				//cout << "Skipping " << n_rect << endl;
-				continue;
-			}
+				//continue;
+			//}
 			//cout << n_rect ;
-			//if(!stabiliseRectByMoments(frame, mbs.box, n_rect)){
+			//if(!stabiliseRectByMoments(frame, mbs, n_rect)){
 				//cout << endl;
 				//continue;
 			//}
 			//cout << " stabilised to " << n_rect << endl;
 			
 			// check that the rect does not already exist
-			int idx = rectExist(*boxStructures, n_rect);
-			if(idx == -1){
+			stabiliseRect(frame, mbs.box, n_rect);
+			
 				box_structure bst;
 				bst.box = n_rect;
 				bst.points.push_back(point);
@@ -415,7 +421,7 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 				bst.img_ = frame(n_rect);
 				calculateHistogram(bst);
 				cvtColor(bst.img_, bst.gray, COLOR_RGB2GRAY);
-				//bst.histCompare = compareHist(mbs.hist, bst.hist, CV_COMP_CORREL);
+				bst.histCompare = compareHist(mbs.hist, bst.hist, CV_COMP_CORREL);
 				
 				bst.momentsCompare = matchShapes(mbs.gray, bst.gray, CONTOURS_MATCH_I3, 0);
 				//cout << " (" << n_rect << ") compare " << bst.histCompare << " moments compare " << bst.momentsCompare << endl;
@@ -423,7 +429,8 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 					//cout << "Skipping for low similarity" << endl;
 					//continue;
 				//}
-								
+			int idx = rectExist(*boxStructures, bst);
+			if(idx == -1){				
 				boxStructures->push_back(bst);
 			} else{
 				(*boxStructures)[idx].points.push_back(point);
@@ -673,7 +680,7 @@ void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool exte
 	
 	for(vector<vector<box_structure>>::iterator iter = b_structures.begin(); iter != b_structures.end(); ++iter){
 		for(vector<box_structure>::iterator it = iter->begin(); it != iter->end(); ++it){
-			int idx = rectExist(*(res->boxStructures), it->box);
+			int idx = rectExist(*(res->boxStructures), *it);
 			if(idx == -1){
 				res->boxStructures->push_back(*it);
 			} else{ /// The rect exist s merge the points
