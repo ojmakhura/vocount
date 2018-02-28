@@ -1468,6 +1468,24 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 					
 					f.results["sel_keypoints"] = selDescRes;
 					
+					if(settings.dfClustering){
+						vector<vector<uint>> filteredStructures(colourSel.selectedKeypoints.size(), vector<uint>());
+						for(uint i = 0; i < colourSel.selectedKeypoints.size(); i++){
+							vector<uint>& structures = filteredStructures[i];
+							KeyPoint kp = colourSel.selectedKeypoints[i];
+							for(uint j = 0; j < res1->boxStructures->size(); j++){
+								box_structure& bx = res1->boxStructures->at(j);
+								
+								if(bx.box.contains(kp.pt)){
+									structures.push_back(j);
+								}
+							}
+							
+							printf("structures.size() = %ld\n", structures.size());
+						}
+						
+						//printf("filteredStructures.size() = %d\n", xs);
+					}
 					
 				}
 			}
