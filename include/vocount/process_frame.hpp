@@ -206,9 +206,12 @@ void finalise(vocount& vcount);
  * 
  * 
  */
-//results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, String& keypointsFrameDir, String& keypointsDir); 
 results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, Mat& dataset, vector<KeyPoint>& keypoints, String& keypointsFrameDir, String& keypointsDir);
 
-void combine(vocount& vcount, vsettings& settings, results_t* descriptorResults, results_t* seleDescriptorResults);
+/**
+ * 
+ * 
+ */ 
+void combineSelDescriptorsRawStructures(results_t* descriptorResults, results_t* seleDescriptorResults, selection_t& colourSel, vector<int32_t>& keypointStructures, set<uint>& selStructures);
   
 #endif

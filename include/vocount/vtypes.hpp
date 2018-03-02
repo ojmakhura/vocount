@@ -43,6 +43,7 @@ typedef struct {
 	Mat selectedDesc;
 	vector<KeyPoint> selectedKeypoints;
 	set<int32_t> selectedClusters;
+	vector<int32_t> oldIndices;								/// The keypoint indices before selection
 } selection_t;
 
 typedef struct _box_structure{

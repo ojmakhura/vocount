@@ -508,7 +508,7 @@ set<int32_t> extendBoxClusters(Mat& frame, results_t* res, set<int32_t>& process
 		}		
 	}
 	
-	printf("Now has found %lu objects\n", boxStructures->size());
+	//printf("Now has found %lu objects\n", boxStructures->size());
 	return prcl;
 }
 
@@ -710,7 +710,7 @@ void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool exte
 		b_structures.push_back(str2);
 	}
 	
-	printf("res->clusterStructures size = %ld, res->finalPointClusters-> size = %ld\n", res->clusterStructures->size(), res->finalPointClusters->size());
+	//printf("res->clusterStructures size = %ld, res->finalPointClusters-> size = %ld\n", res->clusterStructures->size(), res->finalPointClusters->size());
 	
 	for(vector<vector<box_structure>>::iterator iter = b_structures.begin(); iter != b_structures.end(); ++iter){
 		for(vector<box_structure>::iterator it = iter->begin(); it != iter->end(); ++it){
@@ -1343,6 +1343,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 				colourSel.selectedClusters = currSelClusters;
 				colourSel.selectedKeypoints.clear();
 				colourSel.roiFeatures.clear();
+				colourSel.oldIndices.clear();
 				/****************************************************************************************************/
 				/// Image space clustering
 				/// -------------------------
@@ -1355,6 +1356,8 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 					
 					int cluster = *itt;
 					IntArrayList* list = (IntArrayList*)g_hash_table_lookup(colourSel.clusterKeypointIdx, &cluster);
+					int32_t* ldata = (int32_t*)list->data;
+					colourSel.oldIndices.insert(colourSel.oldIndices.end(), ldata, ldata + list->size);
 					getListKeypoints(f.keypoints, list, colourSel.selectedKeypoints);
 					getSelectedKeypointsDescriptors(f.descriptors, list, selDesc);
 				}					
@@ -1470,56 +1473,22 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 					
 					if(settings.dfClustering){
 						
-						/**
-						 * For each keypoint in the selected set, we find all box_structures that 
-						 * contain the point.
-						 */ 
-						vector<vector<uint>> filteredStructures(colourSel.selectedKeypoints.size(), vector<uint>());
-						for(uint i = 0; i < colourSel.selectedKeypoints.size(); i++){
-							vector<uint>& structures = filteredStructures[i];
-							KeyPoint kp = colourSel.selectedKeypoints[i];
-							for(uint j = 0; j < res1->boxStructures->size(); j++){
-								box_structure& bx = res1->boxStructures->at(j);
-								
-								if(bx.box.contains(kp.pt)){
-									structures.push_back(j);
-								}
-							}
-							
-							//printf("structures.size() = %ld\n", structures.size());
-						}
-						
-						/**
-						 * For those keypoints that are inside multiple structures,
-						 * we find out which structure has the smallest moment comparison
-						 */ 
 						vector<int32_t> keypointStructures(colourSel.selectedKeypoints.size(), -1);
-						//int32_t count = 0;
-						set<uint> nonEmpties;
-						for(uint i = 0; i < keypointStructures.size(); i++){
-							vector<uint>& strs = filteredStructures[i];
+						set<uint> selectedStructures;
+						combineSelDescriptorsRawStructures(res1, selDescRes, colourSel, keypointStructures, selectedStructures);
+						Mat kimg = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
+		
+						for(set<uint>::iterator it = selectedStructures.begin(); it != selectedStructures.end(); it++){
+							Scalar value;
 							
-							if(strs.size() > 0){
-								//count++;
-								uint minIdx = strs[0];
-								double minMoment = res1->boxStructures->at(minIdx).momentsCompare;
-								for(uint j = 1; j < strs.size(); j++){
-									uint idx = strs[j];
-									double moment = res1->boxStructures->at(idx).momentsCompare;
-									
-									if(moment < minMoment){
-										minIdx = idx;
-										minMoment = moment;
-									}
-								}
-								keypointStructures[i] = minIdx;
-								nonEmpties.insert(minIdx);
-							} else{
-								printf("Keypoint %d has cluster %d\n", i, selDescRes->labels->at(i));
-							}
+							RNG rng(12345);
+							value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
+									rng.uniform(0, 255));				
+							
+							box_structure& b = res1->boxStructures->at(*it);
+							rectangle(kimg, b.box, value, 2, 8, 0);
 						}
-						
-						printf("nonEmpties.size() = %d\n", nonEmpties.size());
+						printImage(settings.dfComboDir, f.i, "selected_structures", kimg) ;
 					}
 					
 				}
@@ -1529,8 +1498,53 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 	maintaintHistory(vcount, f);
 }
 
-void combine(vocount& vcount, vsettings& settings, results_t* descriptorResults, results_t* seleDescriptorResults){
+void combineSelDescriptorsRawStructures(results_t* descriptorResults, results_t* seleDescriptorResults, selection_t& colourSel, vector<int32_t>& keypointStructures, set<uint>& selStructures){
+	/**
+	 * For each keypoint in the selected set, we find all box_structures that 
+	 * contain the point.
+	 */ 
+	vector<vector<uint>> filteredStructures(colourSel.selectedKeypoints.size(), vector<uint>());
+	for(uint i = 0; i < colourSel.selectedKeypoints.size(); i++){
+		vector<uint>& structures = filteredStructures[i];
+		KeyPoint kp = colourSel.selectedKeypoints[i];
+		for(uint j = 0; j < descriptorResults->boxStructures->size(); j++){
+			box_structure& bx = descriptorResults->boxStructures->at(j);
+			
+			if(bx.box.contains(kp.pt)){
+				structures.push_back(j);
+			}
+		}
 	
+	}
+		
+	/**
+	 * For those keypoints that are inside multiple structures,
+	 * we find out which structure has the smallest moment comparison
+	 */ 
+	for(uint i = 0; i < keypointStructures.size(); i++){
+		vector<uint>& strs = filteredStructures[i];
+		
+		if(strs.size() > 0){
+			uint minIdx = strs[0];
+			double minMoment = descriptorResults->boxStructures->at(minIdx).momentsCompare;
+			for(uint j = 1; j < strs.size(); j++){
+				uint idx = strs[j];
+				double moment = descriptorResults->boxStructures->at(idx).momentsCompare;
+				
+				if(moment < minMoment){
+					minIdx = idx;
+					minMoment = moment;
+				}
+			}
+			keypointStructures[i] = minIdx;
+			selStructures.insert(minIdx);
+		//} else{
+			//int32_t oldIdx = colourSel.oldIndices[i];
+			//printf("Keypoint %d has new cluster %d and old cluster %d\n", i, seleDescriptorResults->labels->at(i), descriptorResults->labels->at(oldIdx));
+		}
+	}
+		
+	printf("selStructures.size() = %ld\n", selStructures.size());
 }
 
 results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, Mat& dataset, vector<KeyPoint>& keypoints, String& keypointsFrameDir, String& keypointsDir){	
