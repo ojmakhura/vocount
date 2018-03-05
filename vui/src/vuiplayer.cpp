@@ -62,6 +62,7 @@ void VUIPlayer::run(){
         }
         this->msleep(0);
     }
+    stop();
 }
 
 void VUIPlayer::play(){

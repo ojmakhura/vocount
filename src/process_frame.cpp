@@ -1476,19 +1476,27 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 						vector<int32_t> keypointStructures(colourSel.selectedKeypoints.size(), -1);
 						set<uint> selectedStructures;
 						combineSelDescriptorsRawStructures(res1, selDescRes, colourSel, keypointStructures, selectedStructures);
-						Mat kimg = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
-		
-						for(set<uint>::iterator it = selectedStructures.begin(); it != selectedStructures.end(); it++){
-							Scalar value;
-							
-							RNG rng(12345);
-							value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
-									rng.uniform(0, 255));				
-							
-							box_structure& b = res1->boxStructures->at(*it);
-							rectangle(kimg, b.box, value, 2, 8, 0);
+						
+						if(settings.print){
+							Mat kimg = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
+			
+							for(set<uint>::iterator it = selectedStructures.begin(); it != selectedStructures.end(); it++){
+								Scalar value;
+								
+								RNG rng(12345);
+								value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
+										rng.uniform(0, 255));				
+								
+								box_structure& b = res1->boxStructures->at(*it);
+								rectangle(kimg, b.box, value, 2, 8, 0);
+							}
+							printImage(settings.dfComboDir, f.i, "selected_structures", kimg) ;
+							double accuracy = 0;
+							if(vcount.truth[f.i] > 0){
+								accuracy = ((double)selectedStructures.size() / vcount.truth[f.i]) * 100;
+							} 
+							vcount.dfEstimatesFile << f.i << "," <<  selectedStructures.size() << "," << vcount.truth[f.i] << "," << accuracy << "\n";
 						}
-						printImage(settings.dfComboDir, f.i, "selected_structures", kimg) ;
 					}
 					
 				}

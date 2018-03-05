@@ -16,34 +16,7 @@ void createOutputDirectories(vocount& vcount, vsettings& settings){
 		if(settings.dClustering){
 			settings.descriptorDir = createDirectory(settings.outputFolder, "descriptors");
 			printf("Created descriptors directory at %s.\n", settings.descriptorDir.c_str());
-		}
-		
-		if(settings.isClustering){
-			settings.imageSpaceDir = createDirectory(settings.outputFolder, "image_space");
-			printf("Created image_space directory at %s.\n", settings.imageSpaceDir.c_str());
-		}
-		
-		if(settings.fdClustering){
-			settings.filteredDescDir = createDirectory(settings.outputFolder, "filtered_descriptors");
-			printf("Created filtered_descriptors directory at %s.\n", settings.filteredDescDir.c_str());
-		}
-		
-		if(settings.dfClustering){
-			settings.dfComboDir = createDirectory(settings.outputFolder, "descriptor_filtered_descriptors");
-			printf("Created descriptor_filtered_descriptors directory at %s.\n", settings.dfComboDir.c_str());
-		}
-		
-		if(settings.dfClustering){
-			settings.diComboDir = createDirectory(settings.outputFolder, "descriptor_image_space");
-			printf("Created filtered_descriptors directory at %s.\n", settings.diComboDir.c_str());
-		}
-		
-		if(settings.dfiClustering){
-			settings.dfiComboDir = createDirectory(settings.outputFolder, "all_combined");
-			printf("Created all_combined directory at %s.\n", settings.dfiComboDir.c_str());
-		}
-					
-		if(settings.dClustering){
+			
 			String name = settings.descriptorDir + "/estimates.csv";
 			vcount.descriptorsEstimatesFile.open(name.c_str());
 			vcount.descriptorsEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
@@ -52,18 +25,11 @@ void createOutputDirectories(vocount& vcount, vsettings& settings){
 			vcount.descriptorsClusterFile.open(name.c_str());
 			vcount.descriptorsClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
 		}
-					
-		if(settings.fdClustering){
-			String name = settings.filteredDescDir + "/estimates.csv";
-			vcount.selDescEstimatesFile.open(name.c_str());
-			vcount.selDescEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
-			
-			name = settings.filteredDescDir + "/ClusterEstimates.csv";
-			vcount.selDescClusterFile.open(name.c_str());
-			vcount.selDescClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
-		}
-			
+		
 		if(settings.isClustering){
+			settings.imageSpaceDir = createDirectory(settings.outputFolder, "image_space");
+			printf("Created image_space directory at %s.\n", settings.imageSpaceDir.c_str());
+			
 			String name = settings.imageSpaceDir + "/estimates.csv";
 			vcount.indexEstimatesFile.open(name.c_str());
 			vcount.indexEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual, Validity\n";
@@ -72,18 +38,37 @@ void createOutputDirectories(vocount& vcount, vsettings& settings){
 			vcount.indexClusterFile.open(name.c_str());
 			vcount.indexClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
 		}
-			
+		
 		if(settings.fdClustering){
+			settings.filteredDescDir = createDirectory(settings.outputFolder, "filtered_descriptors");
+			printf("Created filtered_descriptors directory at %s.\n", settings.filteredDescDir.c_str());
+			
+			String name = settings.filteredDescDir + "/estimates.csv";
+			vcount.selDescEstimatesFile.open(name.c_str());
+			vcount.selDescEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
+			
+			name = settings.filteredDescDir + "/ClusterEstimates.csv";
+			vcount.selDescClusterFile.open(name.c_str());
+			vcount.selDescClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
+		}
+		
+		if(settings.dfClustering){
+			settings.dfComboDir = createDirectory(settings.outputFolder, "descriptor_filtered_descriptors");
+			printf("Created descriptor_filtered_descriptors directory at %s.\n", settings.dfComboDir.c_str());
+			
 			String name = settings.dfComboDir + "/estimates.csv";
 			vcount.dfEstimatesFile.open(name.c_str());
-			vcount.dfEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
+			vcount.dfEstimatesFile << "Frame #,Box Est.,Actual, Accuracy\n";
 				
-			name = settings.diComboDir + "/ClusterEstimates.csv";
-			vcount.dfClusterFile.open(name.c_str());
-			vcount.dfClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
+			//name = settings.dfComboDir + "/ClusterEstimates.csv";
+			//vcount.dfClusterFile.open(name.c_str());
+			//vcount.dfClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
 		}
-			
+		
 		if(settings.diClustering){
+			settings.diComboDir = createDirectory(settings.outputFolder, "descriptor_image_space");
+			printf("Created filtered_descriptors directory at %s.\n", settings.diComboDir.c_str());
+			
 			String name = settings.diComboDir + "/estimates.csv";
 			vcount.diEstimatesFile.open(name.c_str());
 			vcount.diEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
@@ -92,8 +77,11 @@ void createOutputDirectories(vocount& vcount, vsettings& settings){
 			vcount.diClusterFile.open(name.c_str());
 			vcount.diClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
 		}
-			
+		
 		if(settings.dfiClustering){
+			settings.dfiComboDir = createDirectory(settings.outputFolder, "all_combined");
+			printf("Created all_combined directory at %s.\n", settings.dfiComboDir.c_str());
+			
 			String name = settings.dfiComboDir + "/estimates.csv";
 			vcount.dfiEstimatesFile.open(name.c_str());
 			vcount.dfiEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
