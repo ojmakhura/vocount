@@ -39,7 +39,7 @@ static String validityStr = "Validity";
 typedef struct {
 	int minPts = -1;
     IntIntListMap* clusterKeypointIdx; 						/// maps labels to the keypoint indices
-	vector<vector<int32_t>> roiFeatures;
+	vector<int32_t> roiFeatures;
 	Mat selectedDesc;
 	vector<KeyPoint> selectedKeypoints;
 	set<int32_t> selectedClusters;
@@ -85,10 +85,10 @@ typedef struct FRAMED{
 		frame,														/// The frame
 		gray;													/// hdbscan cluster
 	vector<KeyPoint> keypoints; 									/// Frame keypoints
-	vector<Rect2d> rois;														/// region of interest rectangle
-	vector<vector<int32_t>> roiFeatures;										/// indices of the features inside the roi
-	vector<int32_t> centerFeatures;											/// index of the roi central feature
-	vector<Mat> roiDesc;													/// region of interest descriptors
+	Rect2d roi;														/// region of interest rectangle
+	vector<int32_t> roiFeatures;										/// indices of the features inside the roi
+	int32_t centerFeature = -1;											/// index of the roi central feature
+	Mat roiDesc;													/// region of interest descriptors
 	bool hasRoi = false;
 	map<String, results_t*> results;
 } framed;
@@ -98,8 +98,8 @@ typedef struct VOCOUNT{
     int colourMinPts;
 	bool roiExtracted = false;
 	Ptr<Feature2D> detector;
-    vector<Ptr<Tracker>> trackers;
-	vector<Rect2d> rois;
+    Ptr<Tracker> tracker;
+	Rect2d roi;
     map<int32_t, map<String, int32_t> > stats;
     map<int32_t, vector<int32_t> > clusterEstimates;
 	vector<framed> frameHistory;
@@ -128,7 +128,7 @@ typedef struct VSETTINGS{
 		 dfClustering = false,											/// Combine descriptor and filtered desctiptor clustering
 		 diClustering = false,											/// Combine descriptor and image space clustering
 		 dfiClustering = false,											/// Combine descriptor, filtered descriptor and image space clustering
-		 extend = false,											/// Combine descriptor, filtered descriptor and image space clustering
+		 extend = false;											/// Combine descriptor, filtered descriptor and image space clustering
 	
 } vsettings;
 

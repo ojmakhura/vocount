@@ -83,7 +83,7 @@ Mat drawKeyPoints(Mat in, vector<KeyPoint> points, Scalar colour, int type){
 	Mat x = in.clone();
 	if(type == -1){
 		for(vector<KeyPoint>::iterator it = points.begin(); it != points.end(); ++it){
-			circle(x, Point(it->pt.x, it->pt.y), 4, colour, CV_FILLED, 8, 0);
+			circle(x, Point(it->pt.x, it->pt.y), 3, colour, CV_FILLED, 8, 0);
 		}
 	} else{
 		drawKeypoints( in, points, x, Scalar::all(-1), type );
@@ -133,37 +133,40 @@ double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vec
  * 
  * 
  */ 
-void generateFinalPointClusters(vector<vector<int32_t>>& roiFeatures, results_t* res){
+void generateFinalPointClusters(vector<int32_t>& roiFeatures, results_t* res){
 	set<int32_t> st;	// cluster for the roi features
-	for(uint i = 0; i < roiFeatures.size(); i++){
-		for (vector<int32_t>::iterator it = roiFeatures[i].begin(); it != roiFeatures[i].end(); ++it) {
-			int* label;
-			int k = res->labels->at(*it);
-			label = &k;
+	for (vector<int32_t>::iterator it = roiFeatures.begin(); it != roiFeatures.end(); ++it) {
+		int* label;
+		int k = res->labels->at(*it);
+		label = &k;
+		if(k != 0){		
 			IntArrayList* list = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, label);
 			
 			// If the record was not in the hash table, create a new record
 			if(list == NULL){
 				label = (int *)malloc(sizeof(int));
 				*label = k;
-				list = int_array_list_init_size(roiFeatures[i].size());
+				list = int_array_list_init_size(roiFeatures.size());
 				g_hash_table_insert(res->roiClusterPoints, label, list);
 				st.insert(k);
 			}
 					
 			int_array_list_append(list, *it);
-			
 		}
 	}
 	
 	for (set<int32_t>::iterator it = st.begin(); it != st.end(); ++it){
 		int32_t key = *it;
-		if (key != 0) {
-			int_array_list_append(res->objectClusters, key);
-		}		
+		//if (key != 0) {
+		int_array_list_append(res->objectClusters, key);
+		//}		
 	}
 	
-	res->objectClusters = hdbscan_sort_by_similarity(res->distancesMap, res->objectClusters, INTRA_DISTANCE_TYPE);
+	//printf("** res->objectClusters size = %d and res->roiClusterPoints size = %d\n", res->objectClusters->size, g_hash_table_size(res->roiClusterPoints));
+	if(res->objectClusters->size > 0){
+		res->objectClusters = hdbscan_sort_by_similarity(res->distancesMap, res->objectClusters, INTRA_DISTANCE_TYPE);
+	}
+	//printf("** res->objectClusters size = %d and res->roiClusterPoints size = %d\n", res->objectClusters->size, g_hash_table_size(res->roiClusterPoints));
 	
 	int32_t *data = (int32_t *)res->objectClusters->data;
 	for(int32_t i = res->objectClusters->size - 1; i >= 0; i--){		
@@ -194,23 +197,23 @@ int rectExist(vector<box_structure>& structures, box_structure& bst){
 	return -1;
 }
 
-void trimRect(Rect& r, int rows, int cols){
-	if(r.x < 0){
-		r.width += r.x;
-		r.x = 0;
+void trimRect(Rect& r, int rows, int cols, int padding){
+	if(r.x < padding){
+		r.width += r.x - padding;
+		r.x = padding;
 	}
 				
-	if(r.y < 0){
-		r.height += r.y;
-		r.y = 0;
+	if(r.y < padding){
+		r.height += r.y - padding;
+		r.y = padding;
 	}
 				
-	if((r.x + r.width) >= cols){
-		r.width = cols - r.x;
+	if((r.x + r.width) >= cols - padding){
+		r.width = cols - r.x - padding;
 	}
 				
-	if((r.y + r.height) >= rows){
-		r.height = rows - r.y;
+	if((r.y + r.height) >= rows - padding){
+		r.height = rows - r.y - padding;
 	}
 }
 
@@ -229,14 +232,14 @@ bool stabiliseRect(Mat frame, Rect templ_r, Rect& proposed){
 	new_r.width += half_w; //new_r.width;
 	new_r.height += half_h; //new_r.height;
 	
-	trimRect(new_r, frame.rows, frame.cols);
+	trimRect(new_r, frame.rows, frame.cols, 0);
 	//cout << "Trimmed new_r  = " << new_r << endl;
 	if(new_r.height < 1 || new_r.width < 1){
 		return false;
 	}
 	
 	Mat img = frame(new_r);
-	trimRect(templ_r, frame.rows, frame.cols);
+	trimRect(templ_r, frame.rows, frame.cols, 0);
 	//cout << templ_r << endl;
 	Mat templ = frame(templ_r);
 	
@@ -282,7 +285,7 @@ bool stabiliseRectByMoments(Mat& frame, const box_structure templ_r, Rect& propo
 	
 	do {
 		vector<Rect> rects;
-		trimRect(center, frame.rows, frame.cols);
+		trimRect(center, frame.rows, frame.cols, 0);
 		Mat centerImg = gray(center);	
 		double momCompare;
 		if(min == -1){
@@ -296,46 +299,46 @@ bool stabiliseRectByMoments(Mat& frame, const box_structure templ_r, Rect& propo
 		
 		Rect top = center;
 		top.y -= 1;
-		trimRect(top, frame.rows, frame.cols);
+		trimRect(top, frame.rows, frame.cols, 0);
 		rects.push_back(top);
 				
 		Rect bottom = center;
 		bottom.y += 1;
-		trimRect(bottom, frame.rows, frame.cols);
+		trimRect(bottom, frame.rows, frame.cols, 0);
 		rects.push_back(bottom);
 				
 		Rect right = center;
 		right.x += 1;
-		trimRect(right, frame.rows, frame.cols);
+		trimRect(right, frame.rows, frame.cols, 0);
 		rects.push_back(right);
 		
 		Rect left = center;
 		left.x -= 1;
-		trimRect(left, frame.rows, frame.cols);
+		trimRect(left, frame.rows, frame.cols, 0);
 		rects.push_back(left);
 		
 		Rect topLeft = center;
 		topLeft.y -= 1;
 		topLeft.x -= 1;
-		trimRect(topLeft, frame.rows, frame.cols);
+		trimRect(topLeft, frame.rows, frame.cols, 0);
 		rects.push_back(topLeft);
 				
 		Rect bottomLeft = center;
 		topLeft.y += 1;
 		topLeft.x -= 1;
-		trimRect(bottomLeft, frame.rows, frame.cols);
+		trimRect(bottomLeft, frame.rows, frame.cols, 0);
 		rects.push_back(bottomLeft);
 		
 		Rect topRight = center;
 		topLeft.y -= 1;
 		topLeft.x += 1;
-		trimRect(topRight, frame.rows, frame.cols);
+		trimRect(topRight, frame.rows, frame.cols, 0);
 		rects.push_back(topRight);
 		
 		Rect bottomRight = center;
 		topLeft.y += 1;
 		topLeft.x += 1;
-		trimRect(bottomRight, frame.rows, frame.cols);
+		trimRect(bottomRight, frame.rows, frame.cols, 0);
 		rects.push_back(bottomRight);
 		
 		for(uint i = 0; i < rects.size(); i++){			
@@ -403,7 +406,7 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 			bst.points.push_back(point);
 								
 			//cout << mbs.box << " : " << n_rect;
-			trimRect(n_rect, frame.rows, frame.cols);
+			trimRect(n_rect, frame.rows, frame.cols, 0);
 								
 			if(n_rect.height < 1 || n_rect.width < 1){
 				continue;
@@ -527,21 +530,21 @@ void generateClusterImages(Mat frame, results_t* res){
 			res->lsize = it->second.size();
 		}
 
-		Mat kimg = drawKeyPoints(frame, it->second, Scalar(0, 0, 255), -1);
+		Mat kimg = drawKeyPoints(frame, it->second, Scalar(255, 255, 255), -1);
 		
 		vector<Rect2d>& rects = (*res->clusterStructures)[it->first];
 		for(uint i = 0; i < rects.size(); i++){
 			Scalar value;
-			if(i == 0){
-				value = Scalar(0, 0, 255);
-			} else {
-				RNG rng(12345);
-				value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
+			//if(i == 0){
+				//value = Scalar(0, 0, 255);
+			//} else {
+			RNG rng(12345);
+			value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
 						rng.uniform(0, 255));				
-			}
+			//}
 			rectangle(kimg, rects[i], value, 2, 8, 0);
 		}
-		
+		rectangle(kimg, rects[0], Scalar(0, 0, 255), 2, 8, 0);
 		String ss = "img_keypoints-";
 		string s = to_string(it->first);
 		ss += s.c_str();
@@ -555,7 +558,7 @@ void generateClusterImages(Mat frame, results_t* res){
 		kp.insert(kp.end(), it->second.begin(), it->second.end());
 	}
 
-	Mat mm = drawKeyPoints(frame, kp, Scalar(0, 0, 255), -1);
+	Mat mm = drawKeyPoints(frame, kp, Scalar(255, 255, 255), -1);
 
 	String ss = "img_allkps";
 	(*(res->selectedClustersImages))[ss] = mm;
@@ -607,65 +610,61 @@ double calcDistanceL1(Point2f f1, Point2f f2){
 /**
  * Find the roi features and at the same time find the central feature.
  */
-void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d>& rois, vector<vector<int32_t>>& roiFeatures, vector<Mat>& roiDesc, vector<int32_t>& centerFeatures){
-	roiFeatures.reserve(rois.size());
-	roiDesc.reserve(rois.size());
-	centerFeatures.reserve(rois.size());
+void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, Rect2d& roi, vector<int32_t>& roiFeatures, Mat& roiDesc, int32_t& centerFeature){
+	//roiFeatures.reserve(1);
+	//roiDesc.reserve(1);
+	//centerFeatures.reserve(1);
 	//printf("rois.size = %lu roiFeatures = %lu roiDesc = %lu\n", rois.size(), roiFeatures.size(), roiDesc.size());
 //#pragma omp parallel for	
-	for(uint i = 0; i < rois.size(); i++){
-		roiFeatures.push_back(vector<int32_t>());
-		roiDesc.push_back(Mat());
-		centerFeatures.push_back(-1);
-	}
+	//for(uint i = 0; i < rois.size(); i++){
+		//roiFeatures vector<int32_t>();
+		//roiDesc = Mat();
+		//centerFeatures = -1;
+	//}
 	//printf("rois.size = %lu roiFeatures = %lu roiDesc = %lu\n", rois.size(), roiFeatures.size(), roiDesc.size());
 
 	//printf("keypoints = %lu, descriptors = %d\n", keypoints.size(), descriptors.rows);
 
 //#pragma omp parallel for	
-	for(uint x = 0; x < rois.size(); x++){
-		Rect2d& r = rois[x];
+	//for(uint x = 0; x < rois.size(); x++){
+	Rect2d& r = roi;
+	Point2f p;
 
-		Point2f p;
-
-		p.x = (r.x + r.width)/2.0f;
-		p.y = (r.y + r.height)/2.0f;
-		double distance;
-		int32_t centerFeature = -1;
-		for(uint i = 0; i < keypoints.size(); ++i){		
-			for(uint j = 0; j < rois.size(); j++){		
-			
-				if(rois[j].contains(keypoints[i].pt)){
-					roiFeatures[j].push_back(i);
-
-					// find the center feature index
-					if(centerFeature == -1){
-						centerFeature = i;
-						distance = calcDistanceL1(p, keypoints[i].pt);
-					} else {
-						double d1 = calcDistanceL1(p, keypoints[i].pt);
-
-						if(d1 < distance){
-							distance = d1;
-							centerFeature = i;
-						}
-					}
-
-					// create the roi descriptor
-					Mat t = descriptors.row(i);
-					roiDesc[j].push_back(t);
-					
+	p.x = (r.x + r.width)/2.0f;
+	p.y = (r.y + r.height)/2.0f;
+	double distance;
+	//int32_t centerFeature = -1;
+	for(uint i = 0; i < keypoints.size(); ++i){		
+		//for(uint j = 0; j < rois.size(); j++){		
+		
+		if(roi.contains(keypoints[i].pt)){
+			roiFeatures.push_back(i);
+				// find the center feature index
+			if(centerFeature == -1){
+				centerFeature = i;
+				distance = calcDistanceL1(p, keypoints[i].pt);
+			} else {
+				double d1 = calcDistanceL1(p, keypoints[i].pt);
+					if(d1 < distance){
+					distance = d1;
+					centerFeature = i;
 				}
 			}
+			// create the roi descriptor
+			Mat t = descriptors.row(i);
+			roiDesc.push_back(t);
+			
 		}
-		centerFeatures[x] = centerFeature;
-		//break;
+			//}
 	}
+		//centerFeatures = centerFeature;
+		//break;
+	//}
 	//printf("roiDesc had %d rows\n", roiDesc.rows);
 	//return centerFeature;
 }
 
-void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool extend, bool reextend){
+void getBoxStructure(results_t* res, Rect2d& roi, Mat& frame, bool extend, bool reextend){
 	vector<vector<box_structure>> b_structures;
 	set<int32_t> processedClusters;
 	int32_t *data = (int32_t *)res->objectClusters->data;
@@ -674,9 +673,11 @@ void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool exte
 		int32_t key = data[i];
 		processedClusters.insert(key);
 		(*res->clusterStructures)[key];
+		//printf("------ Searching for key %d from es->objectClusters->size %d\n", key, res->objectClusters->size);
 		IntArrayList *roiPoints = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, &(key));
+		
 		vector<vector<KeyPoint>> kps;
-		if(roiPoints->size > 1){
+		if(roiPoints != NULL && roiPoints->size > 1){
 			IntArrayList *cPoints = (IntArrayList *)g_hash_table_lookup(res->clusterMap, &(key));
 			splitROICluster(roiPoints, cPoints, *(res->dataset), kps, *(res->keypoints));
 		} else{
@@ -685,7 +686,7 @@ void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool exte
 		
 		vector<box_structure> str2;
 		box_structure mbs;
-		mbs.box = rois[0];
+		mbs.box = roi;
 		mbs.img_ = frame(mbs.box);
 		calculateHistogram(mbs);
 		mbs.histCompare = compareHist(mbs.hist, mbs.hist, CV_COMP_CORREL);
@@ -698,7 +699,7 @@ void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool exte
 			KeyPoint kp;
 			for(vector<KeyPoint>::iterator iter = itr->begin(); iter != itr->end(); ++iter){
 				
-				if(rois[0].contains(iter->pt)){
+				if(roi.contains(iter->pt)){
 					kp = *iter;
 					break;
 				}
@@ -1208,6 +1209,10 @@ void findNewROIs(Mat& frame, vector<Ptr<Tracker>>& trackers, vector<Rect2d>& new
 void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, Mat& frame){
 	
 	vcount.frameCount++;
+	
+	cout << "################################################################################" << endl;
+	cout << "                              " << vcount.frameCount << endl;
+	cout << "################################################################################" << endl;
 	framed f, index_f, sel_f;
 
 	f.i = vcount.frameCount;
@@ -1220,77 +1225,106 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 
 	cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
 	vcount.detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
+	if (!f.keypoints.empty()) {
 	
-	if (settings.selectROI && !vcount.roiExtracted) { // select a roi if c has been pressed or if the program was run with -s option
+		if (settings.selectROI && !vcount.roiExtracted) { // select a roi if c has been pressed or if the program was run with -s option
+				
+			Mat f2 = frame.clone();
+			f.roi = selectROI("Select ROI", f2);
+			destroyWindow("Select ROI");
+				
+			vcount.tracker = createTrackerByName(settings.trackerAlgorithm);
+			vcount.tracker->init( frame, f.roi);
 			
-		Mat f2 = frame.clone();
-		Rect2d boundingBox = selectROI("Select ROI", f2);
-		//cout << boundingBox << endl;
-		destroyWindow("Select ROI");
-		f.rois.push_back(boundingBox);
+			vcount.roiExtracted = true;
+			settings.selectROI = false;
+		} else if(vcount.roiExtracted && vcount.roi.area() > 0){
 			
-		for(size_t i = 0; i < f.rois.size(); i++){
-			vcount.trackers.push_back(createTrackerByName(settings.trackerAlgorithm));
-			vcount.trackers[i]->init( frame, f.rois[i] );
+			f.roi = vcount.roi;
+			vcount.tracker = createTrackerByName(settings.trackerAlgorithm);
+			vcount.tracker->init( frame, vcount.roi );
+			vcount.roi = Rect2d(0,0,0,0);
 		}
-			
-		//trackers.add(_trackers, f2, f.rois);
-		vcount.roiExtracted = true;
-		settings.selectROI = false;
-	} else if(vcount.roiExtracted && vcount.rois.size() > 0){
-		
-		for(size_t i = 0; i < vcount.rois.size(); i++){
-			//cout << vcount.rois[i] << endl;
-			f.rois.push_back(vcount.rois[i]);
-			vcount.trackers.push_back(createTrackerByName(settings.trackerAlgorithm));
-			vcount.trackers[i]->init( frame, vcount.rois[i] );
-		}
-		vcount.rois.clear();
-	}
 
-	if (vcount.roiExtracted ){
-		f.rois.resize(1);
-		//printf("rois size = %lu\n", f.rois.size());
-		RNG rng(12345);
-		Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));
-		for(size_t i = 0; i < vcount.trackers.size(); i++){
-			vcount.trackers[i]->update(frame, f.rois[i]);
-			rectangle(frame, f.rois[i], value, 2, 8, 0);
-			break;
+		if (vcount.roiExtracted ){
+			
+			vcount.tracker->update(frame, f.roi);
+			findROIFeature(f.keypoints, f.descriptors, f.roi, f.roiFeatures, f.roiDesc, f.centerFeature);
+			Rect r = f.roi;
+			double d1 = r.area();
+			trimRect(r, frame.rows, frame.cols, 10);
+			double d2 = r.area();
+						
+			int rdx = 1;
+			int xz = 1;
+			/**
+			 * select a new roi as long as either d2 < d1 or 
+			 * no roi features were found
+			 */ 
+			while(d2 < d1 || f.roiFeatures.empty()){
+				f.roiFeatures.clear();
+				f.roiDesc = Mat();
+				f.centerFeature = -1;
+				//printf("*\n*\n");
+				vector<box_structure>* bxs = vcount.frameHistory[vcount.frameHistory.size()-xz].results.at("descriptors")->boxStructures;
+				
+				if(!bxs->empty()){	
+					f.roi = bxs->at(rdx).box;
+					Rect prev = f.roi;
+					Rect nRect = f.roi;
+					stabiliseRect(frame, prev, nRect);	
+					vcount.tracker = createTrackerByName(settings.trackerAlgorithm);
+					vcount.tracker->init(vcount.frameHistory[vcount.frameHistory.size()-1].frame, f.roi);
+					vcount.tracker->update(frame, f.roi);				
+					r = f.roi;
+					d1 = r.area();
+					trimRect(r, frame.rows, frame.cols, 10);
+					
+					//cout << "Rect r = " << r << " Area = " << r.area() << endl;
+					d2 = r.area();
+					findROIFeature(f.keypoints, f.descriptors, f.roi, f.roiFeatures, f.roiDesc, f.centerFeature);
+				}else{
+					xz++;
+				}
+				rdx++;
+			}
+			//cout << "f.roiFeatures size = " << f.roiFeatures.size() << endl;
+			//cout << f.roiDesc << endl;
+			
+			RNG rng(12345);
+			Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));		
+			rectangle(frame, f.roi, value, 2, 8, 0);	
+			
 		}
-	}
-	
-   	String iSpaceFrameDir;
-   	String descriptorFrameDir;
-    String selectedDescFrameDir;
-    	
-    if(settings.print){
-		printImage(settings.outputFolder, vcount.frameCount, "frame", frame);
-    	
-		if(settings.isClustering){
-			iSpaceFrameDir = createDirectory(settings.imageSpaceDir, to_string(vcount.frameCount));
+		cout << f.roi << endl;
+		display("frame", frame);
+		String iSpaceFrameDir;
+		String descriptorFrameDir;
+		String selectedDescFrameDir;
+			
+		if(settings.print){
+			printImage(settings.outputFolder, vcount.frameCount, "frame", frame);
+			
+			if(settings.isClustering){
+				iSpaceFrameDir = createDirectory(settings.imageSpaceDir, to_string(vcount.frameCount));
+			}
+			
+			if(settings.dClustering){
+				descriptorFrameDir = createDirectory(settings.descriptorDir, to_string(vcount.frameCount));
+			}
+			
+			if(settings.fdClustering){
+				selectedDescFrameDir = createDirectory(settings.filteredDescDir, to_string(vcount.frameCount));
+			}
 		}
-    	
-		if(settings.dClustering){
-			descriptorFrameDir = createDirectory(settings.descriptorDir, to_string(vcount.frameCount));
-		}
-		
-		if(settings.fdClustering){
-			selectedDescFrameDir = createDirectory(settings.filteredDescDir, to_string(vcount.frameCount));
-		}
-    }
-        
-	if (!f.descriptors.empty()) {
+        	
 		vector<Rect2d> foundRects;
-		cout << "################################################################################" << endl;
-		cout << "                              " << f.i << endl;
-		cout << "################################################################################" << endl;
 		
 		// Create clustering dataset
 		f.hasRoi = vcount.roiExtracted;
 		results_t* res1;
 		if(settings.dClustering){// || settings.diClustering || settings.dfClustering || settings.dfiClustering){	
-			findROIFeature(f.keypoints, f.descriptors, f.rois, f.roiFeatures, f.roiDesc, f.centerFeatures);	
+			
 			Mat dset = getDescriptorDataset(vcount.frameHistory, settings.step, f.descriptors);	
 			res1 = clusterDescriptors(vcount, settings, f, dset, f.keypoints, descriptorFrameDir, settings.descriptorDir);
 			//res1 = clusterDescriptors(vcount, settings, f, descriptorFrameDir, settings.descriptorDir);
@@ -1377,9 +1411,9 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 			}
 			
 			//printf("colourSel.selectedDesc has size %d colourSel.selectedKeypoints = %ld , f.rois = %ld, colourSel.roiFeatures = %ld\n", colourSel.selectedDesc.rows, colourSel.selectedKeypoints.size(), f.rois.size(), colourSel.roiFeatures.size());
-			vector<Mat> roiDesc;
-			vector<int32_t> ce;
-			findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.rois, colourSel.roiFeatures, roiDesc, ce);			
+			Mat roiDesc;
+			int32_t ce;
+			findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.roi, colourSel.roiFeatures, roiDesc, ce);			
 				
 			if(settings.isClustering){// || settings.diClustering || settings.dfiClustering){
 				printf("Clustering selected keypoints in image space\n\n\n");
@@ -1465,7 +1499,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 				//selDescRes = clusterDescriptors(vcount, settings, f, colourSel.selectedDesc, f.keypoints, descriptorFrameDir, settings.descriptorDir);
 				selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true, false);
 				generateFinalPointClusters(colourSel.roiFeatures, selDescRes);
-				getBoxStructure(selDescRes, f.rois, frame, true, true);	
+				getBoxStructure(selDescRes, f.roi, frame, true, true);	
 				
 				//cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				selDescRes->total = 0; //countPrint(selDescRes->roiClusterPoints, selDescRes->finalPointClusters, 
@@ -1475,7 +1509,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 				if(settings.print){							
 					generateClusterImages(f.frame, selDescRes);
 					createBoxStructureImages(selDescRes->boxStructures, selDescRes->selectedClustersImages);
-					Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
+					Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(255, 255, 255), -1);
 					printImage(settings.filteredDescDir, vcount.frameCount, "frame_kp", frm);
 					generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, selDescRes, f.i);
 					printImages(selectedDescFrameDir, selDescRes->selectedClustersImages, vcount.frameCount);
@@ -1571,7 +1605,7 @@ results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, M
 	
 	results_t* res = do_cluster(NULL, dataset, keypoints, settings.step, 3, true, true);
 	generateFinalPointClusters(f.roiFeatures, res);	
-	getBoxStructure(res, f.rois, f.frame, settings.extend, false);
+	getBoxStructure(res, f.roi, f.frame, settings.extend, false);
 	printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
 	//cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 	res->total = 0; // countPrint(res->roiClusterPoints, res->finalPointClusters, res->cest, res->selectedFeatures, res->lsize);

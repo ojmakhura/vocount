@@ -115,7 +115,7 @@ void printEstimates(ofstream& myfile, map<String, int32_t>* estimates){
 	myfile << estimates->at(boxEst) << ",";
 	myfile << estimates->at(truthCount) << ",";
 	myfile << estimates->at(validityStr) << ",";
-	double accuracy = estimates->at(truthCount) != 0 ? ((double estimates->at(boxEst)) / estimates->at(truthCount)) * 100 : 0;
+	double accuracy = (estimates->at(truthCount) != 0) ? ((double) estimates->at(boxEst) / estimates->at(truthCount)) * 100 : 0;
 	myfile << accuracy << "\n";
 	
 	myfile.flush();
@@ -234,11 +234,11 @@ void printImages(String& folder, map<String, Mat>* images, int count){
 	}
 }
 
-void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<vector<int32_t>>& roiFeatures, results_t* res, int i){
+void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<int32_t>& roiFeatures, results_t* res, int i){
 	//if (vcount.print) {
 		int selSampleSize = 0;
 		if(g_hash_table_size(res->roiClusterPoints) > 0){
-			(*(res->odata))[sampleSize] = roiFeatures[0].size();
+			(*(res->odata))[sampleSize] = roiFeatures.size();
 			GHashTableIter iter;
 			gpointer key;
 			gpointer value;

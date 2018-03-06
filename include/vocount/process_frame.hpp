@@ -79,7 +79,7 @@ vector<KeyPoint> getAllMatchedKeypoints(framed& f);
 /**
  *
  */
-void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, vector<Rect2d>& rois, vector<vector<int32_t>>& roiFeatures, vector<Mat>& roiDesc, vector<int32_t>& centerFeatures);
+void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, Rect2d& roi, vector<int32_t>& roiFeatures, Mat& roiDesc, int32_t& centerFeature);
 
 /**
  *
@@ -89,7 +89,7 @@ bool processOptions(vocount& vcount, vsettings& settings, CommandLineParser& par
 /**
  *
  */
-void generateFinalPointClusters(vector<vector<int32_t>>& roiFeatures, results_t* res);
+void generateFinalPointClusters(vector<int32_t>& roiFeatures, results_t* res);
 
 /**
  * Get the true count of objects from the given folder. The
@@ -177,7 +177,7 @@ void expandClusters(results_t* res);
  * 
  * 
  */ 
-void getBoxStructure(results_t* res, vector<Rect2d>& rois, Mat& frame, bool extend, bool reextend);
+void getBoxStructure(results_t* res, Rect2d& rois, Mat& frame, bool extend, bool reextend);
 
 /**
  * 

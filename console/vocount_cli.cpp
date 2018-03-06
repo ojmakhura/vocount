@@ -139,9 +139,11 @@ bool processOptions(vocount& vcount, vsettings& settings, CommandLineParser& par
 		int w = atoi(s.c_str());
 		s = parser.get<String>("rh");
 		int h = atoi(s.c_str());
-		Rect2d roi(x, y, w, h);
+		
 		vcount.roiExtracted = true;
-		vcount.rois.push_back(roi);
+		vcount.roi = Rect2d(x, y, w, h);;
+	} else{
+		vcount.roi = Rect2d(0, 0, 0, 0);		
 	}
 	
 	return true;
@@ -179,9 +181,7 @@ int main(int argc, char** argv) {
     }
 
     while(cap.read(frame))
-    {
-		display("frame", frame);
-		
+    {	
 		// Listen for a key pressed
 		char c = (char) waitKey(20);
 		if (c == 'q') {
