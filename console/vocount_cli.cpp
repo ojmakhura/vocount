@@ -35,6 +35,11 @@ static void help(){
 			"     [-df]       						# Combine descriptor clustering and filtered descriptors clustering\n"
 			"     [-di]       						# Combine descriptor clustering and image index based clustering\n"
 			"     [-dfi]       					# Combine descriptor clustering, filtered descriptors and index based clustering\n"
+			"     [-rx]       					# roi x coordiate\n"
+			"     [-ry]       					# roi y coordinate\n"
+			"     [-rh]       					# roi height\n"
+			"     [-rw]       					# roi width\n"
+			"     [-e]       					# extend the box structures to include clusters not in the initial list\n"
 	        "\n" );
 }
 
@@ -89,27 +94,54 @@ bool processOptions(vocount& vcount, vsettings& settings, CommandLineParser& par
 	}
 	
 	if(parser.has("d") || parser.has("df") || parser.has("di") || parser.has("dfi")){
+		printf("*** Raw descriptor clustering activated\n");
 		settings.dClustering = true;
 	}
 	
 	if(parser.has("i") || parser.has("di") || parser.has("dfi")){
+		printf("*** Image space clustering activated\n");
 		settings.isClustering = true;
 	}
 	
 	if(parser.has("f") || parser.has("df") || parser.has("dfi")){
+		printf("*** Filtered descriptor clustering activated\n");
 		settings.fdClustering = true;
 	}
 	
 	if(parser.has("df")){
+		printf("*** Will combine descriptors and filtered descriptors results\n");
 		settings.dfClustering = true;
 	}
 	
 	if(parser.has("di")){
+		printf("*** Will combine descriptors and image space clustering results\n");
 		settings.diClustering = true;
 	}
 	
 	if(parser.has("dfi")){
+		printf("*** Will combine descriptors, filtered descriptors and image space clustering results\n");
 		settings.dfiClustering = true;
+	}
+	
+	if(parser.has("e")){
+		printf("*** Will extend the box structures\n");
+		settings.extend = true;
+	}
+	
+	if(parser.has("rx") && parser.has("ry") && parser.has("rw") && parser.has("rh")){
+		printf("*** ROI provided from command line\n");
+		settings.selectROI = false;
+		String s = parser.get<String>("rx");
+		int x = atoi(s.c_str());
+		s = parser.get<String>("ry");
+		int y = atoi(s.c_str());
+		s = parser.get<String>("rw");
+		int w = atoi(s.c_str());
+		s = parser.get<String>("rh");
+		int h = atoi(s.c_str());
+		Rect2d roi(x, y, w, h);
+		vcount.roiExtracted = true;
+		vcount.rois.push_back(roi);
 	}
 	
 	return true;
@@ -129,7 +161,8 @@ int main(int argc, char** argv) {
 					"{help ||}{o||}{n|1|}"
 					"{v||}{video||}{w|1|}{s||}"
 					"{i||}{c||}{t||}{l||}{ta|BOOSTING|}"
-					"{d||}{f||}{df||}{di||}{dfi||}");
+					"{d||}{f||}{df||}{di||}{dfi||}"
+					"{rx||}{ry||}{rw||}{rh||}{e||}");
 
 	if(!processOptions(vcount, settings, parser, cap)){
 		help();

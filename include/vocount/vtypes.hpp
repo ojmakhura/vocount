@@ -127,7 +127,8 @@ typedef struct VSETTINGS{
 		 fdClustering = false,											/// Filtered descriptor clustering	
 		 dfClustering = false,											/// Combine descriptor and filtered desctiptor clustering
 		 diClustering = false,											/// Combine descriptor and image space clustering
-		 dfiClustering = false;											/// Combine descriptor, filtered descriptor and image space clustering
+		 dfiClustering = false,											/// Combine descriptor, filtered descriptor and image space clustering
+		 extend = false,											/// Combine descriptor, filtered descriptor and image space clustering
 	
 } vsettings;
 
