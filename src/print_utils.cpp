@@ -19,7 +19,7 @@ void createOutputDirectories(vocount& vcount, vsettings& settings){
 			
 			String name = settings.descriptorDir + "/estimates.csv";
 			vcount.descriptorsEstimatesFile.open(name.c_str());
-			vcount.descriptorsEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
+			vcount.descriptorsEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual, Validity, Accuracy\n";
 				
 			name = settings.descriptorDir + "/ClusterEstimates.csv";
 			vcount.descriptorsClusterFile.open(name.c_str());
@@ -32,7 +32,7 @@ void createOutputDirectories(vocount& vcount, vsettings& settings){
 			
 			String name = settings.imageSpaceDir + "/estimates.csv";
 			vcount.indexEstimatesFile.open(name.c_str());
-			vcount.indexEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual, Validity\n";
+			vcount.indexEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual, Validity, Accuracy\n";
 			
 			name = settings.imageSpaceDir + "/ClusterEstimates.csv";
 			vcount.indexClusterFile.open(name.c_str());
@@ -45,7 +45,7 @@ void createOutputDirectories(vocount& vcount, vsettings& settings){
 			
 			String name = settings.filteredDescDir + "/estimates.csv";
 			vcount.selDescEstimatesFile.open(name.c_str());
-			vcount.selDescEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
+			vcount.selDescEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual, Validity, Accuracy\n";
 			
 			name = settings.filteredDescDir + "/ClusterEstimates.csv";
 			vcount.selDescClusterFile.open(name.c_str());
@@ -71,7 +71,7 @@ void createOutputDirectories(vocount& vcount, vsettings& settings){
 			
 			String name = settings.diComboDir + "/estimates.csv";
 			vcount.diEstimatesFile.open(name.c_str());
-			vcount.diEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
+			vcount.diEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual, Validity, Accuracy\n";
 				
 			name = settings.diComboDir + "/ClusterEstimates.csv";
 			vcount.diClusterFile.open(name.c_str());
@@ -84,7 +84,7 @@ void createOutputDirectories(vocount& vcount, vsettings& settings){
 			
 			String name = settings.dfiComboDir + "/estimates.csv";
 			vcount.dfiEstimatesFile.open(name.c_str());
-			vcount.dfiEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual\n";
+			vcount.dfiEstimatesFile << "Frame #,Sample Size,Selected Sample,Feature Size, Selected Features, # Clusters,Cluster Sum, Cluster Avg., Box Est.,Actual, Validity, Accuracy\n";
 				
 			name = settings.dfiComboDir + "/ClusterEstimates.csv";
 			vcount.dfiClusterFile.open(name.c_str());
@@ -114,7 +114,9 @@ void printEstimates(ofstream& myfile, map<String, int32_t>* estimates){
 	myfile << estimates->at(clusterAverage) << ",";
 	myfile << estimates->at(boxEst) << ",";
 	myfile << estimates->at(truthCount) << ",";
-	myfile << estimates->at(validityStr) << "\n";
+	myfile << estimates->at(validityStr) << ",";
+	double accuracy = estimates->at(truthCount) != 0 ? ((double estimates->at(boxEst)) / estimates->at(truthCount)) * 100 : 0;
+	myfile << accuracy << "\n";
 	
 	myfile.flush();
 
