@@ -22,11 +22,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-
 SOURCES += \
         src/main.cpp \
         src/vuiwindow.cpp \
-        src/vuiplayer.cpp
+        src/vuiplayer.cpp \
+        ../src/print_utils.cpp \
+        ../src/process_frame.cpp
 
 HEADERS += \
         include/vuiplayer.h \
@@ -35,7 +36,26 @@ HEADERS += \
 FORMS += \
         forms/vuiwindow.ui
 
-INCLUDEPATH += "include"
+INCLUDEPATH += "include" \
+            "../include" \
+            "/usr/local/opencv/include" \
+            "../thirdparty/include" \
+            "/usr/include/glib-2.0" \
+            "/usr/lib64/glib-2.0/include"
+
+LIBS += -L/usr/local/opencv/lib64 \
+        -lopencv_core \
+        -lopencv_imgcodecs \
+        -lopencv_highgui \
+        -lopencv_xfeatures2d \
+        -lopencv_features2d \
+        -lopencv_imgproc \
+        -lopencv_videoio
+
+LIBS += -lglib-2.0
+
+LIBS += -L../thirdparty/lib \
+        -lhdbscan
 
 QMAKE_CXXFLAGS += -fopenmp
 QMAKE_LFLAGS +=  -fopenmp

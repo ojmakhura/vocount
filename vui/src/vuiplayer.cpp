@@ -5,7 +5,6 @@
 #include <fstream>
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/xfeatures2d.hpp>
-//#include <opencv2/ximgproc/segmentation.hpp>
 #include <ctime>
 #include <string>
 #include "vocount/print_utils.hpp"

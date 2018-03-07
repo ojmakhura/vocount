@@ -1,12 +1,19 @@
-# HDBSCAN
-This is an implementation of the hdbscan algorithm RICARDO J. G. B. CAMPELLO et al. This is a translation from Java to C/C++. The build uses cmake to compile. You will need the math library and the glib2 installed.
+# Video Object Counting
+This project counts the objects of interest from a video. The user input is an ROI rectangle around one of the objects in a video frame. Using HDBSCAN we then find all other objects that have the similar local features as the object in the ROI. 
 
 ## Compile
-1. git clone https://github.com/ojmakhura/hdbscan.git
-2. cd hdbscan
-3. mkdir build
-4. cd build
-5. cmake ..
-6. make
+1. git clone https://github.com/ojmakhura/vocount.git
+2. cd vocount/thirdparty
+3. ./hdbscan.sh
+4. cd ..
+5. mkdir build
+6. cd build
+7. cmake ..
+8. make
 
-The library comes with 2 tester files in the samples folder. The file tester.c shows how to use the library in a C implementation. THe file tester.cpp shows how to use the library with a C++ implementation. The implementation has bee designed to work with a dataset of 5 different types of data, float, double, int, long and short. To let the algorithm know which datatype you are working with, you pass the DATATYPE\_{FLOAT, DOUBLE, INT, SHORT, FLOAT} as a parameter to hdbscan* scan = hdbscan\_init() when using C or hdbscan scan() when using C++. 
+## Console App
+- console/vocount_cli --help
+
+## QT 5 App
+- vui/vui 
+

@@ -79,6 +79,43 @@ void VUIWindow::on_actionPlay_triggered()
 
         }
 
+        if(!ui->sampleSizeEdit->text().isEmpty()){
+            player->settings.rsize = ui->sampleSizeEdit->text().toInt();
+        } else{
+            player->settings.rsize = 1;
+        }
+
+        player->vcount.roiExtracted = false;
+
+        if(!ui->xLineEdit->text().isEmpty()){
+            player->vcount.roi.x = ui->xLineEdit->text().toInt();
+            player->vcount.roiExtracted = true;
+        }
+
+        if(player->vcount.roiExtracted && !ui->yLineEdit->text().isEmpty()){
+            player->vcount.roi.y = ui->yLineEdit->text().toInt();
+        } else {
+            player->vcount.roiExtracted = false;
+        }
+
+        if(player->vcount.roiExtracted && !ui->widthLineEdit->text().isEmpty()){
+            player->vcount.roi.width = ui->widthLineEdit->text().toInt();
+        } else {
+            player->vcount.roiExtracted = false;
+        }
+
+        if(player->vcount.roiExtracted && !ui->heightLineEdit->text().isEmpty()){
+            player->vcount.roi.height = ui->heightLineEdit->text().toInt();
+        } else {
+            player->vcount.roiExtracted = false;
+        }
+
+        if(player->vcount.roiExtracted){
+            player->settings.selectROI = false;
+        } else {
+            player->vcount.roi = Rect2d(0, 0, 0, 0);
+        }
+
         player->settings.trackerAlgorithm = ui->trackerComboBox->currentText().toStdString().data();
         ui->trackerComboBox->setEnabled(false);
         player->settings.dClustering = ui->descriptorSpaceBox->isChecked();
@@ -87,7 +124,7 @@ void VUIWindow::on_actionPlay_triggered()
         player->settings.dfClustering = ui->descFilteredDescBox->isChecked();
         player->settings.diClustering = ui->descImageSpaceBox->isChecked();
         player->settings.dfiClustering = ui->combineAllBox->isChecked();
-        player->settings.rsize = ui->sampleSizeEdit->text().toInt();
+        player->settings.extend = ui->extendCheckBox->isChecked();
         player->settings.step = 1;
 
         this->player->initPlayer();

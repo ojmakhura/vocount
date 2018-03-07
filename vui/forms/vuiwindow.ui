@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>622</width>
-    <height>464</height>
+    <width>612</width>
+    <height>576</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -113,7 +113,7 @@
    <widget class="QSplitter" name="splitter">
     <property name="geometry">
      <rect>
-      <x>110</x>
+      <x>80</x>
       <y>130</y>
       <width>121</width>
       <height>25</height>
@@ -136,8 +136,8 @@
    <widget class="QSplitter" name="splitter_2">
     <property name="geometry">
      <rect>
-      <x>100</x>
-      <y>170</y>
+      <x>210</x>
+      <y>130</y>
       <width>221</width>
       <height>25</height>
      </rect>
@@ -159,86 +159,193 @@
      </property>
     </widget>
    </widget>
-   <widget class="QCheckBox" name="descFilteredDescBox">
+   <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
-      <x>100</x>
-      <y>250</y>
-      <width>211</width>
+      <x>60</x>
+      <y>170</y>
+      <width>471</width>
+      <height>161</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Clustering</string>
+    </property>
+    <widget class="QCheckBox" name="imageSpaceBox">
+     <property name="geometry">
+      <rect>
+       <x>350</x>
+       <y>40</y>
+       <width>116</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Image Space</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="filteredDescriptorBox">
+     <property name="geometry">
+      <rect>
+       <x>188</x>
+       <y>40</y>
+       <width>156</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Filtered Descriptor</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="descriptorSpaceBox">
+     <property name="geometry">
+      <rect>
+       <x>36</x>
+       <y>39</y>
+       <width>145</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Descriptor Space</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="descFilteredDescBox">
+     <property name="geometry">
+      <rect>
+       <x>36</x>
+       <y>79</y>
+       <width>211</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Descriptor + Filtered Desc</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="combineAllBox">
+     <property name="geometry">
+      <rect>
+       <x>36</x>
+       <y>119</y>
+       <width>161</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Combine All</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="descImageSpaceBox">
+     <property name="geometry">
+      <rect>
+       <x>276</x>
+       <y>79</y>
+       <width>191</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Descriptor + Img Space</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QCheckBox" name="extendCheckBox">
+    <property name="geometry">
+     <rect>
+      <x>450</x>
+      <y>130</y>
+      <width>111</width>
       <height>23</height>
      </rect>
     </property>
     <property name="text">
-     <string>Descriptor + Filtered Desc</string>
+     <string>Extend Count</string>
     </property>
    </widget>
-   <widget class="QCheckBox" name="descImageSpaceBox">
+   <widget class="QGroupBox" name="groupBox_2">
     <property name="geometry">
      <rect>
-      <x>340</x>
-      <y>250</y>
-      <width>191</width>
-      <height>23</height>
+      <x>60</x>
+      <y>350</y>
+      <width>241</width>
+      <height>121</height>
      </rect>
     </property>
-    <property name="text">
-     <string>Descriptor + Img Space</string>
+    <property name="title">
+     <string>Default ROI</string>
     </property>
-   </widget>
-   <widget class="QCheckBox" name="combineAllBox">
-    <property name="geometry">
-     <rect>
-      <x>100</x>
-      <y>290</y>
-      <width>161</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Combine All</string>
-    </property>
-   </widget>
-   <widget class="QCheckBox" name="descriptorSpaceBox">
-    <property name="geometry">
-     <rect>
-      <x>100</x>
-      <y>210</y>
-      <width>145</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Descriptor Space</string>
-    </property>
-    <property name="checked">
-     <bool>true</bool>
-    </property>
-   </widget>
-   <widget class="QCheckBox" name="filteredDescriptorBox">
-    <property name="geometry">
-     <rect>
-      <x>252</x>
-      <y>211</y>
-      <width>156</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Filtered Descriptor</string>
-    </property>
-   </widget>
-   <widget class="QCheckBox" name="imageSpaceBox">
-    <property name="geometry">
-     <rect>
-      <x>414</x>
-      <y>211</y>
-      <width>116</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Image Space</string>
-    </property>
+    <widget class="QWidget" name="">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>40</y>
+       <width>161</width>
+       <height>62</height>
+      </rect>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_5">
+        <item>
+         <widget class="QLabel" name="xLabel">
+          <property name="text">
+           <string>x</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="xLineEdit"/>
+        </item>
+       </layout>
+      </item>
+      <item row="0" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QLabel" name="widthLabel">
+          <property name="text">
+           <string>Width</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="widthLineEdit"/>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_4">
+        <item>
+         <widget class="QLabel" name="yLabel">
+          <property name="text">
+           <string>y</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="yLineEdit"/>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <widget class="QLabel" name="heightLabel">
+          <property name="text">
+           <string>Height</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="heightLineEdit"/>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -246,7 +353,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>622</width>
+     <width>612</width>
      <height>22</height>
     </rect>
    </property>

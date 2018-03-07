@@ -901,14 +901,14 @@ void getListKeypoints(vector<KeyPoint>& keypoints, IntArrayList* list, vector<Ke
  *
  */
 selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints){
-	int mpts;
+    int mpts = 3;
 	printf("Detecting minPts value for colour clustering.\n");
 	Mat dataset = getColourDataset(frame, keypoints);
 	size_t size = 0;
-	map<int, int> choices;
+    //map<int, int> choices;
 	int chosenCount = 1, currentCount = 1;
 	IntIntListMap* clusterKeypointIdxMap = NULL;
-	map_kp clusterKeyPointsMap;
+    //map_kp clusterKeyPointsMap;
 	selection_t colourSelection;
 	colourSelection.minPts = 2;
 	hdbscan scan(3, DATATYPE_FLOAT);
@@ -918,7 +918,7 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 
 		printf("\n\n >>>>>>>>>>>> Clustering for minPts = %d\n", i);
 			
-		set<int> lsetkps(scan.clusterLabels, scan.clusterLabels + scan.numPoints);	
+        //set<int> lsetkps(scan.clusterLabels, scan.clusterLabels + scan.numPoints);
 			
 		IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);		
 		IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scan, clusterMap);
@@ -1318,11 +1318,11 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 			}
 		}
         	
-		vector<Rect2d> foundRects;
+        //vector<Rect2d> foundRects;
 		
 		// Create clustering dataset
 		f.hasRoi = vcount.roiExtracted;
-		results_t* res1;
+        results_t* res1 = NULL;
 		if(settings.dClustering){// || settings.diClustering || settings.dfClustering || settings.dfiClustering){	
 			
 			Mat dset = getDescriptorDataset(vcount.frameHistory, settings.step, f.descriptors);	
@@ -1544,8 +1544,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 						} 
 						vcount.dfEstimatesFile << f.i << "," <<  selectedStructures.size() << "," << vcount.truth[f.i] << "," << accuracy << "\n";
 					}
-				}
-				
+				}				
 			}
 		}		
 	}
@@ -1606,11 +1605,9 @@ results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, M
 	results_t* res = do_cluster(NULL, dataset, keypoints, settings.step, 3, true, true);
 	generateFinalPointClusters(f.roiFeatures, res);	
 	getBoxStructure(res, f.roi, f.frame, settings.extend, false);
-	printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
-	//cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-	res->total = 0; // countPrint(res->roiClusterPoints, res->finalPointClusters, res->cest, res->selectedFeatures, res->lsize);
-	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+    cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+    printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
+    res->total = 0; // countPrint(res->roiClusterPoints, res->finalPointClusters, res->cest, res->selectedFeatures, res->lsize);
 
 	f.results["descriptors"] = res;
 				
@@ -1624,6 +1621,7 @@ results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, M
 		printEstimates(vcount.descriptorsEstimatesFile, res->odata);
 		printClusterEstimates(vcount.descriptorsClusterFile, res->odata, res->cest);	
 	}
+    cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 	
 	return res;
 }
@@ -1638,29 +1636,27 @@ void finalise(vocount& vcount){
 		}
 	}
 
-    //if(vcount.print){
-		if(vcount.descriptorsClusterFile.is_open()){
-			vcount.descriptorsClusterFile.close();
-		}
-				
-		if(vcount.descriptorsEstimatesFile.is_open()){
-			vcount.descriptorsEstimatesFile.close();
-		}
-		
-		if(vcount.selDescClusterFile.is_open()){
-			vcount.selDescClusterFile.close();
-		}	
-		
-		if(vcount.selDescEstimatesFile.is_open()){
-			vcount.selDescEstimatesFile.close();
-		}
-			
-		if(vcount.indexClusterFile.is_open()){
-			vcount.indexClusterFile.close();
-		}
-		
-		if(vcount.indexEstimatesFile.is_open()){
-			vcount.indexEstimatesFile.close();
-		}
-    //}
+    if(vcount.descriptorsClusterFile.is_open()){
+        vcount.descriptorsClusterFile.close();
+    }
+
+    if(vcount.descriptorsEstimatesFile.is_open()){
+        vcount.descriptorsEstimatesFile.close();
+    }
+
+    if(vcount.selDescClusterFile.is_open()){
+        vcount.selDescClusterFile.close();
+    }
+
+    if(vcount.selDescEstimatesFile.is_open()){
+        vcount.selDescEstimatesFile.close();
+    }
+
+    if(vcount.indexClusterFile.is_open()){
+        vcount.indexClusterFile.close();
+    }
+
+    if(vcount.indexEstimatesFile.is_open()){
+        vcount.indexEstimatesFile.close();
+    }
 }

@@ -20,6 +20,7 @@ protected:
 public:
     vsettings settings;
     bool initialised = false;
+    vocount vcount;
     
     explicit VUIPlayer(QObject *parent = 0);
     //Destructor
@@ -36,8 +37,7 @@ public:
 
 private:
 	Mat frame;
-	VideoCapture cap;
-    vocount vcount;
+    VideoCapture cap;
     selection_t colourSel;
     bool _paused = false;
     bool _stop = false;
