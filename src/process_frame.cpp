@@ -15,7 +15,7 @@
 
 using namespace std;
 
-
+static COLOURS colours;
 
 void display(char const* screen, const InputArray& m) {
 	if (!m.empty()) {
@@ -530,21 +530,17 @@ void generateClusterImages(Mat frame, results_t* res){
 			res->lsize = it->second.size();
 		}
 
-		Mat kimg = drawKeyPoints(frame, it->second, Scalar(255, 255, 255), -1);
+		Mat kimg = drawKeyPoints(frame, it->second, colours.white, -1);
 		
 		vector<Rect2d>& rects = (*res->clusterStructures)[it->first];
 		for(uint i = 0; i < rects.size(); i++){
-			Scalar value;
-			//if(i == 0){
-				//value = Scalar(0, 0, 255);
-			//} else {
+			
 			RNG rng(12345);
-			value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
-						rng.uniform(0, 255));				
-			//}
+			Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
+						rng.uniform(0, 255));		
 			rectangle(kimg, rects[i], value, 2, 8, 0);
 		}
-		rectangle(kimg, rects[0], Scalar(0, 0, 255), 2, 8, 0);
+		rectangle(kimg, rects[0], colours.red, 2, 8, 0);
 		String ss = "img_keypoints-";
 		string s = to_string(it->first);
 		ss += s.c_str();
@@ -558,7 +554,7 @@ void generateClusterImages(Mat frame, results_t* res){
 		kp.insert(kp.end(), it->second.begin(), it->second.end());
 	}
 
-	Mat mm = drawKeyPoints(frame, kp, Scalar(255, 255, 255), -1);
+	Mat mm = drawKeyPoints(frame, kp, colours.white, -1);
 
 	String ss = "img_allkps";
 	(*(res->selectedClustersImages))[ss] = mm;
@@ -961,7 +957,7 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 		if(*k != 0){
 			vector<KeyPoint> kps;
 			getListKeypoints(keypoints, list, kps);
-			Mat m = drawKeyPoints(frame, kps, Scalar(0, 0, 255), -1);
+			Mat m = drawKeyPoints(frame, kps, colours.red, -1);
 			display("choose", m);
 			
 			// Listen for a key pressed
@@ -1427,7 +1423,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 				
 				if(settings.print){
 					generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, idxClusterRes, f.i);
-					Mat frm = drawKeyPoints(f.frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
+					Mat frm = drawKeyPoints(f.frame, colourSel.selectedKeypoints, colours.red, -1);
 					printImage(settings.imageSpaceDir, vcount.frameCount, "frame_kp", frm);
 					printImages(iSpaceFrameDir, idxClusterRes->selectedClustersImages, vcount.frameCount);
 					printEstimates(vcount.indexEstimatesFile, idxClusterRes->odata);
@@ -1509,7 +1505,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 				if(settings.print){							
 					generateClusterImages(f.frame, selDescRes);
 					createBoxStructureImages(selDescRes->boxStructures, selDescRes->selectedClustersImages);
-					Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(255, 255, 255), -1);
+					Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, colours.white, -1);
 					printImage(settings.filteredDescDir, vcount.frameCount, "frame_kp", frm);
 					generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, selDescRes, f.i);
 					printImages(selectedDescFrameDir, selDescRes->selectedClustersImages, vcount.frameCount);
@@ -1526,7 +1522,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 					combineSelDescriptorsRawStructures(res1, selDescRes, colourSel, keypointStructures, selectedStructures);
 					
 					if(settings.print){
-						Mat kimg = drawKeyPoints(frame, colourSel.selectedKeypoints, Scalar(0, 0, 255), -1);
+						Mat kimg = drawKeyPoints(frame, colourSel.selectedKeypoints, colours.red, -1);
 										for(set<uint>::iterator it = selectedStructures.begin(); it != selectedStructures.end(); it++){
 							Scalar value;
 							
@@ -1614,7 +1610,7 @@ results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, M
 	if(settings.print){
 		generateClusterImages(f.frame, res);
 		createBoxStructureImages(res->boxStructures, res->selectedClustersImages);
-		Mat frm = drawKeyPoints(f.frame, keypoints, Scalar(0, 0, 255), -1);
+		Mat frm = drawKeyPoints(f.frame, keypoints, colours.red, -1);
 		printImage(keypointsDir, vcount.frameCount, "frame_kp", frm);					
 		generateOutputData(vcount, f.frame, keypoints, f.roiFeatures, res, f.i);
 		printImages(keypointsFrameDir, res->selectedClustersImages, vcount.frameCount);

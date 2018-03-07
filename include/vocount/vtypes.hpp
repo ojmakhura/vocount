@@ -132,5 +132,13 @@ typedef struct VSETTINGS{
 	
 } vsettings;
 
+typedef struct {
+	Scalar white = Scalar(255, 255, 255);
+	Scalar red = Scalar(0, 0, 255);
+	Scalar green = Scalar(0, 255, 0);
+	Scalar blue = Scalar(255, 0, 0);
+} COLOURS;
+
+
 
 #endif /* VTYPES_HPP_ */
