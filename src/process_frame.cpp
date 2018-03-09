@@ -901,10 +901,8 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 	printf("Detecting minPts value for colour clustering.\n");
 	Mat dataset = getColourDataset(frame, keypoints);
 	size_t size = 0;
-    //map<int, int> choices;
 	int chosenCount = 1, currentCount = 1;
 	IntIntListMap* clusterKeypointIdxMap = NULL;
-    //map_kp clusterKeyPointsMap;
 	selection_t colourSelection;
 	colourSelection.minPts = 2;
 	hdbscan scan(3, DATATYPE_FLOAT);
@@ -912,10 +910,7 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 	
 	for(int i = 3; i < 30; i++){
 
-		printf("\n\n >>>>>>>>>>>> Clustering for minPts = %d\n", i);
-			
-        //set<int> lsetkps(scan.clusterLabels, scan.clusterLabels + scan.numPoints);
-			
+		printf("\n\n >>>>>>>>>>>> Clustering for minPts = %d\n", i);			
 		IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);		
 		IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scan, clusterMap);
 		
