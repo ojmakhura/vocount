@@ -1201,9 +1201,6 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 	
 	vcount.frameCount++;
 	
-	cout << "################################################################################" << endl;
-	cout << "                              " << vcount.frameCount << endl;
-	cout << "################################################################################" << endl;
 	framed f, index_f, sel_f;
 
 	f.i = vcount.frameCount;
@@ -1217,6 +1214,9 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 	cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
 	vcount.detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
 	if (!f.keypoints.empty()) {
+		cout << "################################################################################" << endl;
+		cout << "                              " << vcount.frameCount << endl;
+		cout << "################################################################################" << endl;
 	
 		if (settings.selectROI && !vcount.roiExtracted) { // select a roi if c has been pressed or if the program was run with -s option
 				
@@ -1309,8 +1309,6 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 			}
 		}
         	
-        //vector<Rect2d> foundRects;
-		
 		// Create clustering dataset
 		f.hasRoi = vcount.roiExtracted;
         results_t* res1 = NULL;
@@ -1329,7 +1327,6 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		if(colourSel.minPts != -1 && (settings.isClustering || settings.fdClustering)){// || settings.diClustering || settings.dfClustering || settings.dfiClustering)){
 			
 			if(vcount.frameHistory.size() > 0){
-				//if(vcount.frameHistory.size() > 0){
 				framed ff = vcount.frameHistory[vcount.frameHistory.size()-1];
 				vector<KeyPoint> keyp(ff.keypoints.begin(), ff.keypoints.end());
 				Mat dataset = getColourDataset(ff.frame, keyp);
@@ -1471,9 +1468,6 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 					map<String, Mat> selectedClustersImages;
 					selectedClustersImages["img_allkps"] = idxClusterRes->selectedClustersImages->at("img_allkps");
 					createBoxStructureImages(&bsts, &selectedClustersImages);
-					//String bidest = "/mnt/2TB/programming/phd/workspace/_vocount/out/wx02/di";
-					//printImages(bidest, &selectedClustersImages, vcount.frameCount);
-					//printf("Combination di found %lu objects\n", lst.size());
 				}						
 			}				
 				
@@ -1492,7 +1486,6 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 				generateFinalPointClusters(colourSel.roiFeatures, selDescRes);
 				getBoxStructure(selDescRes, f.roi, frame, true, true);	
 				
-				//cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				selDescRes->total = 0; //countPrint(selDescRes->roiClusterPoints, selDescRes->finalPointClusters, 
 												//selDescRes->cest, selDescRes->selectedFeatures, selDescRes->lsize);
 				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
