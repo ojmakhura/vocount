@@ -57,6 +57,11 @@ LIBS += -lglib-2.0
 LIBS += -L../thirdparty/lib \
         -lhdbscan
 
+unix {
+    CONFIG += link_pkgconfig
+    PKGCONFIG += opencv
+}
+
 QMAKE_CXXFLAGS += -fopenmp
 QMAKE_LFLAGS +=  -fopenmp
 

@@ -1263,7 +1263,8 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 					f.roi = bxs->at(rdx).box;
 					Rect prev = f.roi;
 					Rect nRect = f.roi;
-					stabiliseRect(frame, prev, nRect);	
+					stabiliseRect(frame, prev, nRect);
+					//f.roi = nRect;
 					vcount.tracker = createTrackerByName(settings.trackerAlgorithm);
 					vcount.tracker->init(vcount.frameHistory[vcount.frameHistory.size()-1].frame, f.roi);
 					vcount.tracker->update(frame, f.roi);				
