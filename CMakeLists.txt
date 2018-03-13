@@ -40,7 +40,6 @@ pkg_check_modules(GLIB2 REQUIRED glib-2.0>=2.36.0)
 # Find QT 5 Core module
 
 find_package(Qt5 COMPONENTS Core REQUIRED)
-
 add_definitions(${Qt5Core_DEFINITIONS})
 
 OPTION (USE_OpenMP "Use OpenMP" ON)
