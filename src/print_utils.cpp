@@ -213,17 +213,6 @@ String createDirectory(String& mainFolder, String subfolder){
 		}
 	}
 
-	/*String command = "mkdir \'";
-	command += sokp;
-	command += "\'";
-	printf("%s\n", command.c_str());
-	printf("\n");
-	const int dir_err2 = system(command.c_str());
-	if (-1 == dir_err2) {
-		printf("Error creating directory!n");
-		exit(1);
-	}*/
-
 	return dest;
 
 }

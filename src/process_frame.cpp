@@ -530,7 +530,7 @@ void generateClusterImages(Mat frame, results_t* res){
 			res->lsize = it->second.size();
 		}
 
-		Mat kimg = drawKeyPoints(frame, it->second, colours.white, -1);
+		Mat kimg = drawKeyPoints(frame, it->second, colours.red, -1);
 		
 		vector<Rect2d>& rects = (*res->clusterStructures)[it->first];
 		for(uint i = 0; i < rects.size(); i++){
@@ -554,7 +554,7 @@ void generateClusterImages(Mat frame, results_t* res){
 		kp.insert(kp.end(), it->second.begin(), it->second.end());
 	}
 
-	Mat mm = drawKeyPoints(frame, kp, colours.white, -1);
+	Mat mm = drawKeyPoints(frame, kp, colours.red, -1);
 
 	String ss = "img_allkps";
 	(*(res->selectedClustersImages))[ss] = mm;
@@ -909,10 +909,16 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 	scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);	
 	
 	for(int i = 3; i < 30; i++){
+		
+		if(i > 3){
+			scan.reRun(i + 1);
+		}
 
 		printf("\n\n >>>>>>>>>>>> Clustering for minPts = %d\n", i);			
 		IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);		
 		IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scan, clusterMap);
+		int s = g_hash_table_size(clusterMap);
+		printf("cluster map has size = %d\n", s);
 		
 		if(g_hash_table_size(distancesMap) != size){
 			size = g_hash_table_size(distancesMap);
@@ -934,8 +940,9 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 				hdbscan_destroy_cluster_table(clusterMap);
 			}
 		}
+		
 		hdbscan_destroy_distance_map_table(distancesMap);
-		scan.reRun(i + 1);
+		
 	}
 	
 	colourSelection.clusterKeypointIdx = clusterKeypointIdxMap;
@@ -1030,45 +1037,65 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 		res = initResult_t(dataset, keypoints);
 	}
 	
-	res->minPts = step * f_minPts;
+	int m_pts = step * f_minPts;
+	hdbscan scan(m_pts, DATATYPE_FLOAT);
+	scan.run(res->dataset->ptr<float>(), res->dataset->rows, res->dataset->cols, TRUE);
+	
+	IntIntListMap* c_map = NULL;
+	IntDistancesMap* d_map = NULL;
+	clustering_stats stats;
+	int val = -1;
 	
 	int i = 0;
 	
-	while(res->validity <= 2 && i < 5){
-		res->minPts = (f_minPts + i) * step;
-		printf("Testing minPts = %d\n", res->minPts);
-		if(res->clusterMap != NULL){
-			hdbscan_destroy_cluster_table(res->clusterMap);
+	while(val <= 2 && i < 5){
+		
+		if(m_pts > (step * f_minPts)){	
+			scan.reRun(m_pts);
 		}
 		
-		//if(res->stats != NULL){
-		//	hdbscan_destroy_stats_map(res->stats);
-		//}
-		
-		if(res->distancesMap != NULL){
-			hdbscan_destroy_distance_map_table(res->distancesMap);
-		}
-		
-		if(!(res->labels->empty())){
-			res->labels->clear();
-		}
-				
-		hdbscan scan(res->minPts, DATATYPE_FLOAT);
-		scan.run(res->dataset->ptr<float>(), res->dataset->rows, res->dataset->cols, TRUE);
-		res->labels->insert(res->labels->begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
-		res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, keypoints.size()); //scan.numPoints);
+		c_map = hdbscan_create_cluster_table(scan.clusterLabels, 0, keypoints.size());
 		
 		if(analyse){
-			res->distancesMap = hdbscan_get_min_max_distances(&scan, res->clusterMap);
-			hdbscan_calculate_stats(res->distancesMap, &(res->stats));
-			res->validity = hdbscan_analyse_stats(&(res->stats));
+			d_map = hdbscan_get_min_max_distances(&scan, c_map);
+			hdbscan_calculate_stats(d_map, &(stats));
+			val = hdbscan_analyse_stats(&(stats));
+		}
+		
+		if(c_map != NULL){
+			uint hsize = res->clusterMap == NULL ? 0 : g_hash_table_size(res->clusterMap);
+			if(g_hash_table_size(c_map) > hsize || val > res->validity){
+				if(res->clusterMap != NULL){
+					hdbscan_destroy_cluster_table(res->clusterMap);
+				}
+				
+				if(res->distancesMap != NULL){
+					hdbscan_destroy_distance_map_table(res->distancesMap);
+				}
+				
+				if(!(res->labels->empty())){
+					res->labels->clear();
+				}	
+				
+				res->clusterMap = c_map;
+				res->distancesMap = d_map;
+				res->stats = stats;
+				res->validity = val;
+				res->minPts = m_pts;
+				res->labels->insert(res->labels->begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
+		
+			} else {
+				hdbscan_destroy_cluster_table(c_map);
+				hdbscan_destroy_distance_map_table(d_map);
+			}
 		}
 		
 		if(singleRun){
 			break;
 		}
-		
+		printf("Testing minPts = %d with validity = %d and cluster map size = %d\n", m_pts, val, g_hash_table_size(c_map));
 		i++;
+		m_pts = (f_minPts + i) * step;
 	}
 	res->ogsize = keypoints.size();
 
@@ -1217,6 +1244,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		cout << "################################################################################" << endl;
 		cout << "                              " << vcount.frameCount << endl;
 		cout << "################################################################################" << endl;
+		printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
 	
 		if (settings.selectROI && !vcount.roiExtracted) { // select a roi if c has been pressed or if the program was run with -s option
 				
@@ -1315,6 +1343,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
         results_t* res1 = NULL;
 		if(settings.dClustering){// || settings.diClustering || settings.dfClustering || settings.dfiClustering){	
 			
+			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 			Mat dset = getDescriptorDataset(vcount.frameHistory, settings.step, f.descriptors);	
 			res1 = clusterDescriptors(vcount, settings, f, dset, f.keypoints, descriptorFrameDir, settings.descriptorDir);
 			//res1 = clusterDescriptors(vcount, settings, f, descriptorFrameDir, settings.descriptorDir);
@@ -1479,22 +1508,19 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 			/// 
 			/****************************************************************************************************/
 			if(settings.fdClustering || settings.dfClustering || settings.dfiClustering){
-				//dataset = colourSel.selectedDesc.clone();
-				printf("Clustering selected keypoints in descriptor space\n\n\n");
+				printf("Clustering selected keypoints in descriptor space\n\n");
 				results_t* selDescRes;
-				//selDescRes = clusterDescriptors(vcount, settings, f, colourSel.selectedDesc, f.keypoints, descriptorFrameDir, settings.descriptorDir);
 				selDescRes = do_cluster(NULL, colourSel.selectedDesc, colourSel.selectedKeypoints, 1, 3, true, false);
 				generateFinalPointClusters(colourSel.roiFeatures, selDescRes);
 				getBoxStructure(selDescRes, f.roi, frame, true, true);	
 				
 				selDescRes->total = 0; //countPrint(selDescRes->roiClusterPoints, selDescRes->finalPointClusters, 
 												//selDescRes->cest, selDescRes->selectedFeatures, selDescRes->lsize);
-				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				
 				if(settings.print){							
 					generateClusterImages(f.frame, selDescRes);
 					createBoxStructureImages(selDescRes->boxStructures, selDescRes->selectedClustersImages);
-					Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, colours.white, -1);
+					Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, colours.red, -1);
 					printImage(settings.filteredDescDir, vcount.frameCount, "frame_kp", frm);
 					generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, selDescRes, f.i);
 					printImages(selectedDescFrameDir, selDescRes->selectedClustersImages, vcount.frameCount);
@@ -1504,8 +1530,9 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 				
 				f.results["sel_keypoints"] = selDescRes;
 				
+				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				if(settings.dfClustering){
-					
+					printf("Filtering detected objects with colour model\n\n");
 					vector<int32_t> keypointStructures(colourSel.selectedKeypoints.size(), -1);
 					set<uint> selectedStructures;
 					combineSelDescriptorsRawStructures(res1, selDescRes, colourSel, keypointStructures, selectedStructures);
@@ -1587,11 +1614,9 @@ void combineSelDescriptorsRawStructures(results_t* descriptorResults, results_t*
 
 results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, Mat& dataset, vector<KeyPoint>& keypoints, String& keypointsFrameDir, String& keypointsDir){	
 	
-	results_t* res = do_cluster(NULL, dataset, keypoints, settings.step, 3, true, true);
+	results_t* res = do_cluster(NULL, dataset, keypoints, settings.step, 3, true, false);
 	generateFinalPointClusters(f.roiFeatures, res);	
 	getBoxStructure(res, f.roi, f.frame, settings.extend, false);
-    cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-    printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
     res->total = 0; // countPrint(res->roiClusterPoints, res->finalPointClusters, res->cest, res->selectedFeatures, res->lsize);
 
 	f.results["descriptors"] = res;
