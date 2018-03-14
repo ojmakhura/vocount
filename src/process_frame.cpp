@@ -919,7 +919,7 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 		
 		printf("cluster map has size = %d and validity = %d\n", g_hash_table_size(clusterMap), val);
 		
-		if(i == 3 || val >= 0){
+		if(i == 3 || val >= 1){
 			validity = val;
 			colourSelection.minPts = i;
 			
