@@ -37,8 +37,8 @@ static 	String truthCount = "Actual";
 static String validityStr = "Validity";
 
 typedef struct {
-	int minPts = -1;
-    IntIntListMap* clusterKeypointIdx; 						/// maps labels to the keypoint indices
+	int minPts = -3;
+    IntIntListMap* clusterKeypointIdx = NULL; 						/// maps labels to the keypoint indices
 	vector<int32_t> roiFeatures;
 	Mat selectedDesc;
 	vector<KeyPoint> selectedKeypoints;
