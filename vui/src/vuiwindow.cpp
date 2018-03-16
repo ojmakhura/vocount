@@ -125,6 +125,7 @@ void VUIWindow::on_actionPlay_triggered()
         player->settings.diClustering = ui->descImageSpaceBox->isChecked();
         player->settings.dfiClustering = ui->combineAllBox->isChecked();
         player->settings.extend = ui->extendCheckBox->isChecked();
+        player->settings.rotationalInvariance = ui->rotationInvariance->isChecked();
         player->settings.step = 1;
 
         this->player->initPlayer();

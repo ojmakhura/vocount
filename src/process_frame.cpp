@@ -12,6 +12,7 @@
 #include <dirent.h>
 #include <gsl/gsl_statistics.h>
 #include <QDir>
+#include <math.h>
 
 using namespace std;
 
@@ -574,9 +575,43 @@ void maintaintHistory(vocount& voc, framed& f){
 	}
 }
 
-Mat getDescriptorDataset(vector<framed>& frameHistory, int step, Mat descriptors){
-	Mat dataset = descriptors.clone();
+//void do_descriptorDataset(Mat& dataset, Mat& descriptors, vector<KeyPoint>& keypoints, bool includeAngle, bool includeOctave){
+//}
 
+Mat getDescriptorDataset(vector<framed>& frameHistory, int step, Mat descriptors, vector<KeyPoint> keypoints, bool includeAngle, bool includeOctave){
+	Mat dataset = descriptors.clone();
+	
+	if(includeAngle){
+		Mat angles(descriptors.rows, 1, CV_32FC1);
+		float* data = angles.ptr<float>(0);
+
+#pragma omp parallel for shared(data)	
+		for(size_t i = 0; i < keypoints.size(); i++){
+			KeyPoint kp = keypoints[i];
+			data[i] = (M_PI / 180) * kp.angle;
+		}
+		
+		hconcat(dataset, angles, dataset);
+	}
+	
+	if(includeOctave){
+		Mat octaves(descriptors.rows, 1, CV_32FC1);
+		float* data = octaves.ptr<float>(0);
+#pragma omp parallel for shared(data)			
+		for(size_t i = 0; i < keypoints.size(); i++){
+			KeyPoint kp = keypoints[i];
+			data[i] = (M_PI/180) * kp.octave;
+		}
+		
+		hconcat(dataset, octaves, dataset);
+		
+	}
+	
+	if(!dataset.isContinuous()){
+		dataset = dataset.clone();
+	}
+	
+	/*
 	if (!frameHistory.empty()) {
 		for (int j = 1; j < step; ++j) {
 			int ix = frameHistory.size() - j;
@@ -585,7 +620,7 @@ Mat getDescriptorDataset(vector<framed>& frameHistory, int step, Mat descriptors
 				dataset.push_back(fx.descriptors);
 			}
 		}
-	}
+	}*/
 
 	return dataset;
 }
@@ -899,7 +934,7 @@ void getListKeypoints(vector<KeyPoint>& keypoints, IntArrayList* list, vector<Ke
 selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints){
 	printf("Detecting minPts value for colour clustering.\n");
 	Mat dataset = getColourDataset(frame, keypoints);
-	int validity = -2;
+	//int val = 
 	selection_t colourSelection;
 	hdbscan scan(3, DATATYPE_FLOAT);
 	scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);	
@@ -920,7 +955,7 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 		printf("cluster map has size = %d and validity = %d\n", g_hash_table_size(clusterMap), val);
 		
 		if(i == 3 || val >= 1){
-			validity = val;
+			//validity = val;
 			colourSelection.minPts = i;
 			
 			if(colourSelection.clusterKeypointIdx != NULL){
@@ -1328,9 +1363,8 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		if(settings.dClustering){// || settings.diClustering || settings.dfClustering || settings.dfiClustering){	
 			
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-			Mat dset = getDescriptorDataset(vcount.frameHistory, settings.step, f.descriptors);	
+			Mat dset = getDescriptorDataset(vcount.frameHistory, settings.step, f.descriptors, f.keypoints, settings.rotationalInvariance, false);	
 			res1 = clusterDescriptors(vcount, settings, f, dset, f.keypoints, descriptorFrameDir, settings.descriptorDir);
-			//res1 = clusterDescriptors(vcount, settings, f, descriptorFrameDir, settings.descriptorDir);
 		}
 		
 		if(colourSel.minPts == -1 && (settings.isClustering || settings.fdClustering)){

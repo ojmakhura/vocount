@@ -64,7 +64,7 @@ double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vec
 /**
  *
  */
-Mat getDescriptorDataset(vector<framed>& frameHistory, int step, Mat descriptors);
+Mat getDescriptorDataset(vector<framed>& frameHistory, int step, Mat descriptors, vector<KeyPoint> keypoints, bool includeAngle, bool includeOctave);
 
 /**
  *

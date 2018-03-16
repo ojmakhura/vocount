@@ -40,6 +40,7 @@ static void help(){
 			"     [-rh]       					# roi height\n"
 			"     [-rw]       					# roi width\n"
 			"     [-e]       					# extend the box structures to include clusters not in the initial list\n"
+			"     [-r]       					# rotate the rectangles\n"
 	        "\n" );
 }
 
@@ -128,6 +129,11 @@ bool processOptions(vocount& vcount, vsettings& settings, CommandLineParser& par
 		settings.extend = true;
 	}
 	
+	if(parser.has("r")){
+		printf("*** Will rotate the rectangles for rotational invariance\n");
+		settings.rotationalInvariance = true;
+	}
+	
 	if(parser.has("rx") && parser.has("ry") && parser.has("rw") && parser.has("rh")){
 		printf("*** ROI provided from command line\n");
 		settings.selectROI = false;
@@ -164,7 +170,7 @@ int main(int argc, char** argv) {
 					"{v||}{video||}{w|1|}{s||}"
 					"{i||}{c||}{t||}{l||}{ta|BOOSTING|}"
 					"{d||}{f||}{df||}{di||}{dfi||}"
-					"{rx||}{ry||}{rw||}{rh||}{e||}");
+					"{rx||}{ry||}{rw||}{rh||}{e||}{r||}");
 
 	if(!processOptions(vcount, settings, parser, cap)){
 		help();
