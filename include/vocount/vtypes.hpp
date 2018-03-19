@@ -48,6 +48,7 @@ typedef struct {
 
 typedef struct _box_structure{
 	Rect box;
+	Point matchPoint;										/// Template match location
 	vector<KeyPoint> points;
 	Mat img_, hsv, gray;
 	MatND hist;
@@ -83,7 +84,8 @@ typedef struct FRAMED{
 	int i = 0;
 	Mat descriptors,  												/// Frame descriptors
 		frame,														/// The frame
-		gray;													/// hdbscan cluster
+		gray,														/// grayscale image
+		templateMatch;												/// template match image
 	vector<KeyPoint> keypoints; 									/// Frame keypoints
 	Rect2d roi;														/// region of interest rectangle
 	vector<int32_t> roiFeatures;										/// indices of the features inside the roi
