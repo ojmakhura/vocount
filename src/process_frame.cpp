@@ -1324,7 +1324,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 			rectangle(frame, f.roi, value, 2, 8, 0);
 			
 			/// Do a template matching algorithm using the roi as the template
-			Mat templ = frame(f.roi);	
+			/*Mat templ = frame(f.roi);	
 			int result_cols =  frame.cols - templ.cols + 1;
 			int result_rows = frame.rows - templ.rows + 1;
 			
@@ -1332,6 +1332,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 			matchTemplate(frame, templ, templateMatch, TM_SQDIFF);
 			normalize( templateMatch, templateMatch, 0, 1, NORM_MINMAX, -1, Mat() );	
 			display("template match", templateMatch);
+			* */
 		}
 		cout << f.roi << endl;
 		display("frame", frame);
