@@ -917,14 +917,16 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 		if(i > 3){
 			scan.reRun(i);
 		}
-
+		
 		printf("\n\n >>>>>>>>>>>> Clustering for minPts = %d\n", i);			
 		IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);		
-		IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scan, clusterMap);
+		IntDistancesMap* dMap = hdbscan_get_min_max_distances(&scan, clusterMap);
 		clustering_stats stats;
-		hdbscan_calculate_stats(distancesMap, &(stats));
-		int val = hdbscan_analyse_stats(&(stats));
+		hdbscan_calculate_stats(dMap, &stats);
+		int val = hdbscan_analyse_stats(&stats);
 		
+		//hdbscan_print_distance_map_table(dMap);
+		//hdbscan_print_stats(&stats);
 		printf("cluster map has size = %d and validity = %d\n", g_hash_table_size(clusterMap), val);
 		
 		if(i == 3 || val >= 1){
@@ -941,7 +943,7 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 			hdbscan_destroy_cluster_table(clusterMap);
 		}
 				
-		hdbscan_destroy_distance_map_table(distancesMap);
+		hdbscan_destroy_distance_map_table(dMap);
 		
 	}
 	
@@ -1056,8 +1058,10 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 		
 		if(analyse){
 			d_map = hdbscan_get_min_max_distances(&scan, c_map);
-			hdbscan_calculate_stats(d_map, &(stats));
-			val = hdbscan_analyse_stats(&(stats));
+			hdbscan_calculate_stats(d_map, &stats);
+			val = hdbscan_analyse_stats(&stats);
+			//hdbscan_print_distance_map_table(d_map);
+			//hdbscan_print_stats(&stats);
 		}
 		
 		if(c_map != NULL){
@@ -1395,13 +1399,14 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 				clustering_stats stats;
 				hdbscan_calculate_stats(distancesMap, &(stats));
 				int val = hdbscan_analyse_stats(&(stats));
+				printf("------- MinPts = %d (%d)- new validity = %d and old validity = %d\n", colourSel.minPts, g_hash_table_size(colourSel.clusterKeypointIdx), val, colourSel.validity);
 				
-				int count = 1;
+				//hdbscan_print_cluster_table(colourSel.clusterKeypointIdx);
 				
 				// If we get validity less than the previous, we rerun with a reduced minPts
-				while(val < colourSel.validity && colourSel.minPts >= 3){
-					colourSel.minPts -= 1);
-					scanis.rerun(2 * colourSel.minPts);
+				/*while(val < colourSel.validity && colourSel.minPts > 3){
+					colourSel.minPts -= 1;
+					scanis.reRun(2 * colourSel.minPts);
 					
 					if(colourSel.clusterKeypointIdx != NULL){
 						hdbscan_destroy_cluster_table(colourSel.clusterKeypointIdx);
@@ -1414,13 +1419,18 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 						hdbscan_destroy_distance_map_table(distancesMap);
 						distancesMap = NULL;
 					}
-					
+					//hdbscan_print_cluster_table(colourSel.clusterKeypointIdx);
 					distancesMap = hdbscan_get_min_max_distances(&scanis, colourSel.clusterKeypointIdx);
-					hdbscan_calculate_stats(distancesMap, &(stats));
-					val = hdbscan_analyse_stats(&(stats));
-				}
+					hdbscan_calculate_stats(distancesMap, &stats);
+					val = hdbscan_analyse_stats(&stats);
+					hdbscan_print_stats(&stats);
+					hdbscan_print_distance_map_table(distancesMap);
+					printf("------- MinPts = %d (%d)- new validity = %d and old validity = %d\n", colourSel.minPts, g_hash_table_size(colourSel.clusterKeypointIdx), val, colourSel.validity);
+					//break;
+				}*/
 				
-				printf("------- new validity = %d and old validity = %d\n", val, colourSel.validity);
+				//if(colourSel.validity = val)	
+				
 				colourSel.validity = val;
 				
 				set<int32_t> currSelClusters, cClusters;
