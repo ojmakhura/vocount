@@ -906,46 +906,50 @@ void getListKeypoints(vector<KeyPoint>& keypoints, IntArrayList* list, vector<Ke
  */
 selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints){
 	printf("Detecting minPts value for colour clustering.\n");
+    int mpts = 3;
 	Mat dataset = getColourDataset(frame, keypoints);
-	//int val = 
+	size_t size = 0;
+	int chosenCount = 1, currentCount = 1;
 	selection_t colourSelection;
+	IntIntListMap* clusterKeypointIdxMap = NULL;
 	hdbscan scan(3, DATATYPE_FLOAT);
 	scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);	
 	
 	for(int i = 3; i < 30; i++){
-		
 		if(i > 3){
 			scan.reRun(i);
 		}
-		
 		printf("\n\n >>>>>>>>>>>> Clustering for minPts = %d\n", i);			
 		IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);		
-		IntDistancesMap* dMap = hdbscan_get_min_max_distances(&scan, clusterMap);
+		/*IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scan, clusterMap);
 		clustering_stats stats;
-		hdbscan_calculate_stats(dMap, &stats);
-		int val = hdbscan_analyse_stats(&stats);
-		
-		//hdbscan_print_distance_map_table(dMap);
-		//hdbscan_print_stats(&stats);
+		hdbscan_calculate_stats(distancesMap, &stats);
+		int val = hdbscan_analyse_stats(&stats);*/
 		printf("cluster map has size = %d and validity = %d\n", g_hash_table_size(clusterMap), val);
-		
-		if(i == 3 || val >= 1){
-			//validity = val;
-			colourSelection.minPts = i;
-			colourSelection.validity = val;
-			
-			if(colourSelection.clusterKeypointIdx != NULL){
-				hdbscan_destroy_cluster_table(colourSelection.clusterKeypointIdx);
-			}
-			
-			colourSelection.clusterKeypointIdx = clusterMap;
-		} else{
-			hdbscan_destroy_cluster_table(clusterMap);
-		}
 				
-		hdbscan_destroy_distance_map_table(dMap);
+		if(g_hash_table_size(distancesMap) != size){
+			size = g_hash_table_size(distancesMap);
+			mpts = i;
+			currentCount = 1;
+			hdbscan_destroy_cluster_table(clusterMap);
+		} else{
+			currentCount++;
+			if(currentCount > chosenCount){
+				chosenCount = currentCount;
+				colourSelection.minPts = mpts;
+				if(clusterKeypointIdxMap != NULL){
+					hdbscan_destroy_cluster_table(clusterKeypointIdxMap);
+				}
+				
+				clusterKeypointIdxMap = clusterMap;
+			} else{
+				hdbscan_destroy_cluster_table(clusterMap);
+			}
+		}
+		hdbscan_destroy_distance_map_table(distancesMap);
 		
 	}
+	colourSelection.clusterKeypointIdx = clusterKeypointIdxMap;
 	
 	printf(">>>>>>>> VALID CHOICE OF minPts IS %d <<<<<<<<<\n", colourSelection.minPts);
 	GHashTableIter iter;
