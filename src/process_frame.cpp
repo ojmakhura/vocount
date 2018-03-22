@@ -930,6 +930,7 @@ selection_t detectColourSelectionMinPts(Mat& frame, Mat& descriptors, vector<Key
 		if(i == 3 || val >= 1){
 			//validity = val;
 			colourSelection.minPts = i;
+			colourSelection.validity = val;
 			
 			if(colourSelection.clusterKeypointIdx != NULL){
 				hdbscan_destroy_cluster_table(colourSelection.clusterKeypointIdx);
@@ -1389,6 +1390,39 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 				/****************************************************************************************************/
 				IntIntListMap* prevHashTable = colourSel.clusterKeypointIdx;
 				colourSel.clusterKeypointIdx = hdbscan_create_cluster_table(scanis.clusterLabels + ff.keypoints.size(), 0, f.keypoints.size());
+				
+				IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scanis, colourSel.clusterKeypointIdx);
+				clustering_stats stats;
+				hdbscan_calculate_stats(distancesMap, &(stats));
+				int val = hdbscan_analyse_stats(&(stats));
+				
+				int count = 1;
+				
+				// If we get validity less than the previous, we rerun with a reduced minPts
+				while(val < colourSel.validity && colourSel.minPts >= 3){
+					colourSel.minPts -= 1);
+					scanis.rerun(2 * colourSel.minPts);
+					
+					if(colourSel.clusterKeypointIdx != NULL){
+						hdbscan_destroy_cluster_table(colourSel.clusterKeypointIdx);
+						colourSel.clusterKeypointIdx = NULL;
+					}
+					
+					colourSel.clusterKeypointIdx = hdbscan_create_cluster_table(scanis.clusterLabels + ff.keypoints.size(), 0, f.keypoints.size());
+					
+					if(distancesMap != NULL){
+						hdbscan_destroy_distance_map_table(distancesMap);
+						distancesMap = NULL;
+					}
+					
+					distancesMap = hdbscan_get_min_max_distances(&scanis, colourSel.clusterKeypointIdx);
+					hdbscan_calculate_stats(distancesMap, &(stats));
+					val = hdbscan_analyse_stats(&(stats));
+				}
+				
+				printf("------- new validity = %d and old validity = %d\n", val, colourSel.validity);
+				colourSel.validity = val;
+				
 				set<int32_t> currSelClusters, cClusters;
 						
 				for (set<int32_t>::iterator itt = colourSel.selectedClusters.begin(); itt != colourSel.selectedClusters.end(); ++itt) {

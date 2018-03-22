@@ -38,6 +38,7 @@ static String validityStr = "Validity";
 
 typedef struct {
 	int minPts = -3;
+	int validity = -4;
     IntIntListMap* clusterKeypointIdx = NULL; 						/// maps labels to the keypoint indices
 	vector<int32_t> roiFeatures;
 	Mat selectedDesc;
