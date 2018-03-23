@@ -217,12 +217,27 @@ void finalise(vocount& vcount);
  * 
  * 
  */
-results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, Mat& dataset, vector<KeyPoint>& keypoints, String& keypointsFrameDir, String& keypointsDir);
+results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, Mat& dataset, vector<KeyPoint>& keypoints);
 
 /**
  * 
  * 
  */ 
-void combineSelDescriptorsRawStructures(results_t* descriptorResults, results_t* seleDescriptorResults, selection_t& colourSel, vector<int32_t>& keypointStructures, set<uint>& selStructures);
-  
+void combineSelDescriptorsRawStructures(vocount& vcount, framed& f, selection_t& colourSel, String& dfComboDir, bool print);
+
+/**
+ * 
+ * 
+ */ 
+void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame);
+
+/**
+ * 
+ */
+void imageSpaceClustering(vocount& vcount, vsettings& settings, selection_t& colourSel, framed& f);
+
+/**
+ * 
+ */
+void filteredDescriptorClustering(vocount& vcount, vsettings& settings, selection_t& colourSel, results_t* res1, framed& f, Mat& frame); 
 #endif
