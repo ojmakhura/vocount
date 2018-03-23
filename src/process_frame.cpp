@@ -1257,6 +1257,121 @@ Mat do_templateMatch(Mat& frame, Rect2d roi){
 	return result;
 }
 
+void getFrameColourModel(vocount& vcount, framed& f, selection_t& colourSel, Mat& frame){
+	
+	framed ff = vcount.frameHistory[vcount.frameHistory.size()-1];
+	vector<KeyPoint> keyp(ff.keypoints.begin(), ff.keypoints.end());
+	Mat dataset = getColourDataset(ff.frame, keyp);
+	keyp.insert(keyp.end(), f.keypoints.begin(), f.keypoints.end());
+	dataset.push_back(getColourDataset(frame, f.keypoints));
+	dataset = dataset.clone();
+	hdbscan scanis(2*colourSel.minPts, DATATYPE_FLOAT);
+	scanis.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
+	
+	/****************************************************************************************************/
+	/// Get the hash table for the current dataset and find the mapping to clusters in prev frame
+	/// and map them to selected colour map
+	/****************************************************************************************************/
+	IntIntListMap* prevHashTable = colourSel.clusterKeypointIdx;
+	int32_t prevNumClusters = colourSel.numClusters;
+	colourSel.clusterKeypointIdx = hdbscan_create_cluster_table(scanis.clusterLabels + ff.keypoints.size(), 0, f.keypoints.size());
+	colourSel.numClusters = g_hash_table_size(colourSel.clusterKeypointIdx);
+	IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scanis, colourSel.clusterKeypointIdx);
+	clustering_stats stats;
+	hdbscan_calculate_stats(distancesMap, &(stats));
+	int val = hdbscan_analyse_stats(&(stats));
+	printf("------- MinPts = %d - new validity = %d (%d) and old validity = %d (%d)\n", colourSel.minPts, val, colourSel.numClusters, colourSel.validity, prevNumClusters);
+				
+	//hdbscan_print_cluster_table(colourSel.clusterKeypointIdx);
+				
+	// If we get validity less than the previous, we rerun with a reduced minPts
+	/*while(val < 0 && colourSel.minPts > 3 && colourSel.numClusters < prevNumClusters){
+	colourSel.minPts -= 1;
+	scanis.reRun(2 * colourSel.minPts);
+					
+	if(colourSel.clusterKeypointIdx != NULL){
+	hdbscan_destroy_cluster_table(colourSel.clusterKeypointIdx);
+	colourSel.clusterKeypointIdx = NULL;
+	}
+					
+	colourSel.clusterKeypointIdx = hdbscan_create_cluster_table(scanis.clusterLabels + ff.keypoints.size(), 0, f.keypoints.size());
+	colourSel.numClusters = g_hash_table_size(colourSel.clusterKeypointIdx);
+	
+	if(distancesMap != NULL){
+		hdbscan_destroy_distance_map_table(distancesMap);
+		distancesMap = NULL;
+	}
+	
+	//hdbscan_print_cluster_table(colourSel.clusterKeypointIdx);
+	distancesMap = hdbscan_get_min_max_distances(&scanis, colourSel.clusterKeypointIdx);
+	hdbscan_calculate_stats(distancesMap, &stats);
+	val = hdbscan_analyse_stats(&stats);
+	//hdbscan_print_stats(&stats);
+	//hdbscan_print_distance_map_table(distancesMap);
+	printf("------- MinPts = %d (%d)- new validity = %d and old validity = %d\n", colourSel.minPts, g_hash_table_size(colourSel.clusterKeypointIdx), val, colourSel.validity);
+	//break;
+	}*/
+				
+	//if(colourSel.validity = val)	
+				
+	colourSel.validity = val;
+				
+	set<int32_t> currSelClusters, cClusters;
+					
+	for (set<int32_t>::iterator itt = colourSel.selectedClusters.begin(); itt != colourSel.selectedClusters.end(); ++itt) {
+		int32_t cluster = *itt;
+		IntArrayList* list = (IntArrayList*)g_hash_table_lookup(prevHashTable, &cluster);
+		int32_t* ldata = (int32_t*)list->data;
+						
+		/**
+		 * Since I have no idea whether the clusters from the previous frames will be clustered in the same manner
+		 * I have to get the cluster with the largest number of points from selected clusters
+		 **/ 
+		map<int32_t, vector<int32_t>> temp;
+		for(int32_t x = 0; x < list->size; x++){
+			int32_t idx = ldata[x];
+			int32_t newCluster = (scanis.clusterLabels)[idx];
+			temp[newCluster].push_back(idx);
+		}
+						
+		int32_t selC = -1;
+		size_t mSize = 0;
+		for(map<int32_t, vector<int32_t>>::iterator it = temp.begin(); it != temp.end(); ++it){
+			if(mSize < it->second.size()){
+				selC = it->first;
+				mSize = it->second.size();
+			}
+		}
+		currSelClusters.insert(selC);			
+	}
+			
+	// Need to clear the previous table map
+	hdbscan_destroy_cluster_table(prevHashTable);
+	colourSel.selectedClusters = currSelClusters;
+	colourSel.selectedKeypoints.clear();
+	colourSel.roiFeatures.clear();
+	colourSel.oldIndices.clear();				
+				
+	/****************************************************************************************************/
+	/// Image space clustering
+	/// -------------------------
+	/// Create a dataset from the keypoints by extracting the colours and using them as the dataset
+	/// hence clustering in image space
+	/****************************************************************************************************/
+					
+	Mat selDesc;
+	for (set<int32_t>::iterator itt = colourSel.selectedClusters.begin(); itt != colourSel.selectedClusters.end(); ++itt) {
+		//printf("Checking cluster %d\n", *itt);
+		int cluster = *itt;
+		IntArrayList* list = (IntArrayList*)g_hash_table_lookup(colourSel.clusterKeypointIdx, &cluster);
+		int32_t* ldata = (int32_t*)list->data;
+		colourSel.oldIndices.insert(colourSel.oldIndices.end(), ldata, ldata + list->size);
+		getListKeypoints(f.keypoints, list, colourSel.selectedKeypoints);
+		getSelectedKeypointsDescriptors(f.descriptors, list, selDesc);
+	}					
+	colourSel.selectedDesc = selDesc.clone();
+}
+
 void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, Mat& frame){
 	
 	vcount.frameCount++;
@@ -1400,116 +1515,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		if(colourSel.minPts != -1 && (settings.isClustering || settings.fdClustering)){
 			
 			if(vcount.frameHistory.size() > 0){
-				framed ff = vcount.frameHistory[vcount.frameHistory.size()-1];
-				vector<KeyPoint> keyp(ff.keypoints.begin(), ff.keypoints.end());
-				Mat dataset = getColourDataset(ff.frame, keyp);
-				keyp.insert(keyp.end(), f.keypoints.begin(), f.keypoints.end());
-				dataset.push_back(getColourDataset(frame, f.keypoints));
-				dataset = dataset.clone();
-				hdbscan scanis(2*colourSel.minPts, DATATYPE_FLOAT);
-				scanis.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
-				
-				/****************************************************************************************************/
-				/// Get the hash table for the current dataset and find the mapping to clusters in prev frame
-				/// and map them to selected colour map
-				/****************************************************************************************************/
-				IntIntListMap* prevHashTable = colourSel.clusterKeypointIdx;
-				int32_t prevNumClusters = colourSel.numClusters;
-				colourSel.clusterKeypointIdx = hdbscan_create_cluster_table(scanis.clusterLabels + ff.keypoints.size(), 0, f.keypoints.size());
-				colourSel.numClusters = g_hash_table_size(colourSel.clusterKeypointIdx);
-				IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scanis, colourSel.clusterKeypointIdx);
-				clustering_stats stats;
-				hdbscan_calculate_stats(distancesMap, &(stats));
-				int val = hdbscan_analyse_stats(&(stats));
-				printf("------- MinPts = %d - new validity = %d (%d) and old validity = %d (%d)\n", colourSel.minPts, val, colourSel.numClusters, colourSel.validity, prevNumClusters);
-				
-				//hdbscan_print_cluster_table(colourSel.clusterKeypointIdx);
-				
-				// If we get validity less than the previous, we rerun with a reduced minPts
-				/*while(val < 0 && colourSel.minPts > 3 && colourSel.numClusters < prevNumClusters){
-					colourSel.minPts -= 1;
-					scanis.reRun(2 * colourSel.minPts);
-					
-					if(colourSel.clusterKeypointIdx != NULL){
-						hdbscan_destroy_cluster_table(colourSel.clusterKeypointIdx);
-						colourSel.clusterKeypointIdx = NULL;
-					}
-					
-					colourSel.clusterKeypointIdx = hdbscan_create_cluster_table(scanis.clusterLabels + ff.keypoints.size(), 0, f.keypoints.size());
-					colourSel.numClusters = g_hash_table_size(colourSel.clusterKeypointIdx);
-					
-					if(distancesMap != NULL){
-						hdbscan_destroy_distance_map_table(distancesMap);
-						distancesMap = NULL;
-					}
-					//hdbscan_print_cluster_table(colourSel.clusterKeypointIdx);
-					distancesMap = hdbscan_get_min_max_distances(&scanis, colourSel.clusterKeypointIdx);
-					hdbscan_calculate_stats(distancesMap, &stats);
-					val = hdbscan_analyse_stats(&stats);
-					//hdbscan_print_stats(&stats);
-					//hdbscan_print_distance_map_table(distancesMap);
-					printf("------- MinPts = %d (%d)- new validity = %d and old validity = %d\n", colourSel.minPts, g_hash_table_size(colourSel.clusterKeypointIdx), val, colourSel.validity);
-					//break;
-				}*/
-				
-				//if(colourSel.validity = val)	
-				
-				colourSel.validity = val;
-				
-				set<int32_t> currSelClusters, cClusters;
-						
-				for (set<int32_t>::iterator itt = colourSel.selectedClusters.begin(); itt != colourSel.selectedClusters.end(); ++itt) {
-					int32_t cluster = *itt;
-					IntArrayList* list = (IntArrayList*)g_hash_table_lookup(prevHashTable, &cluster);
-					int32_t* ldata = (int32_t*)list->data;
-						
-					/**
-					 * Since I have no idea whether the clusters from the previous frames will be clustered in the same manner
-					 * I have to get the cluster with the largest number of points from selected clusters
-					 **/ 
-					map<int32_t, vector<int32_t>> temp;
-					for(int32_t x = 0; x < list->size; x++){
-						int32_t idx = ldata[x];
-						int32_t newCluster = (scanis.clusterLabels)[idx];
-						temp[newCluster].push_back(idx);
-					}
-						
-					int32_t selC = -1;
-					size_t mSize = 0;
-					for(map<int32_t, vector<int32_t>>::iterator it = temp.begin(); it != temp.end(); ++it){
-						if(mSize < it->second.size()){
-							selC = it->first;
-							mSize = it->second.size();
-						}
-					}
-					currSelClusters.insert(selC);			
-				}
-					
-				// Need to clear the previous table map
-				hdbscan_destroy_cluster_table(prevHashTable);
-				colourSel.selectedClusters = currSelClusters;
-				colourSel.selectedKeypoints.clear();
-				colourSel.roiFeatures.clear();
-				colourSel.oldIndices.clear();				
-				
-				/****************************************************************************************************/
-				/// Image space clustering
-				/// -------------------------
-				/// Create a dataset from the keypoints by extracting the colours and using them as the dataset
-				/// hence clustering in image space
-				/****************************************************************************************************/
-					
-				Mat selDesc;
-				for (set<int32_t>::iterator itt = colourSel.selectedClusters.begin(); itt != colourSel.selectedClusters.end(); ++itt) {
-					//printf("Checking cluster %d\n", *itt);
-					int cluster = *itt;
-					IntArrayList* list = (IntArrayList*)g_hash_table_lookup(colourSel.clusterKeypointIdx, &cluster);
-					int32_t* ldata = (int32_t*)list->data;
-					colourSel.oldIndices.insert(colourSel.oldIndices.end(), ldata, ldata + list->size);
-					getListKeypoints(f.keypoints, list, colourSel.selectedKeypoints);
-					getSelectedKeypointsDescriptors(f.descriptors, list, selDesc);
-				}					
-				colourSel.selectedDesc = selDesc.clone();
+				getFrameColourModel(vcount, f, colourSel, frame);
 			}
 			
 			//printf("colourSel.selectedDesc has size %d colourSel.selectedKeypoints = %ld , f.rois = %ld, colourSel.roiFeatures = %ld\n", colourSel.selectedDesc.rows, colourSel.selectedKeypoints.size(), f.rois.size(), colourSel.roiFeatures.size());
@@ -1517,7 +1523,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 			int32_t ce;
 			findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.roi, colourSel.roiFeatures, roiDesc, ce);			
 				
-			if(settings.isClustering){// || settings.diClustering || settings.dfiClustering){
+			if(settings.isClustering){
 				printf("Clustering selected keypoints in image space\n\n\n");
 				Mat ds = getImageSpaceDataset(colourSel.selectedKeypoints);
 				results_t* idxClusterRes = do_cluster(NULL, ds, colourSel.selectedKeypoints, 1, 3, true, true);
