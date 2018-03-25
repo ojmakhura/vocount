@@ -103,31 +103,31 @@ void printImage(String folder, int idx, String name, Mat img) {
 }
 
 
-void printEstimates(ofstream& myfile, map<String, int32_t>* estimates){
-	myfile << estimates->at(frameNum) << ",";
-	myfile << estimates->at(sampleSize) << ",";
-	myfile << estimates->at(selectedSampleSize) << ",";
-	myfile << estimates->at(featureSize) << ",";
-	myfile << estimates->at(selectedFeatureSize) << ",";
-	myfile << estimates->at(numClusters) << ",";
-	myfile << estimates->at(clusterSum) << ",";
-	myfile << estimates->at(clusterAverage) << ",";
-	myfile << estimates->at(boxEst) << ",";
-	myfile << estimates->at(truthCount) << ",";
-	myfile << estimates->at(validityStr) << ",";
-	double accuracy = (estimates->at(truthCount) != 0) ? ((double) estimates->at(boxEst) / estimates->at(truthCount)) * 100 : 0;
+void printEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* estimates){
+	myfile << estimates->at(OutDataIndex::FrameNum) << ",";
+	myfile << estimates->at(OutDataIndex::SampleSize) << ",";
+	myfile << estimates->at(OutDataIndex::SelectedSampleSize) << ",";
+	myfile << estimates->at(OutDataIndex::FeatureSize) << ",";
+	myfile << estimates->at(OutDataIndex::SelectedFeatureSize) << ",";
+	myfile << estimates->at(OutDataIndex::NumClusters) << ",";
+	myfile << estimates->at(OutDataIndex::ClusterSum) << ",";
+	myfile << estimates->at(OutDataIndex::ClusterAverage) << ",";
+	myfile << estimates->at(OutDataIndex::BoxEst) << ",";
+	myfile << estimates->at(OutDataIndex::TruthCount) << ",";
+	myfile << estimates->at(OutDataIndex::Validity) << ",";
+	double accuracy = (estimates->at(OutDataIndex::TruthCount) != 0) ? ((double) estimates->at(OutDataIndex::BoxEst) / estimates->at(OutDataIndex::TruthCount)) * 100 : 0;
 	myfile << accuracy << "\n";
 	
 	myfile.flush();
 
 }
 
-void printClusterEstimates(ofstream& myfile, map<String, int32_t>* estimates, vector<int32_t>* cest){
+void printClusterEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* estimates, vector<int32_t>* cest){
 	
-	myfile << estimates->at(frameNum) << ",";
-	myfile << estimates->at(clusterSum) << ",";
-	myfile << estimates->at(clusterAverage) << ",";
-	myfile << estimates->at(boxEst) << ",";
+	myfile << estimates->at(OutDataIndex::FrameNum) << ",";
+	myfile << estimates->at(OutDataIndex::ClusterSum) << ",";
+	myfile << estimates->at(OutDataIndex::ClusterAverage) << ",";
+	myfile << estimates->at(OutDataIndex::BoxEst) << ",";
 	
 	for(vector<int32_t>::iterator it = cest->begin(); it != cest->end(); ++it){
 		
@@ -227,7 +227,7 @@ void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints
 	//if (vcount.print) {
 		int selSampleSize = 0;
 		if(g_hash_table_size(res->roiClusterPoints) > 0){
-			(*(res->odata))[sampleSize] = roiFeatures.size();
+			(*(res->odata))[OutDataIndex::SampleSize] = roiFeatures.size();
 			GHashTableIter iter;
 			gpointer key;
 			gpointer value;
@@ -237,27 +237,27 @@ void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints
 				IntArrayList* list = (IntArrayList*)value;
 				selSampleSize += list->size;
 			}
-			(*(res->odata))[boxEst] = res->boxStructures->size();
+			(*(res->odata))[OutDataIndex::BoxEst] = res->boxStructures->size();
 		} else{
-			(*(res->odata))[sampleSize] = 0;
+			(*(res->odata))[OutDataIndex::SampleSize] = 0;
 			res->total = 0;
-			(*(res->odata))[boxEst] = g_hash_table_size(res->clusterMap) - 1;
+			(*(res->odata))[OutDataIndex::BoxEst] = g_hash_table_size(res->clusterMap) - 1;
 		}
 
-		(*(res->odata))[selectedSampleSize] = selSampleSize;
-		(*(res->odata))[featureSize] = res->ogsize;
-		(*(res->odata))[selectedFeatureSize] = res->selectedFeatures;
-		(*(res->odata))[numClusters] = res->selectedClustersImages->size();
-		(*(res->odata))[clusterSum] = res->total;
+		(*(res->odata))[OutDataIndex::SelectedSampleSize] = selSampleSize;
+		(*(res->odata))[OutDataIndex::FeatureSize] = res->ogsize;
+		(*(res->odata))[OutDataIndex::SelectedFeatureSize] = res->selectedFeatures;
+		(*(res->odata))[OutDataIndex::NumClusters] = res->selectedClustersImages->size();
+		(*(res->odata))[OutDataIndex::ClusterSum] = res->total;
 		int32_t avg = res->total / res->selectedClustersImages->size();
-		(*(res->odata))[clusterAverage] = avg;
-		(*(res->odata))[frameNum] = i;
-		(*(res->odata))[validityStr] = res->validity;
+		(*(res->odata))[OutDataIndex::ClusterAverage] = avg;
+		(*(res->odata))[OutDataIndex::FrameNum] = i;
+		(*(res->odata))[OutDataIndex::Validity] = res->validity;
 
 		if((size_t)i > vcount.truth.size()){
-			(*(res->odata))[truthCount] = 0;
+			(*(res->odata))[OutDataIndex::TruthCount] = 0;
 		} else{
-			(*(res->odata))[truthCount] = vcount.truth[i];
+			(*(res->odata))[OutDataIndex::TruthCount] = vcount.truth[i];
 		}
 	//}
 }

@@ -580,7 +580,7 @@ void maintaintHistory(vocount& voc, framed& f){
 	if(voc.frameHistory.size() > 10){
 		framed& f1 = voc.frameHistory.front();
 		
-		for(map<String, results_t*>::iterator it = f1.results.begin(); it != f1.results.end(); ++it){
+		for(map<ResultIndex, results_t*>::iterator it = f1.results.begin(); it != f1.results.end(); ++it){
 			cleanResult(it->second);
 		}
 		
@@ -1029,7 +1029,7 @@ results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints){
 	res->keypoints = new vector<KeyPoint>(keypoints.begin(), keypoints.end());
 	res->finalPointClusters = new map_kp();
 	res->clusterStructures = new map<int32_t, vector<Rect2d>>();
-	res->odata = new map<String, int32_t>();
+	res->odata = new map<OutDataIndex, int32_t>();
 	res->labels = new vector<int32_t>(res->keypoints->size());
 	res->boxStructures = new vector<box_structure>();
 	res->cest = new vector<int32_t>();
@@ -1281,41 +1281,8 @@ void getFrameColourModel(vocount& vcount, framed& f, selection_t& colourSel, Mat
 	hdbscan_calculate_stats(distancesMap, &(stats));
 	int val = hdbscan_analyse_stats(&(stats));
 	printf("------- MinPts = %d - new validity = %d (%d) and old validity = %d (%d)\n", colourSel.minPts, val, colourSel.numClusters, colourSel.validity, prevNumClusters);
-				
-	//hdbscan_print_cluster_table(colourSel.clusterKeypointIdx);
-				
-	// If we get validity less than the previous, we rerun with a reduced minPts
-	/*while(val < 0 && colourSel.minPts > 3 && colourSel.numClusters < prevNumClusters){
-	colourSel.minPts -= 1;
-	scanis.reRun(2 * colourSel.minPts);
-					
-	if(colourSel.clusterKeypointIdx != NULL){
-	hdbscan_destroy_cluster_table(colourSel.clusterKeypointIdx);
-	colourSel.clusterKeypointIdx = NULL;
-	}
-					
-	colourSel.clusterKeypointIdx = hdbscan_create_cluster_table(scanis.clusterLabels + ff.keypoints.size(), 0, f.keypoints.size());
-	colourSel.numClusters = g_hash_table_size(colourSel.clusterKeypointIdx);
 	
-	if(distancesMap != NULL){
-		hdbscan_destroy_distance_map_table(distancesMap);
-		distancesMap = NULL;
-	}
-	
-	//hdbscan_print_cluster_table(colourSel.clusterKeypointIdx);
-	distancesMap = hdbscan_get_min_max_distances(&scanis, colourSel.clusterKeypointIdx);
-	hdbscan_calculate_stats(distancesMap, &stats);
-	val = hdbscan_analyse_stats(&stats);
-	//hdbscan_print_stats(&stats);
-	//hdbscan_print_distance_map_table(distancesMap);
-	printf("------- MinPts = %d (%d)- new validity = %d and old validity = %d\n", colourSel.minPts, g_hash_table_size(colourSel.clusterKeypointIdx), val, colourSel.validity);
-	//break;
-	}*/
-				
-	//if(colourSel.validity = val)	
-				
-	colourSel.validity = val;
-				
+	colourSel.validity = val;				
 	set<int32_t> currSelClusters, cClusters;
 					
 	for (set<int32_t>::iterator itt = colourSel.selectedClusters.begin(); itt != colourSel.selectedClusters.end(); ++itt) {
@@ -1412,7 +1379,7 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 			f.roiDesc = Mat();
 			f.centerFeature = -1;
 			//printf("*\n*\n");
-			vector<box_structure>* bxs = vcount.frameHistory[vcount.frameHistory.size()-xz].results.at("descriptors")->boxStructures;
+			vector<box_structure>* bxs = vcount.frameHistory[vcount.frameHistory.size()-xz].results.at(ResultIndex::Descriptors)->boxStructures;
 			
 			if(!bxs->empty()){	
 				f.roi = bxs->at(rdx).box;
@@ -1427,7 +1394,6 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 				d1 = r.area();
 				trimRect(r, frame.rows, frame.cols, 10);
 				
-				//cout << "Rect r = " << r << " Area = " << r.area() << endl;
 				d2 = r.area();
 				findROIFeature(f.keypoints, f.descriptors, f.roi, f.roiFeatures, f.roiDesc, f.centerFeature);
 			}else{
@@ -1435,40 +1401,26 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 			}
 			rdx++;
 		}
-		//cout << "f.roiFeatures size = " << f.roiFeatures.size() << endl;
-		//cout << f.roiDesc << endl;
 		
 		RNG rng(12345);
 		Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));		
 		rectangle(frame, f.roi, value, 2, 8, 0);
-		
-		/// Do a template matching algorithm using the roi as the template
-		/*Mat templ = frame(f.roi);	
-		int result_cols =  frame.cols - templ.cols + 1;
-		int result_rows = frame.rows - templ.rows + 1;
-		
-		templateMatch.create( result_rows, result_cols, CV_32FC1 );
-		matchTemplate(frame, templ, templateMatch, TM_SQDIFF);
-		normalize( templateMatch, templateMatch, 0, 1, NORM_MINMAX, -1, Mat() );	
-		display("template match", templateMatch);
-		* */
 	}
 }
 
 void imageSpaceClustering(vocount& vcount, vsettings& settings, selection_t& colourSel, framed& f){
 	
-	results_t* res1 = f.results["descriptors"];
+	results_t* res1 = f.results[ResultIndex::Descriptors];
 	Mat ds = getImageSpaceDataset(colourSel.selectedKeypoints);
 	results_t* idxClusterRes = do_cluster(NULL, ds, colourSel.selectedKeypoints, 1, 3, true, true);
 	set<int> ss(idxClusterRes->labels->begin(), idxClusterRes->labels->end());
 	printf("We found %lu objects by index points clustering.\n", ss.size() - 1);
 	getKeypointMap(idxClusterRes->clusterMap, &colourSel.selectedKeypoints, *(idxClusterRes->finalPointClusters));
 	generateClusterImages(f.frame, idxClusterRes);
-	f.results["im_space"] = idxClusterRes;		
+	f.results[ResultIndex::ImageSpace] = idxClusterRes;		
 		
 	if(settings.print){
-		String iSpaceFrameDir = createDirectory(settings.imageSpaceDir, to_string(vcount.frameCount));
-					
+		String iSpaceFrameDir = createDirectory(settings.imageSpaceDir, to_string(vcount.frameCount));					
 		generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, idxClusterRes, f.i);
 		Mat frm = drawKeyPoints(f.frame, colourSel.selectedKeypoints, colours.red, -1);
 		printImage(settings.imageSpaceDir, vcount.frameCount, "frame_kp", frm);
@@ -1549,33 +1501,7 @@ void filteredDescriptorClustering(vocount& vcount, vsettings& settings, selectio
 		printClusterEstimates(vcount.selDescClusterFile, selDescRes->odata, selDescRes->cest);	
 	}
 				
-	f.results["sel_keypoints"] = selDescRes;
-	/*if(settings.dfClustering){
-		printf("Filtering detected objects with colour model\n\n");
-		vector<int32_t> keypointStructures(colourSel.selectedKeypoints.size(), -1);
-		set<uint> selectedStructures;
-		combineSelDescriptorsRawStructures(res1, selDescRes, colourSel, keypointStructures, selectedStructures);
-					
-		if(settings.print){
-			Mat kimg = drawKeyPoints(frame, colourSel.selectedKeypoints, colours.red, -1);
-			for(set<uint>::iterator it = selectedStructures.begin(); it != selectedStructures.end(); it++){
-				Scalar value;
-				
-				RNG rng(12345);
-				value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
-						rng.uniform(0, 255));				
-				
-				box_structure& b = res1->boxStructures->at(*it);
-				rectangle(kimg, b.box, value, 2, 8, 0);
-			}
-			printImage(settings.dfComboDir, f.i, "selected_structures", kimg) ;
-			double accuracy = 0;
-			if(vcount.truth[f.i] > 0){
-				accuracy = ((double)selectedStructures.size() / vcount.truth[f.i]) * 100;
-			} 
-			vcount.dfEstimatesFile << f.i << "," <<  selectedStructures.size() << "," << vcount.truth[f.i] << "," << accuracy << "\n";
-		}
-	}	*/
+	f.results[ResultIndex::SelectedKeypoints] = selDescRes;
 }
 
 void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, Mat& frame){
@@ -1584,6 +1510,10 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 	
 	framed f, index_f, sel_f;
 	Mat templateMatch;
+	
+	if(settings.print){
+		printImage(settings.outputFolder, vcount.frameCount, "frame", frame);
+	}
 
 	f.i = vcount.frameCount;
 	index_f.i = f.i;
@@ -1604,8 +1534,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		
 		cout << f.roi << endl;
 		display("frame", frame);
-        	
-		// Create clustering dataset
+        
 		f.hasRoi = vcount.roiExtracted;
         results_t* res1 = NULL;
         
@@ -1616,7 +1545,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		if(settings.dClustering){			
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 			Mat dset = getDescriptorDataset(vcount.frameHistory, settings.step, f.descriptors, f.keypoints, settings.rotationalInvariance, false);	
-			f.results["descriptors"] = clusterDescriptors(vcount, settings, f, dset, f.keypoints);
+			f.results[ResultIndex::Descriptors] = clusterDescriptors(vcount, settings, f, dset, f.keypoints);
 		}
 		
 		/**
@@ -1635,11 +1564,15 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 				getFrameColourModel(vcount, f, colourSel, frame);
 			}
 			
-			//printf("colourSel.selectedDesc has size %d colourSel.selectedKeypoints = %ld , f.rois = %ld, colourSel.roiFeatures = %ld\n", colourSel.selectedDesc.rows, colourSel.selectedKeypoints.size(), f.rois.size(), colourSel.roiFeatures.size());
 			Mat roiDesc;
 			int32_t ce;
 			findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.roi, colourSel.roiFeatures, roiDesc, ce);			
 				
+			/****************************************************************************************************/
+			/// Image Space Clustering
+			/// -------------------------
+			/// 
+			/****************************************************************************************************/
 			if(settings.isClustering){
 				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				printf("Clustering selected keypoints in image space\n\n\n");
@@ -1675,7 +1608,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 void combineSelDescriptorsRawStructures(vocount& vcount, framed& f, selection_t& colourSel, String& dfComboDir, bool print){
 	vector<int32_t> keypointStructures(colourSel.selectedKeypoints.size(), -1);
 	set<uint> selectedStructures;
-	results_t* descriptorResults = f.results["descriptors"];;
+	results_t* descriptorResults = f.results[ResultIndex::Descriptors];;
 	
 	/**
 	 * For each keypoint in the selected set, we find all box_structures that 
@@ -1773,7 +1706,7 @@ void finalise(vocount& vcount){
 #pragma omp parallel for
 	for(uint i = 0; i < vcount.frameHistory.size(); i++){
 		framed& f1 = vcount.frameHistory[i];
-		for(map<String, results_t*>::iterator it = f1.results.begin(); it != f1.results.end(); ++it){
+		for(map<ResultIndex, results_t*>::iterator it = f1.results.begin(); it != f1.results.end(); ++it){
 			cleanResult(it->second);
 		}
 	}

@@ -10,9 +10,9 @@
 
 #include "vocount/vtypes.hpp"
 
-void printEstimates(ofstream& myfile, map<String, int32_t>* estimates);
+void printEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* estimates);
 
-void printClusterEstimates(ofstream& myfile, map<String, int32_t>* estimates, vector<int32_t>* cest);
+void printClusterEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* estimates, vector<int32_t>* cest);
 
 
 /***

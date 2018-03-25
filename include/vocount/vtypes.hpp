@@ -24,17 +24,25 @@ using namespace clustering;
 
 typedef map<int32_t, vector<KeyPoint>> map_kp;
 
-static String frameNum = "Frame No.";
-static String sampleSize = "Sample Size";
-static String selectedSampleSize = "Selected Sample";
-static String featureSize = "Feature Size";
-static String selectedFeatureSize = "Selected Features";
-static String numClusters = "# Clusters";
-static String clusterSum = "Cluster Sum";
-static String clusterAverage = "Cluster Avg.";
-static String boxEst = "Box Est.";
-static 	String truthCount = "Actual";
-static String validityStr = "Validity";
+enum class OutDataIndex{	
+	FrameNum,
+	SampleSize,
+	SelectedSampleSize,
+	FeatureSize,
+	SelectedFeatureSize,
+	NumClusters,
+	ClusterSum,
+	ClusterAverage,
+	BoxEst,
+	TruthCount,
+	Validity
+};
+
+enum class ResultIndex{
+	Descriptors,
+	SelectedKeypoints,
+	ImageSpace
+};
 
 typedef struct {
 	int32_t minPts = -3;
@@ -65,7 +73,7 @@ typedef struct {
     clustering_stats stats;													/// Statistical values for the clusters
     IntDistancesMap* distancesMap = NULL;									/// Min and Max distance table for each cluster
 	map_kp* finalPointClusters;
-	map<String, int32_t>* odata;											/// Output data
+	map<OutDataIndex, int32_t>* odata;											/// Output data
     vector<int32_t>* labels;												/// hdbscan cluster labels
 	vector<box_structure>* boxStructures;									/// Bounding boxes for the individual objects in the frame
 	map<int32_t, vector<Rect2d>>* clusterStructures;
@@ -94,7 +102,7 @@ typedef struct FRAMED{
 	int32_t centerFeature = -1;											/// index of the roi central feature
 	Mat roiDesc;													/// region of interest descriptors
 	bool hasRoi = false;
-	map<String, results_t*> results;
+	map<ResultIndex, results_t*> results;
 } framed;
 
 typedef struct VOCOUNT{
@@ -104,7 +112,6 @@ typedef struct VOCOUNT{
 	Ptr<Feature2D> detector;
     Ptr<Tracker> tracker;
 	Rect2d roi;
-    map<int32_t, map<String, int32_t> > stats;
     map<int32_t, vector<int32_t> > clusterEstimates;
 	vector<framed> frameHistory;
     map<int32_t, int32_t> truth;
