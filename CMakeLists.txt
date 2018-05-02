@@ -14,14 +14,21 @@ set(HDBSCAN_INSTALL_DIR ${CMAKE_BINARY_DIR}/thirdparty/hdbscan)
 ExternalProject_Add(hdbscan_lib
     GIT_REPOSITORY https://github.com/ojmakhura/hdbscan.git
 	GIT_TAG "master"
-	CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${HDBSCAN_INSTALL_DIR}
+	CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${HDBSCAN_INSTALL_DIR} -DBUILD_JAVA=OFF -DBUILD_PYTHON2=OFF -DBUILD_PYTHON3=OFF -DBUILD_SAMPLES=OFF
 	UPDATE_COMMAND git pull	
 )
 ExternalProject_Get_Property(hdbscan_lib INSTALL_DIR)
 
+#detect architecture
+if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")	
+	set(LIBDIR "lib64")
+else()
+	set(LIBDIR "lib")
+endif()
+
 set(HDBSCAN_INCLUDE_DIRS ${HDBSCAN_INSTALL_DIR}/include)
-set(HDBSCAN_LIB_DIRS ${HDBSCAN_INSTALL_DIR}/lib)
-set(HDBSCAN_LIBRARIES hdbscan)
+set(HDBSCAN_LIB_DIRS ${HDBSCAN_INSTALL_DIR}/${LIBDIR})
+set(HDBSCAN_LIBRARIES hdbscan listlib gnulib)
 link_directories(${HDBSCAN_LIB_DIRS})
 
 set(INSTALL_LIB_DIR lib CACHE PATH "Installation directory for libraries")
@@ -38,7 +45,6 @@ find_package(PkgConfig)
 pkg_check_modules(GLIB2 REQUIRED glib-2.0>=2.36.0)
 
 # Find QT 5 Core module
-
 find_package(Qt5 COMPONENTS Core REQUIRED)
 add_definitions(${Qt5Core_DEFINITIONS})
 

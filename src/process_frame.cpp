@@ -11,6 +11,7 @@
 #include <opencv2/imgproc.hpp>
 #include <dirent.h>
 #include <gsl/gsl_statistics.h>
+#include <lmdb.h>
 #include <QDir>
 #include <math.h>
 
@@ -763,7 +764,7 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
 
 void getFrameTruth(String truthFolder, map<int, int>& truth){
 	
-	QDir tf(truthFolder.c_str());
+	/*QDir tf(truthFolder.c_str());
 	QStringList fileList = tf.entryList(QDir::Files, QDir::Name);
 	for(int i = 0; i < fileList.size(); i++){
 		QString fileName = fileList.at(i);
@@ -779,6 +780,29 @@ void getFrameTruth(String truthFolder, map<int, int>& truth){
 
 		int fnum = tokens[0].toInt();
 		truth[fnum] = int(max);
+	}*/
+		
+	int rc;
+	MDB_env *env;
+	MDB_dbi dbi;
+	MDB_val key, data;
+	MDB_txn *txn;
+	MDB_cursor *cursor;
+	
+	rc = mdb_env_create(&env);
+	rc = mdb_env_open(env, truthFolder.c_str(), 0, 0664);
+	rc = mdb_txn_begin(env, NULL, MDB_RDONLY, &txn);
+	rc = mdb_dbi_open(txn, NULL, 0, &dbi);
+	rc = mdb_cursor_open(txn, dbi, &cursor);
+	
+	while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0) {
+		
+		String k((char *)key.mv_data);
+		k = k.substr(0, key.mv_size);
+		
+		String v((char *)data.mv_data);
+		v = v.substr(0, data.mv_size);
+		truth[stoi(k)] = stoi(v);
 	}
 }
 
