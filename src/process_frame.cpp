@@ -939,7 +939,7 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 	hdbscan scan(3, DATATYPE_FLOAT);
 	scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);	
 	
-	for(int i = 3; i < 30; i++){
+	for(int i = 3; i <= 30; i++){
 		if(i > 3){
 			scan.reRun(i);
 		}
