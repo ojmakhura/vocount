@@ -738,6 +738,7 @@ void getBoxStructure(results_t* res, Rect2d& roi, Mat& frame, bool extend, bool 
 			//extendBoxClusters(frame, res, extras);
 		//}
 	}
+	printf("boxStructure found %lu objects\n\n", res->boxStructures->size());
 }
 
 /**
@@ -746,7 +747,6 @@ void getBoxStructure(results_t* res, Rect2d& roi, Mat& frame, bool extend, bool 
  */ 
 void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, Mat>* selectedClustersImages){
 	
-	printf("boxStructure found %lu objects\n\n", boxStructures->size());
 	String ss = "img_bounds";
 
 	Mat img_bounds = (*selectedClustersImages)["img_allkps"].clone();
@@ -944,7 +944,8 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 			scan.reRun(i);
 		}
 		printf("\n\n >>>>>>>>>>>> Clustering for minPts = %d\n", i);			
-		IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);		
+		IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);
+		//hdbscan_print_cluster_sizes(clusterMap);		
 		IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scan, clusterMap);
 		clustering_stats stats;
 		hdbscan_calculate_stats(distancesMap, &stats);
