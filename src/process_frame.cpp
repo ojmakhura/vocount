@@ -926,11 +926,168 @@ void getListKeypoints(vector<KeyPoint>& keypoints, IntArrayList* list, vector<Ke
 }
 
 /**
+ * Function to assess whether the list of minPts contains a continuous 
+ * series of numbers ie: each value m is preceeded by a value of m-1 and
+ * preceeds a value of m+1
+ * 
+ * @param minPts - The set of minPts that result in the same number of
+ * 				   clusters
+ * @return where the set is continuous or not.
+ */ 
+bool isContinuous(set<int>& minPtsList){
+	bool continous = true;
+	int prev = 2;
+	for(int m : minPtsList){
+		if(prev != 2){
+			if(m - prev > 1){
+				continuous = false;
+				break;
+			}
+		}
+		
+		prev = m;
+	}
+	
+	return continuous;
+}
+
+/**
+ * Determines whether there are more valid clustering results than 
+ * invalid clusters.
+ * 
+ * @param minPtsList: the list of clusters
+ * @param validities: the vector containing validities of all clustering
+ * 					  results 
+ */ 
+bool isValid(set<int>& minPtsList, vector<int>& validities){
+	int validCount = 0;
+	int invalidCount = 0;
+	
+	for(int m : minPtsList){
+		int validity = validities[m - 3]; // minPts begins at 3
+		
+		if(validity >= 0){
+			validCount++;
+		} else if(validity == -2){
+			
+			return false;		// If any validity is -2 then the sequence is invalid		
+		} else{
+			invalidCount++;
+		}
+	}
+	
+	return validCount > invalidCount;
+}
+
+int findLargestSet(map<uint, set<int>>& numClusterMap){
+	
+	uint numClusters = 0;
+	
+	/**
+	 * Find the first largest sequence of clustering results with the
+	 * same number of clusters.
+	 */ 
+	for(map<uint, set<int>>::iterator it = numClusterMap.first(); it != numClusterMap.end(); ++it){
+			
+		if(it->second.size() > numClusters){
+			numClusters = it->first;
+		} 
+		/// If the current largest is equal to the new size, then compare 
+		/// the first entries
+		else if(it->second.size() == numClusters){
+			
+			set<int>& previous = numClusterMap.at(numClusters);
+			set<int>& current = it->second;
+			
+			int pfirst = *(previous.begin());
+			int cfirst = *(current.begin());
+			
+			if(cfirst > pfirst){
+				numClusters = it->first;
+			}
+		}
+	}
+	
+	return numClusters;
+}
+
+/**
+ * 
+ * 
+ */ 
+int chooseMinPts(map<uint, set<int>>& numClusterMap, vector<int>& validities){
+	
+	uint numClusters = findLargestSet(numClusterMap);
+	
+	/**
+	 * Find the first largest sequence of clustering results with the
+	 * same number of clusters.
+	 */ 
+	/*for(map<uint, set<int>>::iterator it = numClusterMap.first(); it != numClusterMap.end(); ++it){
+			
+		if(it->second.size() > numClusters){
+			numClusters = it->first;
+		} 
+		/// If the current largest is equal to the new size, then compare 
+		/// the first entries
+		else if(it->second.size() == numClusters){
+			
+			set<int>& previous = numClusterMap.at(numClusters);
+			set<int>& current = it->second;
+			
+			int pfirst = *(previous.begin());
+			int cfirst = *(current.begin());
+			
+			if(cfirst > pfirst){
+				numClusters = it->first;
+			}
+		}
+	}*/
+	
+	bool found = false;
+	while(!found){
+		
+		set<int>& currentSelection = numClusterMap.at(numClusters);
+		
+		found = isContinuous(currentSelection);		
+		found = found && isValid(currentSelection, validities);
+			
+		if(!found){
+			map<uint, set<int>> tmp;
+			/// TODO: Finish this
+			for(map<uint, set<int>>::iterator it = numClusterMap.first(); it != numClusterMap.end(); ++it){
+				set<int>& tmp_set = it->second;
+				int tfirst = *(previous.begin());
+				int cfirst = *(currentSelection.begin());
+				if(it->first < numClusters && tfirst < cfirst){
+					tmp[it->first] = tmp_set;
+				}
+			}
+			
+			numClusters = findLargestSet(tmp);
+		}
+	}
+	
+	set<int> sel = numClusterMap.at(numclusters);
+	
+	return *(sel.begin());
+}
+
+/**
  *
  */
 selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints){
+	
+	map<uint, set<int>> numClusterMap;
+	vector<int> validities;
+	uint largest = 0;
+	
 	printf("Detecting minPts value for colour clustering.\n");
     int mpts = 3;
+    ofstream trainingOut;    
+    trainingOut.open("out/coulour_training_a.csv");
+    trainingOut << "minPts,Num of Clusters, Validity" << endl;   
+    
 	Mat dataset = getColourDataset(frame, keypoints);
 	size_t size = 0;
 	int chosenCount = 1, currentCount = 1;
@@ -951,8 +1108,18 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 		hdbscan_calculate_stats(distancesMap, &stats);
 		int val = hdbscan_analyse_stats(&stats);
 		printf("cluster map has size = %d and validity = %d\n", g_hash_table_size(clusterMap), val);
+		trainingOut << i << "," << g_hash_table_size(clusterMap) << "," << val << "\n";
+		
+		uint idx = g_hash_table_size(clusterMap);
+		numClusterMap[idx].insert(i);
+		
+		/*if(numClusterMap[idx].size() > largest){
+			
+		}*/
+		
+		validities.push_back(val);
 				
-		if(g_hash_table_size(distancesMap) != size){
+		/*if(g_hash_table_size(distancesMap) != size){
 			size = g_hash_table_size(distancesMap);
 			mpts = i;
 			currentCount = 1;
@@ -972,11 +1139,12 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 			} else{
 				hdbscan_destroy_cluster_table(clusterMap);
 			}
-		}
+		}*/
+		hdbscan_destroy_cluster_table(clusterMap);
 		hdbscan_destroy_distance_map_table(distancesMap);		
 	}
-	
-	if(colourSelection.validity < 1){
+
+	/*if(colourSelection.validity < 1){
 		hdbscan_destroy_cluster_table(clusterKeypointIdxMap);
 		colourSelection.minPts--;
 		scan.reRun(colourSelection.minPts);
@@ -989,11 +1157,16 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 		colourSelection.numClusters = g_hash_table_size(clusterKeypointIdxMap);
 		
 		hdbscan_destroy_distance_map_table(distancesMap);	
-	}
+	}*/
 	
+	chooseMinPts();
+	scan.reRun(colourSelection.minPts);
 	colourSelection.clusterKeypointIdx = clusterKeypointIdxMap;
 	
 	printf(">>>>>>>> VALID CHOICE OF minPts IS %d <<<<<<<<<\n", colourSelection.minPts);
+	trainingOut << "Selected minPts," << colourSelection.minPts << "\n";
+	trainingOut.close();
+	
 	GHashTableIter iter;
 	gpointer key;
 	gpointer value;
