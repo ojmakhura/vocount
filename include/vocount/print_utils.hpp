@@ -39,4 +39,9 @@ void printImage(String folder, int idx, String name, Mat img);
 
 void createOutputDirectories(vocount& vcount, vsettings& settings);
 
+/**
+ * 
+ */ 
+void printMatToFile(const Mat& mtx, String folder, String filename, int fmt);
+
 #endif /* PRINT_UTILS_HPP_ */

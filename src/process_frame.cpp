@@ -940,7 +940,7 @@ bool isContinuous(set<int>& minPtsList){
 	for(int m : minPtsList){
 		if(prev != 2){
 			if(m - prev > 1){
-				continuous = false;
+				continous = false;
 				break;
 			}
 		}
@@ -948,7 +948,7 @@ bool isContinuous(set<int>& minPtsList){
 		prev = m;
 	}
 	
-	return continuous;
+	return continous;
 }
 
 /**
@@ -987,7 +987,7 @@ int findLargestSet(map<uint, set<int>>& numClusterMap){
 	 * Find the first largest sequence of clustering results with the
 	 * same number of clusters.
 	 */ 
-	for(map<uint, set<int>>::iterator it = numClusterMap.first(); it != numClusterMap.end(); ++it){
+	for(map<uint, set<int>>::iterator it = numClusterMap.begin(); it != numClusterMap.end(); ++it){
 			
 		if(it->second.size() > numClusters){
 			numClusters = it->first;
@@ -1023,9 +1023,9 @@ int chooseMinPts(map<uint, set<int>>& numClusterMap, vector<int>& validities){
 	 * Find the first largest sequence of clustering results with the
 	 * same number of clusters.
 	 */ 
-	/*for(map<uint, set<int>>::iterator it = numClusterMap.first(); it != numClusterMap.end(); ++it){
-			
-		if(it->second.size() > numClusters){
+	for(map<uint, set<int>>::iterator it = numClusterMap.begin(); it != numClusterMap.end(); ++it){
+		cout << it->first << endl;
+		/*if(it->second.size() > numClusters){
 			numClusters = it->first;
 		} 
 		/// If the current largest is equal to the new size, then compare 
@@ -1041,34 +1041,50 @@ int chooseMinPts(map<uint, set<int>>& numClusterMap, vector<int>& validities){
 			if(cfirst > pfirst){
 				numClusters = it->first;
 			}
-		}
-	}*/
+		}*/
+	}
 	
 	bool found = false;
 	while(!found){
-		
+		//cout << "DEBUG: Largest set is " << numClusters << endl;
 		set<int>& currentSelection = numClusterMap.at(numClusters);
 		
-		found = isContinuous(currentSelection);		
+		found = isContinuous(currentSelection);
 		found = found && isValid(currentSelection, validities);
+		//if(found){		
+		//} else {
+			//cout << "DEBUG: Set for " << numClusters << " is not continuous" << endl;
+		//}
+		
+		//if(!found){
+			//cout << "DEBUG: Set for " << numClusters << " is not valid" << endl;
+		//}
 			
 		if(!found){
 			map<uint, set<int>> tmp;
-			/// TODO: Finish this
-			for(map<uint, set<int>>::iterator it = numClusterMap.first(); it != numClusterMap.end(); ++it){
+			int cfirst = *(currentSelection.begin());
+			
+			for(map<uint, set<int>>::iterator it = numClusterMap.begin(); it != numClusterMap.end(); ++it){
 				set<int>& tmp_set = it->second;
-				int tfirst = *(previous.begin());
-				int cfirst = *(currentSelection.begin());
-				if(it->first < numClusters && tfirst < cfirst){
+				int tfirst = *(tmp_set.begin());
+				if(it->first > numClusters && tfirst < cfirst){
 					tmp[it->first] = tmp_set;
 				}
 			}
 			
+			/*
+			cout << "............................................................................. : " << endl;
+			printf("DEBUG: Tmp has size %ld and is \n", tmp.size());
+			for(map<uint, set<int>>::iterator it = tmp.begin(); it != tmp.end(); ++it){
+				cout << it->first << " : " << it->second.size() << endl;
+			}
+			cout << ".............................................................................\n" << endl;
+			*/
 			numClusters = findLargestSet(tmp);
 		}
 	}
 	
-	set<int> sel = numClusterMap.at(numclusters);
+	set<int> sel = numClusterMap.at(numClusters);
 	
 	return *(sel.begin());
 }
@@ -1080,19 +1096,20 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 	
 	map<uint, set<int>> numClusterMap;
 	vector<int> validities;
-	uint largest = 0;
+	map<int, IntDoubleListMap* > clusterMaps;
 	
 	printf("Detecting minPts value for colour clustering.\n");
-    int mpts = 3;
     ofstream trainingOut;    
     trainingOut.open("out/coulour_training_a.csv");
     trainingOut << "minPts,Num of Clusters, Validity" << endl;   
     
 	Mat dataset = getColourDataset(frame, keypoints);
-	size_t size = 0;
-	int chosenCount = 1, currentCount = 1;
+	printMatToFile(dataset, "out", "colour_training_dset", Formatter::FMT_CSV);
+	printMatToFile(dataset, "out", "colour_training_dset", Formatter::FMT_MATLAB);
+	printMatToFile(dataset, "out", "colour_training_dset", Formatter::FMT_NUMPY);
+	
 	selection_t colourSelection;
-	IntIntListMap* clusterKeypointIdxMap = NULL;
+	//IntIntListMap* clusterKeypointIdxMap = NULL;
 	hdbscan scan(3, DATATYPE_FLOAT);
 	scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);	
 	
@@ -1102,8 +1119,11 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 		}
 		printf("\n\n >>>>>>>>>>>> Clustering for minPts = %d\n", i);			
 		IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);
+		clusterMaps[i] = clusterMap;
+		
 		hdbscan_print_cluster_sizes(clusterMap);		
 		IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scan, clusterMap);
+		
 		clustering_stats stats;
 		hdbscan_calculate_stats(distancesMap, &stats);
 		int val = hdbscan_analyse_stats(&stats);
@@ -1111,57 +1131,23 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 		trainingOut << i << "," << g_hash_table_size(clusterMap) << "," << val << "\n";
 		
 		uint idx = g_hash_table_size(clusterMap);
-		numClusterMap[idx].insert(i);
-		
-		/*if(numClusterMap[idx].size() > largest){
-			
-		}*/
-		
-		validities.push_back(val);
-				
-		/*if(g_hash_table_size(distancesMap) != size){
-			size = g_hash_table_size(distancesMap);
-			mpts = i;
-			currentCount = 1;
-			hdbscan_destroy_cluster_table(clusterMap);
-		} else{
-			currentCount++;
-			if(currentCount > chosenCount){
-				chosenCount = currentCount;
-				colourSelection.minPts = mpts;
-				colourSelection.validity = val;
-				colourSelection.numClusters = g_hash_table_size(clusterMap);
-				if(clusterKeypointIdxMap != NULL){
-					hdbscan_destroy_cluster_table(clusterKeypointIdxMap);
-				}
-				
-				clusterKeypointIdxMap = clusterMap;
-			} else{
-				hdbscan_destroy_cluster_table(clusterMap);
-			}
-		}*/
-		hdbscan_destroy_cluster_table(clusterMap);
+		numClusterMap[idx].insert(i);				
+		validities.push_back(val);		
 		hdbscan_destroy_distance_map_table(distancesMap);		
 	}
-
-	/*if(colourSelection.validity < 1){
-		hdbscan_destroy_cluster_table(clusterKeypointIdxMap);
-		colourSelection.minPts--;
-		scan.reRun(colourSelection.minPts);
-					
-		clusterKeypointIdxMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);		
-		IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scan, clusterKeypointIdxMap);
-		clustering_stats stats;
-		hdbscan_calculate_stats(distancesMap, &stats);
-		colourSelection.validity = hdbscan_analyse_stats(&stats);
-		colourSelection.numClusters = g_hash_table_size(clusterKeypointIdxMap);
 		
-		hdbscan_destroy_distance_map_table(distancesMap);	
-	}*/
+	colourSelection.minPts = chooseMinPts(numClusterMap, validities);
 	
-	chooseMinPts();
-	scan.reRun(colourSelection.minPts);
-	colourSelection.clusterKeypointIdx = clusterKeypointIdxMap;
+	for(map<int, IntDoubleListMap* >::iterator it = clusterMaps.begin(); it != clusterMaps.end(); ++it){
+		if(it->first == colourSelection.minPts){
+			colourSelection.clusterKeypointIdx = it->second;
+			colourSelection.validity = validities[it->first - 3];
+			colourSelection.numClusters = g_hash_table_size(colourSelection.clusterKeypointIdx);
+			
+		} else{
+			hdbscan_destroy_distance_map_table(it->second);
+		}
+	}
 	
 	printf(">>>>>>>> VALID CHOICE OF minPts IS %d <<<<<<<<<\n", colourSelection.minPts);
 	trainingOut << "Selected minPts," << colourSelection.minPts << "\n";

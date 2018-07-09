@@ -262,3 +262,28 @@ void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints
 	//}
 }
 
+void printMatToFile(const Mat& mtx, String folder, String filename, int fmt){
+	String fname = folder;
+	fname += "/";
+	fname += filename;
+	ofstream outfile(fname);
+	
+	if(fmt == Formatter::FMT_CSV){
+		fname += ".csv";		
+	} else if(fmt == Formatter::FMT_MATLAB){
+		fname += ".m";
+	} else if(fmt == Formatter::FMT_PYTHON){
+		fname += ".py";
+	} else if(fmt == Formatter::FMT_NUMPY){
+		fname += ".py";
+		outfile << "import numpy as np" << endl;
+		outfile << "data = " ;
+	} if(fmt == Formatter::FMT_C){
+		fname += ".h";
+	}
+	
+	//ofstream outfile(fname);
+	outfile << format(mtx, fmt) << endl;
+	outfile.close();
+}
+

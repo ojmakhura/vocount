@@ -24,6 +24,8 @@ using namespace clustering;
 
 typedef map<int32_t, vector<KeyPoint>> map_kp;
 
+static bool VO_DEBUG = false;
+
 enum class OutDataIndex{	
 	FrameNum,
 	SampleSize,
