@@ -91,7 +91,7 @@ void generateFinalPointClusters(vector<int32_t>& roiFeatures, results_t* res);
 void getFrameTruth(String truthFolder, map<int, int>& truth);
 
 /**
- * Use the learned colour model selection to find the colour model 
+ * Use the learned colour model selection to track the colour model 
  * of the current frame.
  * 
  * @param - vcount
@@ -99,7 +99,7 @@ void getFrameTruth(String truthFolder, map<int, int>& truth);
  * @param - colourSel
  * @param - frame 
  */
-void getFrameColourModel(vocount& vcount, framed& f, selection_t& colourSel, Mat& frame); 
+void trackFrameColourModel(vocount& vcount, framed& f, selection_t& colourSel, Mat& frame); 
 
 /**
  *

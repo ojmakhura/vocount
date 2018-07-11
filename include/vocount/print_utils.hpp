@@ -10,10 +10,15 @@
 
 #include "vocount/vtypes.hpp"
 
+/**
+ * 
+ */ 
 void printEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* estimates);
 
+/**
+ * 
+ */ 
 void printClusterEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* estimates, vector<int32_t>* cest);
-
 
 /***
  *
@@ -35,8 +40,14 @@ String createDirectory(String& mainFolder, String subfolder);
  */
 void printImages(String& folder, map<String, Mat>* images, int count);
 
+/**
+ * 
+ */ 
 void printImage(String folder, int idx, String name, Mat img);
 
+/**
+ * 
+ */ 
 void createOutputDirectories(vocount& vcount, vsettings& settings);
 
 /**
@@ -44,4 +55,10 @@ void createOutputDirectories(vocount& vcount, vsettings& settings);
  */ 
 void printMatToFile(const Mat& mtx, String folder, String filename, int fmt);
 
+
+/**
+ * 
+ * 
+ */
+void printLabelsToFile(int32_t* labels, int32_t length, String folder, int fmt);
 #endif /* PRINT_UTILS_HPP_ */

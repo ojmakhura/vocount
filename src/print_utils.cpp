@@ -262,27 +262,38 @@ void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints
 	//}
 }
 
+void printLabelsToFile(int32_t* labels, int32_t length, String folder, int fmt){
+		
+	Mat lbs(length, 1, CV_32S, labels);
+	printMatToFile(lbs, folder, "labels", fmt);
+}
+
 void printMatToFile(const Mat& mtx, String folder, String filename, int fmt){
 	String fname = folder;
 	fname += "/";
 	fname += filename;
-	ofstream outfile(fname);
+	//ofstream outfile(fname);
 	
 	if(fmt == Formatter::FMT_CSV){
-		fname += ".csv";		
+		fname += ".csv";	
+		//ofstream outfile(fname);
 	} else if(fmt == Formatter::FMT_MATLAB){
 		fname += ".m";
+		//ofstream outfile(fname);
 	} else if(fmt == Formatter::FMT_PYTHON){
 		fname += ".py";
+		//ofstream outfile(fname);
 	} else if(fmt == Formatter::FMT_NUMPY){
 		fname += ".py";
-		outfile << "import numpy as np" << endl;
-		outfile << "data = " ;
+		//ofstream outfile(fname);
+		//outfile << "import numpy as np" << endl;
+		//outfile << "data = " ;
 	} if(fmt == Formatter::FMT_C){
 		fname += ".h";
+		//ofstream outfile(fname);
 	}
 	
-	//ofstream outfile(fname);
+	ofstream outfile(fname);
 	outfile << format(mtx, fmt) << endl;
 	outfile.close();
 }
