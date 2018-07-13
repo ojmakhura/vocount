@@ -1071,7 +1071,7 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 	map<uint, set<int>> numClusterMap;
 	vector<int> validities;
 	vector<int32_t*> labelsList;
-	map<int, IntDoubleListMap* > clusterMaps;
+	map<int, IntIntListMap* > clusterMaps;
 	
 	printf("Detecting minPts value for colour clustering.\n");
     ofstream trainingOut;    
@@ -1102,8 +1102,8 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 		clustering_stats stats;
 		hdbscan_calculate_stats(distancesMap, &stats);
 		int val = hdbscan_analyse_stats(&stats);
-		printf("cluster map has size = %d and validity = %d\n", g_hash_table_size(clusterMap), val);
-		trainingOut << i << "," << g_hash_table_size(clusterMap) << "," << val << "\n";
+		printf("cluster map has size = %d and validity = %d\n", g_hash_table_size(clusterMap) - 1, val);
+		trainingOut << i << "," << g_hash_table_size(clusterMap) - 1 << "," << val << "\n";
 		
 		uint idx = g_hash_table_size(clusterMap);
 		numClusterMap[idx].insert(i);				
@@ -1129,7 +1129,7 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 		if(it->first == colourSelection.minPts){
 			colourSelection.clusterKeypointIdx = it->second;
 			colourSelection.validity = validities[it->first - 3];
-			colourSelection.numClusters = g_hash_table_size(colourSelection.clusterKeypointIdx);
+			colourSelection.numClusters = g_hash_table_size(colourSelection.clusterKeypointIdx) - 1;
 			
 		} else{
 			hdbscan_destroy_distance_map_table(it->second);			
