@@ -123,6 +123,7 @@ typedef struct VOCOUNT{
     ofstream dfClusterFile, dfEstimatesFile;
     ofstream diClusterFile, diEstimatesFile;
     ofstream dfiClusterFile, dfiEstimatesFile;
+    ofstream trainingFile, trackingFile;
 } vocount;
 
 typedef struct VSETTINGS{

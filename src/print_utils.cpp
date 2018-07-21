@@ -50,6 +50,15 @@ void createOutputDirectories(vocount& vcount, vsettings& settings){
 			name = settings.filteredDescDir + "/ClusterEstimates.csv";
 			vcount.selDescClusterFile.open(name.c_str());
 			vcount.selDescClusterFile << "Frame #,Cluster Sum, Cluster Avg., Box Est.\n";
+			
+			name = settings.filteredDescDir + "/training.csv";
+			vcount.trainingFile.open(name.c_str());
+			vcount.trainingFile << "minPts, Num of Clusters, Validity" << endl;			
+			
+			name = settings.filteredDescDir + "/tracking.csv";
+			vcount.trackingFile.open(name.c_str());
+			vcount.trackingFile << "Frame #, Num of Points, Selected Points, MinPts, Num of Clusters, Validity\n";
+			
 		}
 		
 		if(settings.dfClustering){
