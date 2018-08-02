@@ -877,16 +877,18 @@ Mat getDistanceDataset(Mat descriptors, vector<int> roiIdx){
 
 Mat getColourDataset(Mat f, vector<KeyPoint> pts){
 	Mat m(pts.size(), 3, CV_32FC1);
+	Mat tmpf;
+	GaussianBlur(f, tmpf, Size( 5, 5), 0, 0 );
 	float* data = m.ptr<float>(0);
 	for(size_t i = 0; i < pts.size(); i++){
 		Point2f pt = pts[i].pt;
-		Rect r2(pt.x - 2, pt.y - 2, 4, 4);
-		//cout << f.size() << r2 << " " << pts[i].size;
+		/*Rect r2(pt.x - 1, pt.y - 1, 3, 3);
 		trimRect(r2, f.rows, f.cols, 0);
-		//cout << pt << r2 << endl << endl;
 		Mat tmp = f(r2);
 		Mat mean, stdDev;
 		meanStdDev(tmp, mean, stdDev);
+		*/
+		
 		/*cout << tmp << endl;
 		cout << endl << mean.size() << mean << endl;
 		cout << mean.at<double>(0, 0) << endl;
@@ -894,11 +896,16 @@ Mat getColourDataset(Mat f, vector<KeyPoint> pts){
 		cout << mean.at<double>(0, 2) << endl;
 		cout << endl << stdDev << endl;
 		*/
-		Vec3b p = f.at<Vec3b>(pt);
+		Vec3b p = tmpf.at<Vec3b>(pt);
 		int idx = i * 3;
-		data[idx] = mean.at<double>(0, 0); //p.val[0];
+		/*data[idx] = mean.at<double>(0, 0); //p.val[0];
 		data[idx + 1] = mean.at<double>(0, 1); //p.val[1];
 		data[idx + 2] = mean.at<double>(0, 2); //p.val[2];
+		*/
+		
+		data[idx] = p.val[0];
+		data[idx + 1] = p.val[1];
+		data[idx + 2] = p.val[2];
 	}
 	return m;
 }
@@ -1083,7 +1090,7 @@ int chooseMinPts(map<uint, set<int>>& numClusterMap, vector<int>& validities){
 /**
  *
  */
-selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints, ofstream& trainingFile){
+selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints, ofstream& trainingFile, ofstream& trackingFile){
 	
 	map<uint, set<int>> numClusterMap;
 	vector<int> validities;
@@ -1120,7 +1127,7 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 		clustering_stats stats;
 		hdbscan_calculate_stats(distancesMap, &stats);
 		int val = hdbscan_analyse_stats(&stats);
-		cout << "---------------------------------- Stats Values ---------------------------------" << endl;
+		/*cout << "---------------------------------- Stats Values ---------------------------------" << endl;
 		cout << "coreDistanceValues >> {";
 		cout << "\tMean : " << stats.coreDistanceValues.mean << endl;
 		cout << "\tStandard Dev : " << stats.coreDistanceValues.standardDev << endl;
@@ -1139,6 +1146,7 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 		cout << "\tSkewness : " << stats.intraDistanceValues.skewness << endl;
 		cout << "}" << endl << endl; 
 		cout << "---------------------------------------------------------------------------------" << endl;
+		*/
 		
 		GHashTableIter iter;
 		gpointer key;
@@ -1159,7 +1167,7 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 				
 		uint idx = g_hash_table_size(clusterMap) - 1;
 		int k = 0;
-		gpointer p = g_hash_table_lookup (clusterMap, &k);
+		IntArrayList* p = (IntArrayList *)g_hash_table_lookup (clusterMap, &k);
 		
 		if(p == NULL){
 			idx++;
@@ -1167,7 +1175,13 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 		
 		printf("cluster map has size = %d and validity = %d\n", g_hash_table_size(clusterMap), val);
 		if(trainingFile.is_open()){
-			trainingFile << i << "," << idx << "," << val << "\n";
+			int32_t ps = 0;
+			
+			if(p != NULL){
+				ps = p->size;
+			}
+			
+			trainingFile << i << "," << idx << "," << ps << "," << val << "\n";
 		}
 		
 		numClusterMap[idx].insert(i);				
@@ -1200,11 +1214,11 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 		}
 		delete[] labelsList[it->first - 3];
 	}
-	
+		
 	printf(">>>>>>>> VALID CHOICE OF minPts IS %d <<<<<<<<<\n", colourSelection.minPts);
 	if(trainingFile.is_open()){
 		trainingFile << "Selected minPts," << colourSelection.minPts << "\n";
-		//trainingOut.close();
+		trainingFile.close();
 	}
 	//colourSelection.numClusters = g_hash_table_size(colourSelection.clusterKeypointIdx);
 	GHashTableIter iter;
@@ -1252,6 +1266,10 @@ selection_t detectColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& ke
 			}
 			destroyWindow(windowName.c_str());
 		}
+	}
+	
+	if(trackingFile.is_open()){
+		trackingFile << 1 << "," << keypoints.size() << "," << colourSelection.selectedDesc.rows << "," << colourSelection.minPts << "," << colourSelection.numClusters << "," << colourSelection.validity << endl;
 	}
 	
 	return colourSelection;
@@ -1511,7 +1529,7 @@ void trackFrameColourModel(vocount& vcount, framed& f, selection_t& colourSel, M
 	
 	framed ff;	
 	Mat dataset; // = getColourDataset(ff.frame, keyp);
-	
+	//cout << "1 ......" << endl;
 	if(!vcount.frameHistory.empty()){
 		ff = vcount.frameHistory[vcount.frameHistory.size()-1];
 		keyp.insert(keyp.end(), ff.keypoints.begin(), ff.keypoints.end());
@@ -1519,13 +1537,14 @@ void trackFrameColourModel(vocount& vcount, framed& f, selection_t& colourSel, M
 		p_size = ff.keypoints.size();
 	}
 	
+	//cout << "2 ......" << endl;
 	//Mat dataset = getColourDataset(ff.frame, keyp);
 	keyp.insert(keyp.end(), f.keypoints.begin(), f.keypoints.end());
 	dataset.push_back(getColourDataset(frame, f.keypoints));
 	dataset = dataset.clone();
 	hdbscan scanis(2*colourSel.minPts, DATATYPE_FLOAT);
 	scanis.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
-	
+	//cout << "3 ......" << endl;
 	/****************************************************************************************************/
 	/// Get the hash table for the current dataset and find the mapping to clusters in prev frame
 	/// and map them to selected colour map
@@ -1553,7 +1572,7 @@ void trackFrameColourModel(vocount& vcount, framed& f, selection_t& colourSel, M
 		hdbscan_calculate_stats(distancesMap, &stats);
 		val = hdbscan_analyse_stats(&stats);
 	}
-	
+	hdbscan_print_cluster_sizes(colourSel.clusterKeypointIdx);
 	printf("------- MinPts = %d - new validity = %d (%d) and old validity = %d (%d)\n", colourSel.minPts, val, colourSel.numClusters, colourSel.validity, prevNumClusters);
 	
 	colourSel.validity = val;				
@@ -1816,7 +1835,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
 		getROI(vcount, settings, f, frame);
 		
-		cout << f.roi << endl;
+		//cout << f.roi << endl;
 		display("frame", frame);
         
 		f.hasRoi = vcount.roiExtracted;
@@ -1827,7 +1846,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
          * dataset. 
          */
 		if(settings.dClustering){			
-			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Original Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 			Mat dset = getDescriptorDataset(vcount.frameHistory, settings.step, f.descriptors, f.keypoints, settings.rotationalInvariance, false);	
 			f.results[ResultIndex::Descriptors] = clusterDescriptors(vcount, settings, f, dset, f.keypoints);
 		}
@@ -1837,15 +1856,17 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		 * 
 		 */ 
 		if(colourSel.minPts == -1 && (settings.isClustering || settings.fdClustering)){
-			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Detecting Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 			printf("Finding proper value of minPts\n");
-			colourSel = detectColourModel(frame, f.descriptors, f.keypoints, vcount.trainingFile);	
+			colourSel = trainColourModel(frame, f.descriptors, f.keypoints, vcount.trainingFile, vcount.trackingFile);	
 		} 
 		
 		if(colourSel.minPts != -1){
 			
 			if(vcount.frameHistory.size() > 0){
+				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Track Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				trackFrameColourModel(vcount, f, colourSel, frame);
+				//cout << "model tracked ..................." << endl;
 			}
 			
 			Mat roiDesc;
@@ -1858,7 +1879,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 			/// 
 			/****************************************************************************************************/
 			if(settings.isClustering){
-				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Image Space Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				printf("Clustering selected keypoints in image space\n\n\n");
 				imageSpaceClustering(vcount, settings, colourSel, f);			
 			}				
@@ -1870,7 +1891,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 			/// 
 			/****************************************************************************************************/
 			if(settings.fdClustering || settings.dfClustering || settings.dfiClustering){
-				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Selected Colour Model Descriptor Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				printf("Clustering selected keypoints in descriptor space\n\n");
 				filteredDescriptorClustering(vcount, settings, colourSel, res1, f, frame);	
 			}
@@ -1879,7 +1900,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 			/// Filter original descriptor clustering results with the frame colour model
 			/****************************************************************************************************/
 			if(settings.dfClustering){
-				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Selected Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				printf("Filtering detected objects with colour model\n\n");				
 				combineSelDescriptorsRawStructures(vcount, f, colourSel, settings.dfComboDir, settings.print);
 	
@@ -1980,8 +2001,7 @@ results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, M
 		printEstimates(vcount.descriptorsEstimatesFile, res->odata);
 		printClusterEstimates(vcount.descriptorsClusterFile, res->odata, res->cest);	
 	}
-    cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-	
+    	
 	return res;
 }
 
@@ -2019,9 +2039,9 @@ void finalise(vocount& vcount){
         vcount.indexEstimatesFile.close();
     }
 
-    if(vcount.trainingFile.is_open()){
-        vcount.trainingFile.close();
-    }
+    //if(vcount.trainingFile.is_open()){
+    //    vcount.trainingFile.close();
+    //}
 
     if(vcount.trackingFile.is_open()){
         vcount.trackingFile.close();

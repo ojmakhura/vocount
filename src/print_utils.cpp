@@ -53,7 +53,7 @@ void createOutputDirectories(vocount& vcount, vsettings& settings){
 			
 			name = settings.filteredDescDir + "/training.csv";
 			vcount.trainingFile.open(name.c_str());
-			vcount.trainingFile << "minPts, Num of Clusters, Validity" << endl;			
+			vcount.trainingFile << "minPts, Num of Clusters, Cluster 0 Size, Validity" << endl;			
 			
 			name = settings.filteredDescDir + "/tracking.csv";
 			vcount.trackingFile.open(name.c_str());
