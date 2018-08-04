@@ -233,42 +233,37 @@ void printImages(String& folder, map<String, Mat>* images, int count){
 }
 
 void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<int32_t>& roiFeatures, results_t* res, int i){
-	//if (vcount.print) {
-		int selSampleSize = 0;
-		if(g_hash_table_size(res->roiClusterPoints) > 0){
-			(*(res->odata))[OutDataIndex::SampleSize] = roiFeatures.size();
-			GHashTableIter iter;
-			gpointer key;
-			gpointer value;
-			g_hash_table_iter_init (&iter, res->roiClusterPoints);
+	
+	int selSampleSize = 0;
+	if(res->roiClusterPoints->size() > 0){
+		(*(res->odata))[OutDataIndex::SampleSize] = roiFeatures.size();
+		
+		for(map<int32_t, vector<int32_t>>::iterator it = res->roiClusterPoints->begin(); it != res->roiClusterPoints->end(); ++it){
+			selSampleSize += it->second.size();
+		}
 			
-			while (g_hash_table_iter_next (&iter, &key, &value)){
-				IntArrayList* list = (IntArrayList*)value;
-				selSampleSize += list->size;
-			}
-			(*(res->odata))[OutDataIndex::BoxEst] = res->boxStructures->size();
-		} else{
-			(*(res->odata))[OutDataIndex::SampleSize] = 0;
-			res->total = 0;
-			(*(res->odata))[OutDataIndex::BoxEst] = g_hash_table_size(res->clusterMap) - 1;
-		}
+		(*(res->odata))[OutDataIndex::BoxEst] = res->boxStructures->size();
+	} else{
+		(*(res->odata))[OutDataIndex::SampleSize] = 0;
+		res->total = 0;
+		(*(res->odata))[OutDataIndex::BoxEst] = g_hash_table_size(res->clusterMap) - 1;
+	}
 
-		(*(res->odata))[OutDataIndex::SelectedSampleSize] = selSampleSize;
-		(*(res->odata))[OutDataIndex::FeatureSize] = res->ogsize;
-		(*(res->odata))[OutDataIndex::SelectedFeatureSize] = res->selectedFeatures;
-		(*(res->odata))[OutDataIndex::NumClusters] = res->selectedClustersImages->size();
-		(*(res->odata))[OutDataIndex::ClusterSum] = res->total;
-		int32_t avg = res->total / res->selectedClustersImages->size();
-		(*(res->odata))[OutDataIndex::ClusterAverage] = avg;
-		(*(res->odata))[OutDataIndex::FrameNum] = i;
-		(*(res->odata))[OutDataIndex::Validity] = res->validity;
+	(*(res->odata))[OutDataIndex::SelectedSampleSize] = selSampleSize;
+	(*(res->odata))[OutDataIndex::FeatureSize] = res->ogsize;
+	(*(res->odata))[OutDataIndex::SelectedFeatureSize] = res->selectedFeatures;
+	(*(res->odata))[OutDataIndex::NumClusters] = res->selectedClustersImages->size();
+	(*(res->odata))[OutDataIndex::ClusterSum] = res->total;
+	int32_t avg = res->total / res->selectedClustersImages->size();
+	(*(res->odata))[OutDataIndex::ClusterAverage] = avg;
+	(*(res->odata))[OutDataIndex::FrameNum] = i;
+	(*(res->odata))[OutDataIndex::Validity] = res->validity;
 
-		if((size_t)i > vcount.truth.size()){
-			(*(res->odata))[OutDataIndex::TruthCount] = 0;
-		} else{
-			(*(res->odata))[OutDataIndex::TruthCount] = vcount.truth[i];
-		}
-	//}
+	if((size_t)i > vcount.truth.size()){
+		(*(res->odata))[OutDataIndex::TruthCount] = 0;
+	} else{
+		(*(res->odata))[OutDataIndex::TruthCount] = vcount.truth[i];
+	}
 }
 
 void printLabelsToFile(int32_t* labels, int32_t length, String folder, int fmt){
@@ -281,25 +276,17 @@ void printMatToFile(const Mat& mtx, String folder, String filename, int fmt){
 	String fname = folder;
 	fname += "/";
 	fname += filename;
-	//ofstream outfile(fname);
 	
 	if(fmt == Formatter::FMT_CSV){
 		fname += ".csv";	
-		//ofstream outfile(fname);
 	} else if(fmt == Formatter::FMT_MATLAB){
 		fname += ".m";
-		//ofstream outfile(fname);
 	} else if(fmt == Formatter::FMT_PYTHON){
 		fname += ".py";
-		//ofstream outfile(fname);
 	} else if(fmt == Formatter::FMT_NUMPY){
 		fname += ".py";
-		//ofstream outfile(fname);
-		//outfile << "import numpy as np" << endl;
-		//outfile << "data = " ;
 	} if(fmt == Formatter::FMT_C){
 		fname += ".h";
-		//ofstream outfile(fname);
 	}
 	
 	ofstream outfile(fname);

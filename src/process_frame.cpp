@@ -16,6 +16,10 @@
 #include <math.h>
 
 using namespace std;
+int32_t findCenterMostFeature(Rect2d& roi, vector<int32_t>& roiFeatures, vector<KeyPoint>* keypoints);
+bool trimRect(Rect& r, int rows, int cols, int padding);
+Rect shiftRect(Rect box, Point2f first, Point2f second);
+set<int32_t> findValidROIFeature(vector<KeyPoint>& keypoints, Rect2d& roi, vector<int32_t>& roiFeatures, vector<int32_t>* labels);
 
 static COLOURS colours;
 
@@ -103,34 +107,6 @@ vector<KeyPoint> getAllMatchedKeypoints( map_kp& finalPointClusters){
 	return kp;
 }
 
-double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vector<int32_t>* cest, int32_t& selectedFeatures, double& lsize){
-	double total = 0;
-			
-	GHashTableIter iter;
-	gpointer key;
-	gpointer value;
-	g_hash_table_iter_init (&iter, roiClusterPoints);
-
-	while (g_hash_table_iter_next (&iter, &key, &value)){
-		
-		int32_t* kk = (int32_t *)key;
-		IntArrayList* list = (IntArrayList *)value;
-		if(*kk != 0){
-			int32_t n = (*clusterKeyPoints)[*kk].size() / list->size;
-			cest->push_back(n);
-			total += n;
-			printf("%d has %d and total is %lu :: Approx Num of objects: %d\n\n", *kk, list->size,
-					(*clusterKeyPoints)[*kk].size(), n);
-			selectedFeatures += (*clusterKeyPoints)[*kk].size();
-
-			if ((*clusterKeyPoints)[*kk].size() > lsize) {
-				lsize = (*clusterKeyPoints)[*kk].size();
-			}
-		}		
-	}
-	return total;
-}
-
 /**
  * 
  * 
@@ -138,37 +114,22 @@ double countPrint(IntIntListMap* roiClusterPoints, map_kp* clusterKeyPoints, vec
 void generateFinalPointClusters(vector<int32_t>& roiFeatures, results_t* res){
 	set<int32_t> st;	// cluster for the roi features
 	for (vector<int32_t>::iterator it = roiFeatures.begin(); it != roiFeatures.end(); ++it) {
-		int* label;
 		int k = res->labels->at(*it);
-		label = &k;
 		if(k != 0){		
-			IntArrayList* list = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, label);
-			
-			// If the record was not in the hash table, create a new record
-			if(list == NULL){
-				label = (int *)malloc(sizeof(int));
-				*label = k;
-				list = int_array_list_init_size(roiFeatures.size());
-				g_hash_table_insert(res->roiClusterPoints, label, list);
-				st.insert(k);
-			}
-					
-			int_array_list_append(list, *it);
+			vector<int32_t>& list = (*(res->roiClusterPoints))[k];
+			list.push_back(*it);
+			st.insert(k);
 		}
 	}
 	
 	for (set<int32_t>::iterator it = st.begin(); it != st.end(); ++it){
 		int32_t key = *it;
-		//if (key != 0) {
 		int_array_list_append(res->objectClusters, key);
-		//}		
 	}
 	
-	//printf("** res->objectClusters size = %d and res->roiClusterPoints size = %d\n", res->objectClusters->size, g_hash_table_size(res->roiClusterPoints));
 	if(res->objectClusters->size > 0){
 		res->objectClusters = hdbscan_sort_by_similarity(res->distancesMap, res->objectClusters, INTRA_DISTANCE_TYPE);
 	}
-	//printf("** res->objectClusters size = %d and res->roiClusterPoints size = %d\n", res->objectClusters->size, g_hash_table_size(res->roiClusterPoints));
 	
 	int32_t *data = (int32_t *)res->objectClusters->data;
 	for(int32_t i = res->objectClusters->size - 1; i >= 0; i--){		
@@ -202,31 +163,32 @@ int rectExist(vector<box_structure>& structures, box_structure& bst){
 /**
  * Trim a rectangle
  */ 
-void trimRect(Rect& r, int rows, int cols, int padding){
+bool trimRect(Rect& r, int rows, int cols, int padding){
+	bool trimmed = false;
 	if(r.x < padding){
 		r.width += r.x - padding;
 		r.x = padding;
+		trimmed = true;
 	}
 				
 	if(r.y < padding){
 		r.height += r.y - padding;
 		r.y = padding;
+		trimmed = true;
 	}
 				
 	if((r.x + r.width) >= cols - padding){
 		r.width = cols - r.x - padding;
+		trimmed = true;
 	}
 				
 	if((r.y + r.height) >= rows - padding){
 		r.height = rows - r.y - padding;
+		trimmed = true;
 	}
-}
-/*
-Mat getMatchTemplate(){
-	Mat result;
 	
-	return result;
-}*/
+	return trimmed;
+}
 
 /**
  * Stabilise the proposed object location by using template matching
@@ -250,7 +212,7 @@ bool stabiliseRect(Mat frame, Rect templ_r, Rect& proposed){
 	
 	Mat img = frame(new_r);
 	trimRect(templ_r, frame.rows, frame.cols, 0);
-	//cout << templ_r << endl;
+	
 	Mat templ = frame(templ_r);
 	
 	if(img.rows < templ.rows && img.cols < templ.cols){
@@ -340,9 +302,7 @@ bool stabiliseRectByMoments(Mat& frame, const box_structure templ_r, Rect& propo
 		} else{
 			min = -1;
 		}
-		
-		//cout << "-1 : " << momCompare << " ";
-		
+				
 		Rect top = center;
 		top.y -= 1;
 		trimRect(top, frame.rows, frame.cols, 0);
@@ -393,14 +353,11 @@ bool stabiliseRectByMoments(Mat& frame, const box_structure templ_r, Rect& propo
 			}
 			Mat m = gray(rects[i]);
 			momCompare = matchShapes(templ_r.gray, m, CONTOURS_MATCH_I3, 0);
-			//cout <<  i << " : " << momCompare << " ";
 			if(momCompare < minMom){
 				min = i;
 				minMom = momCompare;
 			}
 		}
-		
-		//cout << endl;
 		
 		if(min != -1){
 			center = rects[min];
@@ -414,6 +371,18 @@ bool stabiliseRectByMoments(Mat& frame, const box_structure templ_r, Rect& propo
 	return true;
 }
 
+Rect shiftRect(Rect box, Point2f first, Point2f second){
+	Rect n_rect = box;;
+	Point2f pshift;
+	pshift.x = second.x - first.x;
+	pshift.y = second.y - first.y;
+	//printf("pshift = (%f, %f)\n", pshift.x, pshift.y);
+	Point pp = pshift;
+	n_rect = n_rect + pp;
+	
+	return n_rect;
+}
+
 /**
  * 
  * 
@@ -424,16 +393,17 @@ void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_
 		KeyPoint point = c_points[j];
 		if(point.pt != first_p.pt){ // roi points have their own structure "mbs"
 			
-			Point2f pshift;
-			pshift.x = point.pt.x - first_p.pt.x;
-			pshift.y = point.pt.y - first_p.pt.y;
+			//Point2f pshift;
+			//pshift.x = point.pt.x - first_p.pt.x;
+			//pshift.y = point.pt.y - first_p.pt.y;
 
 			// shift the roi to get roi for a possible new object
-			Rect n_rect = mbs.box;
+			//Rect n_rect = mbs.box;
 			
-			Point pp = pshift;
-			n_rect = n_rect + pp;
+			//Point pp = pshift;
+			//n_rect = n_rect + pp;
 			
+			Rect n_rect = shiftRect(mbs.box, first_p.pt, point.pt);
 			stabiliseRect(frame, mbs.box, n_rect);
 			
 			box_structure bst;
@@ -659,7 +629,7 @@ void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, Rect2d& roi, 
 				distance = calcDistanceL1(p, keypoints[i].pt);
 			} else {
 				double d1 = calcDistanceL1(p, keypoints[i].pt);
-					if(d1 < distance){
+				if(d1 < distance){
 					distance = d1;
 					centerFeature = i;
 				}
@@ -673,6 +643,183 @@ void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, Rect2d& roi, 
 	}
 }
 
+int32_t findCenterMostFeature(Rect2d& roi, vector<int32_t>& roiFeatures, vector<KeyPoint>* keypoints){
+	int32_t centerFeature = -1;
+	Point2f p;
+
+	p.x = (roi.x + roi.width)/2.0f;
+	p.y = (roi.y + roi.height)/2.0f;
+	double distance;
+	
+	for(size_t i = 0; i < roiFeatures.size(); i++){
+		KeyPoint& r_kp = keypoints->at(roiFeatures[i]);
+		if(centerFeature == -1){
+			centerFeature = i;
+			distance = calcDistanceL1(p, r_kp.pt);
+		} else {
+			double d1 = calcDistanceL1(p, r_kp.pt);
+			if(d1 < distance){
+				distance = d1;
+				centerFeature = i;
+			}
+		}
+	}
+	
+	return centerFeature;
+}
+
+/**
+ * Find the roi features and at the same time find the central feature.
+ */
+set<int32_t> findValidROIFeature(vector<KeyPoint>& keypoints, Rect2d& roi, vector<int32_t>& roiFeatures, vector<int32_t>* labels){
+	Rect2d& r = roi;
+	Point2f p;
+	set<int32_t> roiClusters;
+	p.x = (r.x + r.width)/2.0f;
+	p.y = (r.y + r.height)/2.0f;
+	for(uint i = 0; i < keypoints.size(); ++i){
+		int32_t label = labels->at(i);
+		if(roi.contains(keypoints[i].pt) && label != 0){
+			roiClusters.insert(label);
+			roiFeatures.push_back(i);	
+		} 
+	}
+	
+	return roiClusters;
+}
+
+/**
+ * 
+ * 
+ */ 
+void getBoxStructureByHomography(results_t* res, Rect2d& roi, Mat& frame, bool extend, bool reextend){
+	
+	//int32_t centerFeature;
+	Mat roiDesc;
+	//vector<int32_t> roiFeatures;
+	vector<int32_t> validObjFeatures;
+	
+	//cout << "First roi " << roi << endl;
+	
+	/*findROIFeature(*(res->keypoints), *(res->dataset), roi, roiFeatures, roiDesc, centerFeature);
+	
+	set<int32_t> roiClusters;
+	for(size_t i = 0; i < roiFeatures.size(); i++){
+		int32_t label = res->labels->at(roiFeatures[i]);
+		if(label != 0){
+			roiClusters.insert(label);
+			validFeatures.push_back(roiFeatures[i]);
+			obj.push_back(res->keypoints->at(roiFeatures[i]).pt);
+		}
+	}
+	roiFeatures.clear();*/
+	set<int32_t> roiClusters = findValidROIFeature(*(res->keypoints), roi, validObjFeatures, res->labels);
+	//centerFeature = findCenterMostFeature(roi, validObjFeatures, res->keypoints);
+		
+	cout << "Found " << validObjFeatures.size() << " valid features" << endl;
+	
+	for(size_t i = 0; i < validObjFeatures.size(); i++){
+		int32_t label = res->labels->at(validObjFeatures[i]);
+		KeyPoint r_kp = res->keypoints->at(validObjFeatures[i]);
+		
+		IntArrayList* p = (IntArrayList *)g_hash_table_lookup (res->clusterMap, &label);
+		int32_t* data = (int32_t *)p->data;
+		///
+		/// Create a scene for each of the points in the cluster
+		for(int32_t j = 0; j < p->size; j++){
+			KeyPoint n_kp = res->keypoints->at(data[j]);
+			Rect newRect = shiftRect(roi, r_kp.pt, n_kp.pt);
+			//cout << "roi is " << roi << endl;
+			//printf("first -> (%f, %f), second -> (%f, %f)\n", r_kp.pt.x, r_kp.pt.y, n_kp.pt.x, n_kp.pt.y);
+			//cout << "newRect = " << newRect << endl;
+			// widen the new rect
+			int32_t h_p = newRect.height/2;
+			int32_t w_p = newRect.width/2;
+			
+			newRect.x = newRect.x - w_p;
+			newRect.y = newRect.y - h_p;
+			newRect.height = newRect.height * 2;
+			newRect.width = newRect.width * 2;
+			
+			//cout << "Finding features at " << newRect << endl;
+			bool trimmed = trimRect(newRect, frame.rows, frame.cols, 0);
+			Rect2d rr = Rect2d(newRect);
+			//cout << "Finding features at " << rr << endl;
+			vector<int32_t> sceneFeatures;
+			findValidROIFeature(*(res->keypoints), rr, sceneFeatures, res->labels);
+			vector<int32_t> validSceneFeatures;
+			
+			// Find scene points that share clusters with object points
+			for(size_t k = 0; k < sceneFeatures.size(); k++){
+				int32_t lbl = res->labels->at(sceneFeatures[k]);
+				set<int32_t>::iterator itr = roiClusters.find(lbl);
+				if(itr != roiClusters.end()){
+					validSceneFeatures.push_back(sceneFeatures[k]);
+				}
+			}
+			
+			cout << validSceneFeatures.size() << " - " << validObjFeatures.size() << endl;
+			
+			// create matching points for scene and object
+			// For each of the points in the object, use cluster label
+			// to match with any of the points in the scene
+			vector<Point2f> scene;
+			vector<Point2f> obj;
+			for(size_t k = 0; k < validObjFeatures.size(); k++){
+				int32_t lbl = res->labels->at(validObjFeatures[k]);
+				for(size_t l = 0; l < validSceneFeatures.size(); l++){
+					int32_t lbl2 = res->labels->at(validSceneFeatures[l]);
+					
+					if(lbl == lbl2){
+						obj.push_back(res->keypoints->at(validObjFeatures[k]).pt);
+						scene.push_back(res->keypoints->at(validSceneFeatures[l]).pt);
+						printf("(%f, %f) to (%f, %f)\n", res->keypoints->at(validObjFeatures[k]).pt.x, 
+														res->keypoints->at(validObjFeatures[k]).pt.y, 
+														res->keypoints->at(validSceneFeatures[l]).pt.x, 
+														res->keypoints->at(validSceneFeatures[l]).pt.y);
+					}
+				}
+			}
+						
+			printf("obj.size() = %ld, scene.size() = %ld\n", obj.size(), scene.size());
+			if(obj.size() > 3){
+				Mat H = findHomography( obj, scene, 0 );
+				Mat img_object = frame(newRect);
+				cout<< endl << H << endl << endl;
+				//-- Get the corners from the image_1 ( the object to be "detected" )
+				std::vector<Point2f> obj_corners(4);
+				obj_corners[0] = cvPoint(0,0); 
+				obj_corners[1] = cvPoint( img_object.cols, RHO);
+				obj_corners[2] = cvPoint( img_object.cols, img_object.rows ); 
+				obj_corners[3] = cvPoint( 0, img_object.rows );
+				
+				vector<Point2f> scene_corners(4);
+				
+				if(!H.empty()){
+					perspectiveTransform( obj_corners, scene_corners, H);
+					
+					cout << scene_corners[0].x << ", " << scene_corners[0].y << endl;
+					cout << scene_corners[1].x << ", " << scene_corners[1].y  << endl;
+					cout << scene_corners[2].x << ", " << scene_corners[2].y  << endl;
+					cout << scene_corners[3].x << ", " << scene_corners[3].y  << endl << endl << endl;	
+					
+					//-- Draw lines between the corners (the mapped object in the scene - image_2 )
+					line( frame, scene_corners[0] + Point2f( img_object.cols, 0), scene_corners[1] + Point2f( img_object.cols, 0), Scalar(0, 255, 0), 4 );
+					line( frame, scene_corners[1] + Point2f( img_object.cols, 0), scene_corners[2] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
+					line( frame, scene_corners[2] + Point2f( img_object.cols, 0), scene_corners[3] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
+					line( frame, scene_corners[3] + Point2f( img_object.cols, 0), scene_corners[0] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
+					printImage("out", 222, "mymatches", frame);
+				}
+			}	
+		}
+	}
+	exit(0);
+}
+
+/**
+ * 
+ * 
+ */ 
 void getBoxStructure(results_t* res, Rect2d& roi, Mat& frame, bool extend, bool reextend){
 	vector<vector<box_structure>> b_structures;
 	set<int32_t> processedClusters;
@@ -680,20 +827,10 @@ void getBoxStructure(results_t* res, Rect2d& roi, Mat& frame, bool extend, bool 
 	
 	for(int32_t i = res->objectClusters->size - 1; i >= 0; i--){
 		int32_t key = data[i];
-		//printf("Location 2 key = %d\n", key);
 		processedClusters.insert(key);
 		(*res->clusterStructures)[key];
-		//printf("------ Searching for key %d from es->objectClusters->size %d\n", key, res->objectClusters->size);
-		//IntArrayList *roiPoints = (IntArrayList *)g_hash_table_lookup(res->roiClusterPoints, &(key));
-		
 		vector<vector<KeyPoint>> kps;
-		/*if(roiPoints != NULL && roiPoints->size > 1){
-			IntArrayList *cPoints = (IntArrayList *)g_hash_table_lookup(res->clusterMap, &(key));
-			splitROICluster(roiPoints, cPoints, *(res->dataset), kps, *(res->keypoints));
-			cout << "::::::::::::::: Split points" << endl;
-		} else{*/
 		kps.push_back(res->finalPointClusters->at(key));
-		//}
 		
 		vector<box_structure> str2;
 		box_structure mbs;
@@ -728,6 +865,10 @@ void getBoxStructure(results_t* res, Rect2d& roi, Mat& frame, bool extend, bool 
 				res->boxStructures->push_back(*it);
 			} else{ /// The rect exist s merge the points
 				box_structure& strct = res->boxStructures->at(idx);
+				if(it->histCompare > strct.histCompare){
+					strct.box = it->box;
+				}
+				//printf("comparing (%f, %f) and (%f, %f)\n", it->histCompare, strct.histCompare, it->momentsCompare, strct.momentsCompare);
 				strct.points.insert(strct.points.begin(), it->points.begin(), it->points.end());
 			}
 		}
@@ -766,25 +907,7 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
 }
 
 void getFrameTruth(String truthFolder, map<int, int>& truth){
-	
-	/*QDir tf(truthFolder.c_str());
-	QStringList fileList = tf.entryList(QDir::Files, QDir::Name);
-	for(int i = 0; i < fileList.size(); i++){
-		QString fileName = fileList.at(i);
-		QStringList tokens = fileName.split(' ');
-		
-		String full = truthFolder + "/" + fileName.toStdString();
-	    Mat image = imread(full, CV_LOAD_IMAGE_GRAYSCALE);
-		threshold(image, image, 200, 255, THRESH_BINARY);
-		Mat labels;
-		connectedComponents(image, labels, 8, CV_16U);
-		double min, max;
-		cv::minMaxLoc(labels, &min, &max);
-
-		int fnum = tokens[0].toInt();
-		truth[fnum] = int(max);
-	}*/
-		
+			
 	int rc;
 	MDB_env *env;
 	MDB_dbi dbi;
@@ -882,26 +1005,9 @@ Mat getColourDataset(Mat f, vector<KeyPoint> pts){
 	float* data = m.ptr<float>(0);
 	for(size_t i = 0; i < pts.size(); i++){
 		Point2f pt = pts[i].pt;
-		/*Rect r2(pt.x - 1, pt.y - 1, 3, 3);
-		trimRect(r2, f.rows, f.cols, 0);
-		Mat tmp = f(r2);
-		Mat mean, stdDev;
-		meanStdDev(tmp, mean, stdDev);
-		*/
 		
-		/*cout << tmp << endl;
-		cout << endl << mean.size() << mean << endl;
-		cout << mean.at<double>(0, 0) << endl;
-		cout << mean.at<double>(0, 1) << endl;
-		cout << mean.at<double>(0, 2) << endl;
-		cout << endl << stdDev << endl;
-		*/
 		Vec3b p = tmpf.at<Vec3b>(pt);
 		int idx = i * 3;
-		/*data[idx] = mean.at<double>(0, 0); //p.val[0];
-		data[idx + 1] = mean.at<double>(0, 1); //p.val[1];
-		data[idx + 2] = mean.at<double>(0, 2); //p.val[2];
-		*/
 		
 		data[idx] = p.val[0];
 		data[idx + 1] = p.val[1];
@@ -911,20 +1017,10 @@ Mat getColourDataset(Mat f, vector<KeyPoint> pts){
 }
 
 void getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices, Mat& out){
-	//Mat m;
-	//printf("desc has %d rows \n", desc.rows);
 	int32_t *dt = (int32_t *)indices->data;
 	for(int i = 0; i < indices->size; i++){
-		/*if(m.empty()){
-			m = desc.row(dt[i]);
-
-		} else{*/
-		//printf("Adding row %d\n", dt[i]);
 		out.push_back(desc.row(dt[i]));
-		//}
 	}
-
-	//return m;
 }
 
 void getKeypointMap(IntIntListMap* listMap, vector<KeyPoint>* keypoints, map_kp& mp){
@@ -1070,14 +1166,6 @@ int chooseMinPts(map<uint, set<int>>& numClusterMap, vector<int>& validities){
 				}
 			}
 			
-			/*
-			cout << "............................................................................. : " << endl;
-			printf("DEBUG: Tmp has size %ld and is \n", tmp.size());
-			for(map<uint, set<int>>::iterator it = tmp.begin(); it != tmp.end(); ++it){
-				cout << it->first << " : " << it->second.size() << endl;
-			}
-			cout << ".............................................................................\n" << endl;
-			*/
 			numClusters = findLargestSet(tmp);
 		}
 	}
@@ -1098,18 +1186,12 @@ selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 	map<int, IntIntListMap* > clusterMaps;
 	
 	printf("Detecting minPts value for colour clustering.\n");
-    //ofstream trainingOut;    
-    //trainingOut.open("out/colour_training_a.csv");
-    //if(trainingFile.is_open()){
-		//trainingFile << "minPts,Num of Clusters, Validity" << endl;   
-	//}
 	Mat dataset = getColourDataset(frame, keypoints);
-	printMatToFile(dataset, "out", "colour_training_dset", Formatter::FMT_CSV);
-	printMatToFile(dataset, "out", "colour_training_dset", Formatter::FMT_MATLAB);
-	printMatToFile(dataset, "out", "colour_training_dset", Formatter::FMT_NUMPY);
+	//printMatToFile(dataset, "out", "colour_training_dset", Formatter::FMT_CSV);
+	//printMatToFile(dataset, "out", "colour_training_dset", Formatter::FMT_MATLAB);
+	//printMatToFile(dataset, "out", "colour_training_dset", Formatter::FMT_NUMPY);
 	
 	selection_t colourSelection;
-	//IntIntListMap* clusterKeypointIdxMap = NULL;
 	hdbscan scan(3, DATATYPE_FLOAT);
 	scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);	
 	
@@ -1121,7 +1203,7 @@ selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 		IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);
 		clusterMaps[i] = clusterMap;
 		
-		hdbscan_print_cluster_sizes(clusterMap);
+		//hdbscan_print_cluster_sizes(clusterMap);
 		cout << endl << endl;
 		IntDistancesMap* distancesMap = hdbscan_get_min_max_distances(&scan, clusterMap);
 		clustering_stats stats;
@@ -1148,7 +1230,7 @@ selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 		cout << "---------------------------------------------------------------------------------" << endl;
 		*/
 		
-		GHashTableIter iter;
+		/*GHashTableIter iter;
 		gpointer key;
 		gpointer value;
 		g_hash_table_iter_init (&iter, distancesMap);
@@ -1163,7 +1245,7 @@ selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 			cout << "\tmin_dr:" << dvs->min_dr;
 			cout << "\tmax_dr:" << dvs->max_dr;
 			cout << "\tdr_confidence:" << dvs->dr_confidence << endl;
-		}
+		}*/
 				
 		uint idx = g_hash_table_size(clusterMap) - 1;
 		int k = 0;
@@ -1199,9 +1281,9 @@ selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 		
 	colourSelection.minPts = chooseMinPts(numClusterMap, validities);
 	
-	printLabelsToFile(labelsList[colourSelection.minPts - 3], scan.numPoints, "out", Formatter::FMT_CSV);
-	printLabelsToFile(labelsList[colourSelection.minPts - 3], scan.numPoints, "out", Formatter::FMT_MATLAB);
-	printLabelsToFile(labelsList[colourSelection.minPts - 3], scan.numPoints, "out", Formatter::FMT_NUMPY);
+	//printLabelsToFile(labelsList[colourSelection.minPts - 3], scan.numPoints, "out", Formatter::FMT_CSV);
+	//printLabelsToFile(labelsList[colourSelection.minPts - 3], scan.numPoints, "out", Formatter::FMT_MATLAB);
+	//printLabelsToFile(labelsList[colourSelection.minPts - 3], scan.numPoints, "out", Formatter::FMT_NUMPY);
 	
 	for(map<int, IntDoubleListMap* >::iterator it = clusterMaps.begin(); it != clusterMaps.end(); ++it){
 		if(it->first == colourSelection.minPts){
@@ -1220,7 +1302,7 @@ selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 		trainingFile << "Selected minPts," << colourSelection.minPts << "\n";
 		trainingFile.close();
 	}
-	//colourSelection.numClusters = g_hash_table_size(colourSelection.clusterKeypointIdx);
+	
 	GHashTableIter iter;
 	gpointer key;
 	gpointer value;
@@ -1234,8 +1316,7 @@ selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 		Mat m = drawKeyPoints(frame, kps, colours.red, -1);
 		// print the choice images
 		String imName = "choice_cluster_";
-		imName += std::to_string(*k).c_str();		
-		printImage("out", 1, imName, m);
+		imName += std::to_string(*k).c_str();	
 		
 		if(*k != 0){
 			String windowName = "Choose ";
@@ -1303,7 +1384,8 @@ results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints){
 	res->objectClusters = int_array_list_init();
 		
     res->clusterMap = NULL;		 								/// maps labels to the keypoint indices
-    res->roiClusterPoints = g_hash_table_new(g_int_hash, g_int_equal);								/// cluster labels for the region of interest mapped to the roi points in the cluster
+    
+    res->roiClusterPoints = new map<int32_t, vector<int32_t>>(); /// cluster labels for the region of interest mapped to the roi points in the cluster
     res->distancesMap = NULL;									/// Min and Max distance table for each cluster
     
 	res->lsize = 0;
@@ -1318,7 +1400,6 @@ results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints){
 
 results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_minPts, bool analyse, bool singleRun){
 	
-	//results_t res;
 	if(res == NULL){
 		res = initResult_t(dataset, keypoints);
 	}
@@ -1346,8 +1427,6 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 			d_map = hdbscan_get_min_max_distances(&scan, c_map);
 			hdbscan_calculate_stats(d_map, &stats);
 			val = hdbscan_analyse_stats(&stats);
-			//hdbscan_print_distance_map_table(d_map);
-			//hdbscan_print_stats(&stats);
 		}
 		
 		if(c_map != NULL){
@@ -1403,19 +1482,8 @@ void cleanResult(results_t* res){
 			hdbscan_destroy_distance_map_table(res->distancesMap);
 			res->distancesMap = NULL;
 		}
-		
-		/**
-		 * Here we are using the hdbscan_destroy_cluster_table from the hdbscan.c
-		 * because roiClusterPoints and clusterTable are basically the same structure
-		 * being IntIntListMap datatype.
-		 */ 
-		if(res->roiClusterPoints != NULL){		
-			hdbscan_destroy_cluster_table(res->roiClusterPoints);
-			res->roiClusterPoints = NULL;
-		}
-		
-		int_array_list_delete(res->objectClusters);
-		
+				
+		delete res->roiClusterPoints;
 		delete res->dataset;
 		delete res->keypoints;
 		delete res->finalPointClusters;
@@ -1528,8 +1596,7 @@ void trackFrameColourModel(vocount& vcount, framed& f, selection_t& colourSel, M
 	size_t p_size = 0;
 	
 	framed ff;	
-	Mat dataset; // = getColourDataset(ff.frame, keyp);
-	//cout << "1 ......" << endl;
+	Mat dataset; 
 	if(!vcount.frameHistory.empty()){
 		ff = vcount.frameHistory[vcount.frameHistory.size()-1];
 		keyp.insert(keyp.end(), ff.keypoints.begin(), ff.keypoints.end());
@@ -1537,14 +1604,12 @@ void trackFrameColourModel(vocount& vcount, framed& f, selection_t& colourSel, M
 		p_size = ff.keypoints.size();
 	}
 	
-	//cout << "2 ......" << endl;
-	//Mat dataset = getColourDataset(ff.frame, keyp);
 	keyp.insert(keyp.end(), f.keypoints.begin(), f.keypoints.end());
 	dataset.push_back(getColourDataset(frame, f.keypoints));
 	dataset = dataset.clone();
 	hdbscan scanis(2*colourSel.minPts, DATATYPE_FLOAT);
 	scanis.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
-	//cout << "3 ......" << endl;
+	
 	/****************************************************************************************************/
 	/// Get the hash table for the current dataset and find the mapping to clusters in prev frame
 	/// and map them to selected colour map
@@ -1572,7 +1637,7 @@ void trackFrameColourModel(vocount& vcount, framed& f, selection_t& colourSel, M
 		hdbscan_calculate_stats(distancesMap, &stats);
 		val = hdbscan_analyse_stats(&stats);
 	}
-	hdbscan_print_cluster_sizes(colourSel.clusterKeypointIdx);
+	
 	printf("------- MinPts = %d - new validity = %d (%d) and old validity = %d (%d)\n", colourSel.minPts, val, colourSel.numClusters, colourSel.validity, prevNumClusters);
 	
 	colourSel.validity = val;				
@@ -1592,9 +1657,6 @@ void trackFrameColourModel(vocount& vcount, framed& f, selection_t& colourSel, M
 			int32_t idx = ldata[x];
 			int32_t newCluster = (scanis.clusterLabels)[idx];
 			temp[newCluster].push_back(idx);
-			//if(newCluster != 0){
-				//currSelClusters.insert(newCluster);			
-			//}
 		}
 						
 		int32_t selC = -1;
@@ -1625,7 +1687,7 @@ void trackFrameColourModel(vocount& vcount, framed& f, selection_t& colourSel, M
 					
 	Mat selDesc;
 	for (set<int32_t>::iterator itt = colourSel.selectedClusters.begin(); itt != colourSel.selectedClusters.end(); ++itt) {
-		//printf("Checking cluster %d\n", *itt);
+		
 		int cluster = *itt;
 		IntArrayList* list = (IntArrayList*)g_hash_table_lookup(colourSel.clusterKeypointIdx, &cluster);
 		int32_t* ldata = (int32_t*)list->data;
@@ -1681,7 +1743,7 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 			f.roiFeatures.clear();
 			f.roiDesc = Mat();
 			f.centerFeature = -1;
-			//printf("*\n*\n");
+			
 			vector<box_structure>* bxs = vcount.frameHistory[vcount.frameHistory.size()-xz].results.at(ResultIndex::Descriptors)->boxStructures;
 			
 			if(!bxs->empty()){	
@@ -1689,7 +1751,7 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 				Rect prev = f.roi;
 				Rect nRect = f.roi;
 				stabiliseRect(frame, prev, nRect);
-				//f.roi = nRect;
+				
 				vcount.tracker = createTrackerByName(settings.trackerAlgorithm);
 				vcount.tracker->init(vcount.frameHistory[vcount.frameHistory.size()-1].frame, f.roi);
 				vcount.tracker->update(frame, f.roi);				
@@ -1743,11 +1805,9 @@ void imageSpaceClustering(vocount& vcount, vsettings& settings, selection_t& col
 				box_structure& bs = res1->boxStructures->at(j);
 				if(bs.box.contains(kp.pt)){
 					tmpids.push_back(j);
-					//boxLabel[i] = j;
-					//break;
 				}
 			}
-			//printf("tmpids has %lu size\n", tmpids.size());
+			
 			if(!tmpids.empty()){
 				double minMoments = res1->boxStructures->at(tmpids[0]).momentsCompare;
 				int minIdx = tmpids[0];
@@ -1765,7 +1825,7 @@ void imageSpaceClustering(vocount& vcount, vsettings& settings, selection_t& col
 			}					
 		}
 		set<int32_t> lst(boxLabel.begin(), boxLabel.end());
-		//int cou = 0;
+		
 		vector<box_structure> bsts;
 		Mat fdi = f.frame.clone();
 		for(set<int32_t>::iterator it = lst.begin(); it != lst.end(); ++it){
@@ -1835,7 +1895,6 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
 		getROI(vcount, settings, f, frame);
 		
-		//cout << f.roi << endl;
 		display("frame", frame);
         
 		f.hasRoi = vcount.roiExtracted;
@@ -1866,7 +1925,6 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 			if(vcount.frameHistory.size() > 0){
 				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Track Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				trackFrameColourModel(vcount, f, colourSel, frame);
-				//cout << "model tracked ..................." << endl;
 			}
 			
 			Mat roiDesc;
@@ -1954,9 +2012,6 @@ void combineSelDescriptorsRawStructures(vocount& vcount, framed& f, selection_t&
 			}
 			keypointStructures[i] = minIdx;
 			selectedStructures.insert(minIdx);
-		//} else{
-			//int32_t oldIdx = colourSel.oldIndices[i];
-			//printf("Keypoint %d has new cluster %d and old cluster %d\n", i, seleDescriptorResults->labels->at(i), descriptorResults->labels->at(oldIdx));
 		}
 	}
 		
@@ -1988,6 +2043,7 @@ results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, M
 	results_t* res = do_cluster(NULL, dataset, keypoints, settings.step, 3, true, false);
 	generateFinalPointClusters(f.roiFeatures, res);	
 	getBoxStructure(res, f.roi, f.frame, settings.extend, false);
+	//getBoxStructureByHomography(res, f.roi, f.frame, settings.extend, false);
     res->total = 0; //countPrint(res->roiClusterPoints, res->finalPointClusters, res->cest, res->selectedFeatures, res->lsize);
 			
 	if(settings.print){
@@ -2038,10 +2094,6 @@ void finalise(vocount& vcount){
     if(vcount.indexEstimatesFile.is_open()){
         vcount.indexEstimatesFile.close();
     }
-
-    //if(vcount.trainingFile.is_open()){
-    //    vcount.trainingFile.close();
-    //}
 
     if(vcount.trackingFile.is_open()){
         vcount.trackingFile.close();

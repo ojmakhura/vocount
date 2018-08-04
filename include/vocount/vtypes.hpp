@@ -71,7 +71,8 @@ typedef struct {
 	vector<KeyPoint>* keypoints;
 	Mat* dataset;
     IntIntListMap* clusterMap = NULL;		 								/// maps labels to the keypoint indices
-    IntIntListMap* roiClusterPoints = NULL;									/// cluster labels for the region of interest mapped to the roi points in the cluster
+    //IntIntListMap* roiClusterPoints = NULL;									/// cluster labels for the region of interest mapped to the roi points in the cluster
+    map<int32_t, vector<int32_t>>* roiClusterPoints;
     clustering_stats stats;													/// Statistical values for the clusters
     IntDistancesMap* distancesMap = NULL;									/// Min and Max distance table for each cluster
 	map_kp* finalPointClusters;
