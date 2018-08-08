@@ -169,7 +169,7 @@ int main(int argc, char** argv) {
     vsettings settings;
     selection_t colourSel;
     colourSel.minPts = -1;
-	vcount.detector = SURF::create(1000);
+	vcount.detector = SURF::create(MIN_HESSIAN);
 	
 	cv::CommandLineParser parser(argc, argv,
 					"{help ||}{o||}{n|1|}"

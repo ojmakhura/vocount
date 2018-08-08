@@ -22,8 +22,8 @@ using namespace cv;
 using namespace std;
 using namespace clustering;
 
+#define MIN_HESSIAN 100
 typedef map<int32_t, vector<KeyPoint>> map_kp;
-
 static bool VO_DEBUG = false;
 
 enum class OutDataIndex{	

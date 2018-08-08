@@ -17,7 +17,7 @@ VUIPlayer::VUIPlayer(QObject *parent)
     : QThread(parent){
     //ocl::setUseOpenCL(true);
     this->colourSel.minPts = -1;
-	this->vcount.detector = SURF::create(1000);
+	this->vcount.detector = SURF::create(MIN_HESSIAN);
 }
 
 VUIPlayer::~VUIPlayer(){    
