@@ -24,6 +24,7 @@ using namespace clustering;
 
 #define MIN_HESSIAN 100
 typedef map<int32_t, vector<KeyPoint>> map_kp;
+
 static bool VO_DEBUG = false;
 
 enum class OutDataIndex{	
@@ -59,13 +60,15 @@ typedef struct {
 } selection_t;
 
 typedef struct _box_structure{
-	Rect box;
+	Rect2d box;
 	Point matchPoint;										/// Template match location
-	vector<KeyPoint> points;
+	set<int32_t> points;
 	Mat img_, hsv, gray;
 	MatND hist;
 	double histCompare, momentsCompare;	
 } box_structure;
+
+typedef map<int32_t, vector<box_structure>> map_st;
 
 typedef struct {
 	vector<KeyPoint>* keypoints;
@@ -79,7 +82,7 @@ typedef struct {
 	map<OutDataIndex, int32_t>* odata;											/// Output data
     vector<int32_t>* labels;												/// hdbscan cluster labels
 	vector<box_structure>* boxStructures;									/// Bounding boxes for the individual objects in the frame
-	map<int32_t, vector<Rect2d>>* clusterStructures;
+	map_st* clusterStructures;
 	vector<int32_t>* cest;
 	map<String, Mat>* selectedClustersImages;										/// images with cluster by cluster keypoints drawn
 	map<String, Mat>* leftoverClusterImages;								/// images with leftover clusters
@@ -102,7 +105,7 @@ typedef struct FRAMED{
 	vector<KeyPoint> keypoints; 									/// Frame keypoints
 	Rect2d roi;														/// region of interest rectangle
 	vector<int32_t> roiFeatures;										/// indices of the features inside the roi
-	int32_t centerFeature = -1;											/// index of the roi central feature
+	//int32_t centerFeature = -1;											/// index of the roi central feature
 	Mat roiDesc;													/// region of interest descriptors
 	bool hasRoi = false;
 	map<ResultIndex, results_t*> results;

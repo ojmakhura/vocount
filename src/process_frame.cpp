@@ -17,9 +17,13 @@
 
 using namespace std;
 int32_t findCenterMostFeature(Rect2d& roi, vector<int32_t>& roiFeatures, vector<KeyPoint>* keypoints);
-bool trimRect(Rect& r, int rows, int cols, int padding);
-Rect shiftRect(Rect box, Point2f first, Point2f second);
+bool trimRect(Rect2d& r, int rows, int cols, int padding);
+Rect2d shiftRect(Rect2d box, Point2f first, Point2f second);
 set<int32_t> findValidROIFeature(vector<KeyPoint>& keypoints, Rect2d& roi, vector<int32_t>& roiFeatures, vector<int32_t>* labels);
+set<int32_t> findFeatureClusters(vector<int32_t>& roiFeatures, vector<int32_t>* labels);
+void sortbyDistanceFromCenter(Rect2d& roi, vector<int32_t>& roiFeatures, vector<KeyPoint>* keypoints);
+void getVectorKeypoints(vector<KeyPoint>& keypoints, vector<int32_t>& list, vector<KeyPoint>& out);
+void _getBoxStructure(results_t* res, Rect2d& roi, Mat& frame, bool extend, bool reextend);
 
 static COLOURS colours;
 
@@ -113,6 +117,7 @@ vector<KeyPoint> getAllMatchedKeypoints( map_kp& finalPointClusters){
  */ 
 void generateFinalPointClusters(vector<int32_t>& roiFeatures, results_t* res){
 	set<int32_t> st;	// cluster for the roi features
+	/// Find the 
 	for (vector<int32_t>::iterator it = roiFeatures.begin(); it != roiFeatures.end(); ++it) {
 		int k = res->labels->at(*it);
 		if(k != 0){		
@@ -122,15 +127,20 @@ void generateFinalPointClusters(vector<int32_t>& roiFeatures, results_t* res){
 		}
 	}
 	
+	//set<int32_t> st = findFeatureClusters(roiFeatures, res->labels);
+	
+	// Add the roi clusters to the object clusters
 	for (set<int32_t>::iterator it = st.begin(); it != st.end(); ++it){
 		int32_t key = *it;
 		int_array_list_append(res->objectClusters, key);
 	}
 	
+	// Sort the object clusters by similarity
 	if(res->objectClusters->size > 0){
 		res->objectClusters = hdbscan_sort_by_similarity(res->distancesMap, res->objectClusters, INTRA_DISTANCE_TYPE);
 	}
 	
+	// 
 	int32_t *data = (int32_t *)res->objectClusters->data;
 	for(int32_t i = res->objectClusters->size - 1; i >= 0; i--){		
 		IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(res->clusterMap, data+i);			
@@ -163,7 +173,7 @@ int rectExist(vector<box_structure>& structures, box_structure& bst){
 /**
  * Trim a rectangle
  */ 
-bool trimRect(Rect& r, int rows, int cols, int padding){
+bool trimRect(Rect2d& r, int rows, int cols, int padding){
 	bool trimmed = false;
 	if(r.x < padding){
 		r.width += r.x - padding;
@@ -194,10 +204,10 @@ bool trimRect(Rect& r, int rows, int cols, int padding){
  * Stabilise the proposed object location by using template matching
  * to find the best possible location of maximum similarity
  */ 
-bool stabiliseRect(Mat frame, Rect templ_r, Rect& proposed){
+bool stabiliseRect(Mat frame, Rect2d templ_r, Rect2d& proposed){
 	Mat result;
 	
-	Rect new_r = proposed;
+	Rect2d new_r = proposed;
 	int half_h = new_r.height/2;
 	int half_w = new_r.width/2;
 	new_r.x -= half_w/2;
@@ -231,7 +241,7 @@ bool stabiliseRect(Mat frame, Rect templ_r, Rect& proposed){
 	normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
 	double minVal; double maxVal; Point minLoc; Point maxLoc;
 	Point matchLoc;
-	minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
+	minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
 	matchLoc = minLoc;
 	
 	proposed.x = matchLoc.x + new_r.x;
@@ -241,7 +251,7 @@ bool stabiliseRect(Mat frame, Rect templ_r, Rect& proposed){
 }
 
 
-bool _stabiliseRect(Mat frame, Rect templ_r, Rect& proposed){
+bool _stabiliseRect(Mat frame, Rect2d templ_r, Rect2d& proposed){
 	Mat result;
 	trimRect(templ_r, frame.rows, frame.cols, 0);
 	if(templ_r.height < 1 || templ_r.width < 1){
@@ -257,7 +267,7 @@ bool _stabiliseRect(Mat frame, Rect templ_r, Rect& proposed){
 		return false;
 	}
 	
-	Rect rec = proposed;
+	Rect2d rec = proposed;
 	result.create( result_rows, result_cols, CV_32FC1 );
 	matchTemplate( frame, templ, result, TM_SQDIFF);
 	
@@ -287,12 +297,12 @@ bool _stabiliseRect(Mat frame, Rect templ_r, Rect& proposed){
 bool stabiliseRectByMoments(Mat& frame, const box_structure templ_r, Rect& proposed){
 	Mat gray;
 	cvtColor(frame, gray, COLOR_RGB2GRAY);
-	Rect center = proposed;
+	Rect2d center = proposed;
 	int min = -1;
 	double minMom;
 	
 	do {
-		vector<Rect> rects;
+		vector<Rect2d> rects;
 		trimRect(center, frame.rows, frame.cols, 0);
 		Mat centerImg = gray(center);	
 		double momCompare;
@@ -303,45 +313,45 @@ bool stabiliseRectByMoments(Mat& frame, const box_structure templ_r, Rect& propo
 			min = -1;
 		}
 				
-		Rect top = center;
+		Rect2d top = center;
 		top.y -= 1;
 		trimRect(top, frame.rows, frame.cols, 0);
 		rects.push_back(top);
 				
-		Rect bottom = center;
+		Rect2d bottom = center;
 		bottom.y += 1;
 		trimRect(bottom, frame.rows, frame.cols, 0);
 		rects.push_back(bottom);
 				
-		Rect right = center;
+		Rect2d right = center;
 		right.x += 1;
 		trimRect(right, frame.rows, frame.cols, 0);
 		rects.push_back(right);
 		
-		Rect left = center;
+		Rect2d left = center;
 		left.x -= 1;
 		trimRect(left, frame.rows, frame.cols, 0);
 		rects.push_back(left);
 		
-		Rect topLeft = center;
+		Rect2d topLeft = center;
 		topLeft.y -= 1;
 		topLeft.x -= 1;
 		trimRect(topLeft, frame.rows, frame.cols, 0);
 		rects.push_back(topLeft);
 				
-		Rect bottomLeft = center;
+		Rect2d bottomLeft = center;
 		topLeft.y += 1;
 		topLeft.x -= 1;
 		trimRect(bottomLeft, frame.rows, frame.cols, 0);
 		rects.push_back(bottomLeft);
 		
-		Rect topRight = center;
+		Rect2d topRight = center;
 		topLeft.y -= 1;
 		topLeft.x += 1;
 		trimRect(topRight, frame.rows, frame.cols, 0);
 		rects.push_back(topRight);
 		
-		Rect bottomRight = center;
+		Rect2d bottomRight = center;
 		topLeft.y += 1;
 		topLeft.x += 1;
 		trimRect(bottomRight, frame.rows, frame.cols, 0);
@@ -371,72 +381,75 @@ bool stabiliseRectByMoments(Mat& frame, const box_structure templ_r, Rect& propo
 	return true;
 }
 
-Rect shiftRect(Rect box, Point2f first, Point2f second){
-	Rect n_rect = box;;
-	Point2f pshift;
+Rect2d shiftRect(Rect2d box, Point2f first, Point2f second){
+	Rect2d n_rect = box;;
+	Point2d pshift;
 	pshift.x = second.x - first.x;
 	pshift.y = second.y - first.y;
 	//printf("pshift = (%f, %f)\n", pshift.x, pshift.y);
-	Point pp = pshift;
-	n_rect = n_rect + pp;
+	//Point pp = pshift;
+	n_rect = n_rect + pshift;
 	
 	return n_rect;
+}
+
+bool createNewBoxStructure(KeyPoint first_p, KeyPoint second_p, box_structure& mbs, box_structure& n_mbs, Mat& frame){
+	
+	Rect2d n_rect = shiftRect(mbs.box, first_p.pt, second_p.pt);
+	float r_angle = first_p.angle - second_p.angle;
+	
+	float cx = n_rect.x + n_rect.width/2;
+	float cy = n_rect.y + n_rect.height/2;
+	RotatedRect rotated(Point2f(cx, cy), n_rect.size(), r_angle);
+	//n_rect = rotated.boundingRect();
+	
+	stabiliseRect(frame, mbs.box, n_rect);
+	n_mbs.box = n_rect;
+	trimRect(n_rect, frame.rows, frame.cols, 0);
+	
+	if(n_rect.height < 1 || n_rect.width < 1){
+		return false;
+	}
+	
+	double ratio = n_mbs.box.area()/n_rect.area();
+	if(ratio < 0.2){
+		return false;
+	}
+								
+	n_mbs.img_ = frame(n_rect);
+	calculateHistogram(n_mbs);
+	cvtColor(n_mbs.img_, n_mbs.gray, COLOR_RGB2GRAY);
+	n_mbs.histCompare = compareHist(mbs.hist, n_mbs.hist, CV_COMP_CORREL);		
+	n_mbs.momentsCompare = matchShapes(mbs.gray, n_mbs.gray, CONTOURS_MATCH_I3, 0);
+		
+	return true;
 }
 
 /**
  * 
  * 
  */ 
-void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_points, vector<Rect2d>& rects, KeyPoint first_p, box_structure mbs, Mat& frame){
-	rects.push_back(mbs.box);
-	for(uint j = 0; j < c_points.size(); j++){			
+void addToBoxStructure(vector<box_structure>* boxStructures, vector<KeyPoint> c_points, vector<box_structure>& rects, KeyPoint first_p, box_structure mbs, Mat& frame){
+	rects.push_back(mbs);
+	for(size_t j = 0; j < c_points.size(); j++){			
 		KeyPoint point = c_points[j];
 		if(point.pt != first_p.pt){ // roi points have their own structure "mbs"
-			
-			//Point2f pshift;
-			//pshift.x = point.pt.x - first_p.pt.x;
-			//pshift.y = point.pt.y - first_p.pt.y;
-
-			// shift the roi to get roi for a possible new object
-			//Rect n_rect = mbs.box;
-			
-			//Point pp = pshift;
-			//n_rect = n_rect + pp;
-			
-			Rect n_rect = shiftRect(mbs.box, first_p.pt, point.pt);
+						
+			Rect2d n_rect = shiftRect(mbs.box, first_p.pt, point.pt);
 			stabiliseRect(frame, mbs.box, n_rect);
 			
 			box_structure bst;
-			bst.box = n_rect;
-			bst.points.push_back(point);
-			
-			trimRect(n_rect, frame.rows, frame.cols, 0);
-								
-			if(n_rect.height < 1 || n_rect.width < 1){
+			if(!createNewBoxStructure(first_p, point, mbs, bst, frame)){
 				continue;
 			}
-				
-			double area1 = bst.box.width * bst.box.width; 
-			double area2 = n_rect.width * n_rect.width;
-			double ratio = area2/area1;
-			if(ratio < 0.2){
-				continue;
-			}
-								
-			bst.img_ = frame(n_rect);
-			calculateHistogram(bst);
-			cvtColor(bst.img_, bst.gray, COLOR_RGB2GRAY);
-			bst.histCompare = compareHist(mbs.hist, bst.hist, CV_COMP_CORREL);
-			
-			bst.momentsCompare = matchShapes(mbs.gray, bst.gray, CONTOURS_MATCH_I3, 0);
 			
 			int idx = rectExist(*boxStructures, bst);
 			if(idx == -1){				
 				boxStructures->push_back(bst);
-				rects.push_back(bst.box);
+				rects.push_back(bst);
 			} else{
-				(*boxStructures)[idx].points.push_back(point);
-				rects.push_back((*boxStructures)[idx].box);
+				(*boxStructures)[idx].points.insert(j);
+				rects.push_back((*boxStructures)[idx]);
 			}
 		}
 	}
@@ -484,7 +497,7 @@ set<int32_t> extendBoxClusters(Mat& frame, results_t* res, set<int32_t>& process
 						}
 					}
 					
-					boxStructures->at(first).points.push_back(kp);
+					boxStructures->at(first).points.insert(ldata[i]);
 					first_kp = kp;
 					break;
 				}
@@ -521,15 +534,15 @@ void generateClusterImages(Mat frame, results_t* res){
 
 		Mat kimg = drawKeyPoints(frame, it->second, colours.red, -1);
 		
-		vector<Rect2d>& rects = (*res->clusterStructures)[it->first];
+		vector<box_structure>& rects = (*res->clusterStructures)[it->first];
 		for(uint i = 0; i < rects.size(); i++){
 			
 			RNG rng(12345);
 			Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
 						rng.uniform(0, 255));		
-			rectangle(kimg, rects[i], value, 2, 8, 0);
+			rectangle(kimg, rects[i].box, value, 2, 8, 0);
 		}
-		rectangle(kimg, rects[0], colours.red, 2, 8, 0);
+		rectangle(kimg, rects[0].box, colours.red, 2, 8, 0);
 		String ss = "img_keypoints-";
 		string s = to_string(it->first);
 		ss += s.c_str();
@@ -643,6 +656,99 @@ void findROIFeature(vector<KeyPoint>& keypoints, Mat& descriptors, Rect2d& roi, 
 	}
 }
 
+// A utility function to swap two elements
+void swap(int* a, int* b)
+{
+    int t = *a;
+    *a = *b;
+    *b = t;
+}
+
+// A utility function to swap two elements
+void swap(double* a, double* b)
+{
+    double t = *a;
+    *a = *b;
+    *b = t;
+}
+
+/* This function takes last element as pivot, places
+   the pivot element at its correct position in sorted
+    array, and places all smaller (smaller than pivot)
+   to left of pivot and all greater elements to right
+   of pivot */
+int partition (vector<int32_t>& roiFeatures, vector<double>& distances, int low, int high)
+{
+    double pivot = distances[high];    // pivot
+    int i = (low - 1);  // Index of smaller element
+ 
+    for (int j = low; j <= high- 1; j++)
+    {
+        // If current element is smaller than or
+        // equal to pivot
+        if (distances[j] <= pivot)
+        {
+            i++;    // increment index of smaller element
+            swap(&distances[i], &distances[j]);
+            swap(&roiFeatures[i], &roiFeatures[j]);
+        }
+    }
+    swap(&distances[i + 1], &distances[high]);
+    swap(&roiFeatures[i + 1], &roiFeatures[high]);
+    return (i + 1);
+}
+
+/* The main function that implements QuickSort
+ roiFeatures --> vector to be sorted
+ distances --> vector to sort by,
+  low  --> Starting index,
+  high  --> Ending index */
+void quickSortByDistance(vector<int32_t>& roiFeatures, vector<double>& distances, int low, int high)
+{
+    if (low < high)
+    {
+        /* pi is partitioning index, distances[p] is now
+           at right place */
+        int pi = partition(roiFeatures, distances, low, high);
+ 
+        // Separately sort elements before
+        // partition and after partition
+        quickSortByDistance(roiFeatures, distances, low, pi - 1);
+        quickSortByDistance(roiFeatures, distances, pi + 1, high);
+    }
+}
+
+/**
+ * Sort roi features by the distance from the center
+ * 
+ */ 
+void sortbyDistanceFromCenter(Rect2d& roi, vector<int32_t>& roiFeatures, vector<KeyPoint>* keypoints){
+	vector<double> distances;
+	Point2f p;
+
+	p.x = (roi.x + roi.width)/2.0f;
+	p.y = (roi.y + roi.height)/2.0f;
+	 
+	for(size_t i = 0; i < roiFeatures.size(); i++){
+		KeyPoint& r_kp = keypoints->at(roiFeatures[i]);
+		double distance = calcDistanceL1(p, r_kp.pt);
+		distances.push_back(distance);
+		//cout << roiFeatures[i] << ", " << distance << endl;
+	}
+	
+	quickSortByDistance(roiFeatures, distances, 0, roiFeatures.size()-1);
+	
+	/*cout << "sorted by distance" << endl;
+	for(size_t i = 0; i < roiFeatures.size(); i++){
+		cout << roiFeatures[i] << ", " << distances[i] << endl;
+	}*/
+	//exit(0);
+ }
+
+/**
+ * Find the feature at the most center of the ROI
+ * 
+ */ 
 int32_t findCenterMostFeature(Rect2d& roi, vector<int32_t>& roiFeatures, vector<KeyPoint>* keypoints){
 	int32_t centerFeature = -1;
 	Point2f p;
@@ -689,31 +795,31 @@ set<int32_t> findValidROIFeature(vector<KeyPoint>& keypoints, Rect2d& roi, vecto
 }
 
 /**
+ * Use the labels to filter out the invalid clusters
+ */ 
+set<int32_t> findFeatureClusters(vector<int32_t>& roiFeatures, vector<int32_t>* labels){
+	set<int32_t> roiClusters;
+	
+	for(size_t i = 0; i < roiFeatures.size(); i++){
+		int32_t label = labels->at(roiFeatures[i]);		
+		roiClusters.insert(label);
+	}
+	
+	return roiClusters;
+}
+
+/**
  * 
  * 
  */ 
 void getBoxStructureByHomography(results_t* res, Rect2d& roi, Mat& frame, bool extend, bool reextend){
 	
-	//int32_t centerFeature;
 	Mat roiDesc;
-	//vector<int32_t> roiFeatures;
 	vector<int32_t> validObjFeatures;
 	
-	//cout << "First roi " << roi << endl;
-	
-	/*findROIFeature(*(res->keypoints), *(res->dataset), roi, roiFeatures, roiDesc, centerFeature);
-	
-	set<int32_t> roiClusters;
-	for(size_t i = 0; i < roiFeatures.size(); i++){
-		int32_t label = res->labels->at(roiFeatures[i]);
-		if(label != 0){
-			roiClusters.insert(label);
-			validFeatures.push_back(roiFeatures[i]);
-			obj.push_back(res->keypoints->at(roiFeatures[i]).pt);
-		}
-	}
-	roiFeatures.clear();*/
 	set<int32_t> roiClusters = findValidROIFeature(*(res->keypoints), roi, validObjFeatures, res->labels);
+	//printf("Size is %ld\n", validObjFeatures.size());
+	sortbyDistanceFromCenter(roi, validObjFeatures, res->keypoints);
 	//centerFeature = findCenterMostFeature(roi, validObjFeatures, res->keypoints);
 		
 	cout << "Found " << validObjFeatures.size() << " valid features" << endl;
@@ -728,10 +834,7 @@ void getBoxStructureByHomography(results_t* res, Rect2d& roi, Mat& frame, bool e
 		/// Create a scene for each of the points in the cluster
 		for(int32_t j = 0; j < p->size; j++){
 			KeyPoint n_kp = res->keypoints->at(data[j]);
-			Rect newRect = shiftRect(roi, r_kp.pt, n_kp.pt);
-			//cout << "roi is " << roi << endl;
-			//printf("first -> (%f, %f), second -> (%f, %f)\n", r_kp.pt.x, r_kp.pt.y, n_kp.pt.x, n_kp.pt.y);
-			//cout << "newRect = " << newRect << endl;
+			Rect2d newRect = shiftRect(roi, r_kp.pt, n_kp.pt);
 			// widen the new rect
 			int32_t h_p = newRect.height/2;
 			int32_t w_p = newRect.width/2;
@@ -773,10 +876,10 @@ void getBoxStructureByHomography(results_t* res, Rect2d& roi, Mat& frame, bool e
 					if(lbl == lbl2){
 						obj.push_back(res->keypoints->at(validObjFeatures[k]).pt);
 						scene.push_back(res->keypoints->at(validSceneFeatures[l]).pt);
-						printf("(%f, %f) to (%f, %f)\n", res->keypoints->at(validObjFeatures[k]).pt.x, 
-														res->keypoints->at(validObjFeatures[k]).pt.y, 
-														res->keypoints->at(validSceneFeatures[l]).pt.x, 
-														res->keypoints->at(validSceneFeatures[l]).pt.y);
+						//printf("(%f, %f) to (%f, %f)\n", res->keypoints->at(validObjFeatures[k]).pt.x, 
+						//								res->keypoints->at(validObjFeatures[k]).pt.y, 
+						//								res->keypoints->at(validSceneFeatures[l]).pt.x, 
+						//								res->keypoints->at(validSceneFeatures[l]).pt.y);
 					}
 				}
 			}
@@ -785,7 +888,7 @@ void getBoxStructureByHomography(results_t* res, Rect2d& roi, Mat& frame, bool e
 			if(obj.size() > 3){
 				Mat H = findHomography( obj, scene, 0 );
 				Mat img_object = frame(newRect);
-				cout<< endl << H << endl << endl;
+				//cout<< endl << H << endl << endl;
 				//-- Get the corners from the image_1 ( the object to be "detected" )
 				std::vector<Point2f> obj_corners(4);
 				obj_corners[0] = cvPoint(0,0); 
@@ -798,10 +901,10 @@ void getBoxStructureByHomography(results_t* res, Rect2d& roi, Mat& frame, bool e
 				if(!H.empty()){
 					perspectiveTransform( obj_corners, scene_corners, H);
 					
-					cout << scene_corners[0].x << ", " << scene_corners[0].y << endl;
-					cout << scene_corners[1].x << ", " << scene_corners[1].y  << endl;
-					cout << scene_corners[2].x << ", " << scene_corners[2].y  << endl;
-					cout << scene_corners[3].x << ", " << scene_corners[3].y  << endl << endl << endl;	
+					//cout << scene_corners[0].x << ", " << scene_corners[0].y << endl;
+					//cout << scene_corners[1].x << ", " << scene_corners[1].y  << endl;
+					//cout << scene_corners[2].x << ", " << scene_corners[2].y  << endl;
+					//cout << scene_corners[3].x << ", " << scene_corners[3].y  << endl << endl << endl;	
 					
 					//-- Draw lines between the corners (the mapped object in the scene - image_2 )
 					line( frame, scene_corners[0] + Point2f( img_object.cols, 0), scene_corners[1] + Point2f( img_object.cols, 0), Scalar(0, 255, 0), 4 );
@@ -817,8 +920,188 @@ void getBoxStructureByHomography(results_t* res, Rect2d& roi, Mat& frame, bool e
 }
 
 /**
+ * Create box structures by using the middle-most roi features first
  * 
- * 
+ */ 
+void _getBoxStructure(results_t* res, Rect2d& roi, Mat& frame, bool extend, bool reextend){
+	set<int32_t> processedClusters;
+	Mat roiDesc;
+	vector<int32_t> validObjFeatures;
+	map_kp clusterMapPoints;
+	
+	set<int32_t> roiClusters = findValidROIFeature(*(res->keypoints), roi, validObjFeatures, res->labels);
+	
+	// sort the valid features by how close to the center they are
+	sortbyDistanceFromCenter(roi, validObjFeatures, res->keypoints);
+	
+	box_structure mbs; /// Create a box structure based on roi
+	mbs.box = roi;
+	mbs.img_ = frame(mbs.box);
+	calculateHistogram(mbs);
+	mbs.histCompare = compareHist(mbs.hist, mbs.hist, CV_COMP_CORREL);
+	cvtColor(mbs.img_, mbs.gray, COLOR_RGB2GRAY);
+	mbs.momentsCompare = matchShapes(mbs.gray, mbs.gray, CONTOURS_MATCH_I3, 0);
+		
+	vector<vector<box_structure>> b_structures;
+	//res->boxStructures->push_back(mbs);
+	/// generate box structures based on the valid object points
+	for(size_t i = 0; i < validObjFeatures.size(); i++){
+		int32_t key = res->labels->at(validObjFeatures[i]);
+		//cout << "Creating for " << key << endl;
+		vector<box_structure>& rects = (*res->clusterStructures)[key];
+		
+		/// TODO: be careful about multiple features in the same cluster
+		/// in the same ROI
+		processedClusters.insert(key);
+		vector<vector<KeyPoint>> kps;
+		kps.push_back(res->finalPointClusters->at(key));
+		
+		IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(res->clusterMap, &key);
+		
+		//vector<KeyPoint> clusterKeypoints;
+		//if(clusterMapPoints[key].empty()){
+			//getListKeypoints(*(res->keypoints), l1, clusterMapPoints[key]);
+		//}
+		//getListKeypoints(*(res->keypoints), l1, clusterKeypoints);
+		vector<KeyPoint>& clusterKeypoints = clusterMapPoints[key];
+		
+		KeyPoint f_point = res->keypoints->at(validObjFeatures[i]);
+		//printf("f_point angle is %f and size is %f and octave is %d\n", f_point.angle, f_point.size, f_point.octave);
+		mbs.points.insert(validObjFeatures[i]);
+		
+		/// Each point in the cluster should be inside a box_structure
+		//vector<box_structure> t_structures;
+		//t_structures.push_back(mbs);
+		rects.push_back(mbs);
+		int32_t* data = (int32_t *)l1->data;
+		
+		for(size_t j = 0; j < l1->size; j++){
+			KeyPoint& t_point = res->keypoints->at(data[j]);
+			clusterKeypoints.push_back(t_point);
+			
+			//printf(">>>>>>> t_point angle is %f and size is %f and octave is %d\n", t_point.angle, t_point.size, t_point.octave);
+			if(mbs.box.contains(t_point.pt)){ // if the point is inside mbs, add it to mbs' points
+				mbs.points.insert(data[j]);
+			} else{ // else create a new mbs for it
+				
+				box_structure n_mbs; 
+				//n_mbs.box = shiftRect(mbs.box, f_point.pt, t_point.pt);
+				if(createNewBoxStructure(f_point, t_point, mbs, n_mbs, frame)){
+					
+					n_mbs.points.insert(data[j]);
+					//t_structures.push_back(n_mbs);
+					int idx = rectExist(rects, n_mbs);
+					if(idx == -1){ // the structure does not exist
+						rects.push_back(n_mbs);
+					} else{
+						box_structure& strct = rects.at(idx);
+				
+						// Find out which structure is more similar to the original
+						// by comparing the histograms
+						if(n_mbs.histCompare > strct.histCompare){
+							strct.box = n_mbs.box;
+							strct.matchPoint = n_mbs.matchPoint;
+							strct.img_ = n_mbs.img_;
+							strct.hsv = n_mbs.hsv;
+							strct.gray = n_mbs.gray;
+							strct.hist = n_mbs.hist;
+							strct.histCompare = n_mbs.histCompare;
+							strct.momentsCompare = n_mbs.momentsCompare;													
+						}
+						
+						strct.points.insert(n_mbs.points.begin(), n_mbs.points.end());
+						//n_mbs.points.insert(strct.points.begin(), strct.points.end());
+					}					
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Organise points into the best possible structure
+	 */ 
+	for(map_st::iterator it = res->clusterStructures->begin(); it != res->clusterStructures->end(); ++it){
+		vector<box_structure>& tmp = it->second;
+		int32_t key = it->first;
+		IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(res->clusterMap, &key);
+		int32_t* data = (int32_t *)l1->data;
+		
+		int32_t t[l1->size];
+		for(int32_t j = 0; j < l1->size; j++){
+			t[j] = -1;
+		}
+				
+		double t_cmp[l1->size];
+		
+		for(int32_t j = 0; j < l1->size; j++){
+			KeyPoint kp = res->keypoints->at(data[j]);
+			
+			for(size_t l = 0; l < tmp.size(); l++){
+				if(tmp[l].box.contains(kp.pt)){
+					if(t[j] == -1){
+						t[j] = l;
+						t_cmp[j] = tmp[l].histCompare;
+						tmp[t[j]].points.insert(data[j]);
+					} else if(t_cmp[j] < tmp[l].histCompare){
+						tmp[t[j]].points.erase(data[j]); // remove this point
+						t_cmp[j] = tmp[l].histCompare;
+						t[j] = l;
+						tmp[t[j]].points.insert(data[j]);
+					}
+				}
+			}
+		}
+		
+		set<int32_t> t3;
+		
+		for(int32_t j = 0; j < l1->size; j++){
+			//cout << "inserting " << t[j] << endl;
+			/// TODO check why there is a -1
+			if(t[j] > -1)
+				t3.insert(t[j]);
+		}
+		
+		vector<box_structure> t2;
+		for(set<int32_t>::iterator iter = t3.begin(); iter != t3.end(); ++iter){
+			t2.push_back(tmp[*iter]);
+		}
+		tmp.clear();
+		tmp.insert(tmp.begin(), t2.begin(), t2.end()); 
+		
+		for(size_t j = 0; j < tmp.size(); j++){
+			//cout << it->first << " : " << tmp[j].points.size() << " > " << tmp[j].histCompare << endl;
+			int idx = rectExist(*(res->boxStructures), tmp[j]);
+			
+			if(idx == -1){ // the structure does not exist
+				res->boxStructures->push_back(tmp[j]);
+			} else{ /// The rect exist s merge the points
+				box_structure& strct = res->boxStructures->at(idx);
+				
+				// Find out which structure is more similar to the original
+				// by comparing the histograms
+				if(tmp[j].histCompare > strct.histCompare){
+					strct.box = tmp[j].box;
+					strct.matchPoint = tmp[j].matchPoint;
+					strct.img_ = tmp[j].img_;
+					strct.hsv = tmp[j].hsv;
+					strct.gray = tmp[j].gray;
+					strct.hist = tmp[j].hist;
+					strct.histCompare = tmp[j].histCompare;
+					strct.momentsCompare = tmp[j].momentsCompare;
+							
+					//tmp[j].points.insert(strct.points.begin(), strct.points.end());
+					//res->boxStructures->at(idx) = tmp[j];
+				} 
+				strct.points.insert(tmp[j].points.begin(), tmp[j].points.end());
+				
+			}
+		}
+	}
+}
+
+/**
+ * Create the box structures using res->objectClusters which have been 
+ * sorted by similarity or length 
  */ 
 void getBoxStructure(results_t* res, Rect2d& roi, Mat& frame, bool extend, bool reextend){
 	vector<vector<box_structure>> b_structures;
@@ -828,7 +1111,7 @@ void getBoxStructure(results_t* res, Rect2d& roi, Mat& frame, bool extend, bool 
 	for(int32_t i = res->objectClusters->size - 1; i >= 0; i--){
 		int32_t key = data[i];
 		processedClusters.insert(key);
-		(*res->clusterStructures)[key];
+		//(*res->clusterStructures)[key];
 		vector<vector<KeyPoint>> kps;
 		kps.push_back(res->finalPointClusters->at(key));
 		
@@ -851,8 +1134,8 @@ void getBoxStructure(results_t* res, Rect2d& roi, Mat& frame, bool extend, bool 
 					break;
 				}
 			}
-			mbs.points.push_back(kp);
-			addToBoxStructure(&str2, res->finalPointClusters->at(key), res->clusterStructures->at(key), kp, mbs, frame);
+			//mbs.points.insert(kp);
+			addToBoxStructure(&str2, res->finalPointClusters->at(key), (*res->clusterStructures)[key], kp, mbs, frame);
 		}
 		b_structures.push_back(str2);
 		
@@ -869,7 +1152,7 @@ void getBoxStructure(results_t* res, Rect2d& roi, Mat& frame, bool extend, bool 
 					strct.box = it->box;
 				}
 				//printf("comparing (%f, %f) and (%f, %f)\n", it->histCompare, strct.histCompare, it->momentsCompare, strct.momentsCompare);
-				strct.points.insert(strct.points.begin(), it->points.begin(), it->points.end());
+				strct.points.insert(it->points.begin(), it->points.end());
 			}
 		}
 	}
@@ -1041,6 +1324,13 @@ void getListKeypoints(vector<KeyPoint>& keypoints, IntArrayList* list, vector<Ke
 	int32_t* dt = (int32_t *)list->data;
 	for(int i = 0; i < list->size; i++){
 		int32_t idx = dt[i];
+		out.push_back(keypoints[idx]);
+	}
+}
+
+void getVectorKeypoints(vector<KeyPoint>& keypoints, vector<int32_t>& list, vector<KeyPoint>& out){
+	for(size_t i = 0; i < list.size(); i++){
+		int32_t idx = list[i];
 		out.push_back(keypoints[idx]);
 	}
 }
@@ -1374,7 +1664,7 @@ results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints){
 	res->dataset = new Mat(dataset);
 	res->keypoints = new vector<KeyPoint>(keypoints.begin(), keypoints.end());
 	res->finalPointClusters = new map_kp();
-	res->clusterStructures = new map<int32_t, vector<Rect2d>>();
+	res->clusterStructures = new map<int32_t, vector<box_structure>>();
 	res->odata = new map<OutDataIndex, int32_t>();
 	res->labels = new vector<int32_t>(res->keypoints->size());
 	res->boxStructures = new vector<box_structure>();
@@ -1541,7 +1831,7 @@ cv::Ptr<cv::Tracker> createTrackerByName(cv::String name)
     return tracker;
 }
 
-void findNewROIs(Mat& frame, vector<Ptr<Tracker>>& trackers, vector<Rect2d>& newRects, vector<box_structure>* boxStructures, String trackerName){
+void findNewROIs(Mat& frame, vector<Ptr<Tracker>>& trackers, vector<box_structure>& newRects, vector<box_structure>* boxStructures, String trackerName){
 
 #pragma omp parallel for
 	for(size_t i = 0; i < boxStructures->size(); i++){
@@ -1551,8 +1841,8 @@ void findNewROIs(Mat& frame, vector<Ptr<Tracker>>& trackers, vector<Rect2d>& new
 		box_structure& bs = boxStructures->at(i);
 		
 		for(size_t j = 0; j < newRects.size(); j++){
-			Rect r1 = newRects[j];
-			Rect r2 = r1 & bs.box;
+			Rect2d r1 = newRects[j].box;
+			Rect2d r2 = r1 & bs.box;
 			double sect = ((double)r2.area()/r1.area()) * 100;
 			if(sect > maxIntersect){
 				//maxIndex = i;
@@ -1567,9 +1857,9 @@ void findNewROIs(Mat& frame, vector<Ptr<Tracker>>& trackers, vector<Rect2d>& new
 		#pragma omp critical
 		if(maxIntersect < 95.0 && valid){
 			size_t x = newRects.size();
-			newRects.push_back(bs.box);
+			newRects.push_back(bs);
 			trackers.push_back(createTrackerByName(trackerName));
-			trackers[x]->init( frame, newRects[x] );
+			trackers[x]->init( frame, newRects[x].box);
 		}
 
 	}
@@ -1727,8 +2017,10 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 	if (vcount.roiExtracted ){
 		
 		vcount.tracker->update(frame, f.roi);
-		findROIFeature(f.keypoints, f.descriptors, f.roi, f.roiFeatures, f.roiDesc, f.centerFeature);
-		Rect r = f.roi;
+		int32_t cf;
+		findROIFeature(f.keypoints, f.descriptors, f.roi, f.roiFeatures, f.roiDesc, cf);
+		sortbyDistanceFromCenter(f.roi, f.roiFeatures, &f.keypoints);
+		Rect2d r = f.roi;
 		double d1 = r.area();
 		trimRect(r, frame.rows, frame.cols, 10);
 		double d2 = r.area();
@@ -1742,14 +2034,13 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 		while(d2 < d1 || f.roiFeatures.empty()){
 			f.roiFeatures.clear();
 			f.roiDesc = Mat();
-			f.centerFeature = -1;
 			
 			vector<box_structure>* bxs = vcount.frameHistory[vcount.frameHistory.size()-xz].results.at(ResultIndex::Descriptors)->boxStructures;
 			
 			if(!bxs->empty()){	
 				f.roi = bxs->at(rdx).box;
-				Rect prev = f.roi;
-				Rect nRect = f.roi;
+				Rect2d prev = f.roi;
+				Rect2d nRect = f.roi;
 				stabiliseRect(frame, prev, nRect);
 				
 				vcount.tracker = createTrackerByName(settings.trackerAlgorithm);
@@ -1760,7 +2051,9 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 				trimRect(r, frame.rows, frame.cols, 10);
 				
 				d2 = r.area();
-				findROIFeature(f.keypoints, f.descriptors, f.roi, f.roiFeatures, f.roiDesc, f.centerFeature);
+				int32_t cf;
+				findROIFeature(f.keypoints, f.descriptors, f.roi, f.roiFeatures, f.roiDesc, cf);
+				sortbyDistanceFromCenter(f.roi, f.roiFeatures, &f.keypoints);
 			}else{
 				xz++;
 			}
@@ -2042,7 +2335,8 @@ results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, M
 	
 	results_t* res = do_cluster(NULL, dataset, keypoints, settings.step, 3, true, false);
 	generateFinalPointClusters(f.roiFeatures, res);	
-	getBoxStructure(res, f.roi, f.frame, settings.extend, false);
+	//getBoxStructure(res, f.roi, f.frame, settings.extend, false);
+	_getBoxStructure(res, f.roi, f.frame, settings.extend, false);
 	//getBoxStructureByHomography(res, f.roi, f.frame, settings.extend, false);
     res->total = 0; //countPrint(res->roiClusterPoints, res->finalPointClusters, res->cest, res->selectedFeatures, res->lsize);
 			
