@@ -48,7 +48,7 @@ void maintaintHistory(vocount& voc, framed& f);
 /**
  *
  */
-void generateClusterImages(Mat frame, results_t* res);
+void generateClusterImages(Mat frame, results_t* res, set<int32_t>& processedClusters);
 
 /**
  *
@@ -164,7 +164,7 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
  * Find clusters that have points inside one of the bounding boxes
  * 
  */ 
-set<int32_t> extendBoxClusters(Mat& frame, results_t* res, set<int32_t>& processedClusters);
+void extendBoxClusters(Mat& frame, results_t* res, set<int32_t>& processedClusters);
 
 /**
  * 
@@ -182,7 +182,14 @@ void expandClusters(results_t* res);
  * 
  * 
  */ 
-void getBoxStructure(results_t* res, Rect2d& rois, Mat& frame, bool extend, bool reextend);
+void getBoxStructure(Rect2d& roi, Mat& frame, IntIntListMap* clusterMap, map_st* clusterStructures,
+						vector<KeyPoint>* keypoints, vector<box_structure>* boxStructures, vector<int32_t>* labels,
+						map_kp* finalPointClusters, set<int32_t>& processedClusters);
+			
+/**
+ * 
+ */ 
+void cleanStructures(IntIntListMap* clusterMap, map_st* clusterStructures, vector<KeyPoint>* keypoints, vector<box_structure>* boxStructures);
 
 /**
  * 
@@ -234,4 +241,10 @@ void imageSpaceClustering(vocount& vcount, vsettings& settings, selection_t& col
  * 
  */
 void filteredDescriptorClustering(vocount& vcount, vsettings& settings, selection_t& colourSel, results_t* res1, framed& f, Mat& frame); 
+
+/**
+ * 
+ * 
+ */ 
+void cleanStructures(IntIntListMap* clusterMap, map_st* clusterStructures, vector<KeyPoint>* keypoints, vector<box_structure>* boxStructures);
 #endif
