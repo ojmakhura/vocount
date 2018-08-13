@@ -1817,6 +1817,7 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 		vcount.tracker->init( frame, f.roi);
 			
 		vcount.roiExtracted = true;
+		
 		settings.selectROI = false;
 	} else if(vcount.roiExtracted && vcount.roi.area() > 0){
 			
@@ -1871,10 +1872,7 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 			}
 			rdx++;
 		}
-		
-		RNG rng(12345);
-		Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));		
-		rectangle(frame, f.roi, value, 2, 8, 0);
+		f.hasRoi = vcount.roiExtracted;
 	}
 }
 
@@ -1967,8 +1965,8 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 	sel_f.i = f.i;
 
 	f.frame = frame.clone();
-	index_f.frame = f.frame;
-	sel_f.frame = f.frame;
+	index_f.frame = frame.clone();
+	sel_f.frame = frame.clone();
 
 	cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
 	vcount.detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
@@ -1979,9 +1977,13 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		printf("Frame %d truth is %d\n", vcount.frameCount, vcount.truth[vcount.frameCount]);
 		getROI(vcount, settings, f, frame);
 		
-		display("frame", frame);
-        
-		f.hasRoi = vcount.roiExtracted;
+		RNG rng(12345);
+		Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));		
+		
+		Mat fr = frame.clone();
+		rectangle(fr, f.roi, value, 2, 8, 0);
+		
+		display("frame", fr);
              
         /**
          * Clustering in the descriptor space with unfiltered 
