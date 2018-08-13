@@ -235,7 +235,7 @@ void printImages(String& folder, map<String, Mat>* images, int count){
 void generateOutputData(vocount& vcount, Mat& frame, vector<KeyPoint>& keypoints, vector<int32_t>& roiFeatures, results_t* res, int i){
 	
 	int selSampleSize = 0;
-	if(res->roiClusterPoints->size() > 0){
+	if(res->clusterStructures->size() > 0){
 		(*(res->odata))[OutDataIndex::SampleSize] = roiFeatures.size();
 		
 		for(map<int32_t, vector<int32_t>>::iterator it = res->roiClusterPoints->begin(); it != res->roiClusterPoints->end(); ++it){

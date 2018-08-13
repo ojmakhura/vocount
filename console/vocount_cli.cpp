@@ -201,7 +201,8 @@ int main(int argc, char** argv) {
 		} else if (c == 's') { // select a roi if c has een pressed or if the program was run with -s option
 			settings.selectROI = true;
 		} 
-		processFrame(vcount, settings, colourSel, frame);		
+		processFrame(vcount, settings, colourSel, frame);	
+		//break;	
 	}
 	
 	finalise(vcount);

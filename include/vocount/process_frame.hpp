@@ -48,7 +48,7 @@ void maintaintHistory(vocount& voc, framed& f);
 /**
  *
  */
-void generateClusterImages(Mat frame, results_t* res, set<int32_t>& processedClusters);
+void generateClusterImages(Mat frame, results_t* res);
 
 /**
  *
@@ -164,7 +164,7 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
  * Find clusters that have points inside one of the bounding boxes
  * 
  */ 
-void extendBoxClusters(Mat& frame, results_t* res, set<int32_t>& processedClusters);
+void extendBoxClusters(Mat& frame, results_t* res);
 
 /**
  * 
@@ -182,14 +182,14 @@ void expandClusters(results_t* res);
  * 
  * 
  */ 
-void getBoxStructure(Rect2d& roi, Mat& frame, IntIntListMap* clusterMap, map_st* clusterStructures,
-						vector<KeyPoint>* keypoints, vector<box_structure>* boxStructures, vector<int32_t>* labels,
-						map_kp* finalPointClusters, set<int32_t>& processedClusters);
+void getClustersBoxStructures(Rect2d& roi, Mat& frame, IntIntListMap* clusterMap, map_st* clusterStructures,
+						vector<KeyPoint>* keypoints, vector<int32_t>* labels,
+						map_kp* finalPointClusters);
 			
 /**
  * 
  */ 
-void cleanStructures(IntIntListMap* clusterMap, map_st* clusterStructures, vector<KeyPoint>* keypoints, vector<box_structure>* boxStructures);
+void extractProminentStructures(IntIntListMap* clusterMap, map_st* clusterStructures, vector<KeyPoint>* keypoints, vector<box_structure>* boxStructures);
 
 /**
  * 
@@ -218,7 +218,7 @@ void finalise(vocount& vcount);
  * 
  * 
  */
-results_t* clusterDescriptors(vocount& vcount, vsettings& settings, framed& f, Mat& dataset, vector<KeyPoint>& keypoints);
+results_t* clusterDescriptors(framed& f, Mat& dataset, vector<KeyPoint>& keypoints, int32_t step, bool extend);
 
 /**
  * 
@@ -240,11 +240,6 @@ void imageSpaceClustering(vocount& vcount, vsettings& settings, selection_t& col
 /**
  * 
  */
-void filteredDescriptorClustering(vocount& vcount, vsettings& settings, selection_t& colourSel, results_t* res1, framed& f, Mat& frame); 
+void filteredDescriptorClustering(vocount& vcount, vsettings& settings, selection_t& colourSel, framed& f, Mat& frame); 
 
-/**
- * 
- * 
- */ 
-void cleanStructures(IntIntListMap* clusterMap, map_st* clusterStructures, vector<KeyPoint>* keypoints, vector<box_structure>* boxStructures);
 #endif

@@ -134,7 +134,7 @@ typedef struct VSETTINGS{
     String trackerAlgorithm;    
 	String colourDir, imageSpaceDir, descriptorDir, filteredDescDir,
 			dfComboDir, diComboDir, dfiComboDir;
-	int step, rsize;											/// How many frames to use in the dataset
+	int32_t step, rsize;											/// How many frames to use in the dataset
 	bool print = false;
 	bool interactive = false;
 	bool selectROI = false;
