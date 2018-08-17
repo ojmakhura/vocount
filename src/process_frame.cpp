@@ -1059,6 +1059,11 @@ void getFrameTruth(String truthFolder, map<int, int>& truth){
 		v = v.substr(0, data.mv_size);
 		truth[stoi(k)] = stoi(v);
 	}
+	
+	mdb_cursor_close(cursor);
+	mdb_txn_abort(txn);
+	mdb_close(env, dbi);
+	mdb_env_close(env);
 }
 
 
@@ -1390,7 +1395,8 @@ selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 			colourSelection.numClusters = g_hash_table_size(colourSelection.clusterKeypointIdx);
 			
 		} else{
-			hdbscan_destroy_distance_map_table(it->second);			
+			//hdbscan_destroy_distance_map_table(it->second);
+			hdbscan_destroy_cluster_table(it->second);	
 		}
 		delete[] labelsList[it->first - 3];
 	}
@@ -1759,6 +1765,7 @@ void trackFrameColourModel(vocount& vcount, framed& f, selection_t& colourSel, M
 			
 	// Need to clear the previous table map
 	hdbscan_destroy_cluster_table(prevHashTable);
+	hdbscan_destroy_distance_map_table(distancesMap);
 	colourSel.selectedClusters = currSelClusters;
 	colourSel.selectedKeypoints.clear();
 	colourSel.roiFeatures.clear();
@@ -2173,7 +2180,7 @@ results_t* clusterDescriptors(framed& f, Mat& dataset, vector<KeyPoint>& keypoin
  * Clean the vocount object by cleaning the results and closing the 
  * files.
  */ 
-void finalise(vocount& vcount){
+void finalise(vocount& vcount, selection_t& colourSel){
 		
 #pragma omp parallel for
 	for(uint i = 0; i < vcount.frameHistory.size(); i++){
@@ -2210,4 +2217,8 @@ void finalise(vocount& vcount){
     if(vcount.trackingFile.is_open()){
         vcount.trackingFile.close();
     }
+    
+    if(colourSel.clusterKeypointIdx != NULL){
+		hdbscan_destroy_cluster_table(colourSel.clusterKeypointIdx);
+	}
 }

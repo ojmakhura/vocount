@@ -56,7 +56,6 @@ void VUIPlayer::run(){
                 _stop = true;
                 continue;
             }
-            //display("Frame", this->frame);
             processFrame(vcount, settings, colourSel, frame);
         }
         this->msleep(0);
@@ -91,7 +90,7 @@ bool VUIPlayer::isPaused(){
 void VUIPlayer::stop(){
     this->initialised = false;
     this->cap.release();
-    finalise(vcount);
+    finalise(vcount, colourSel);
     _stop = true;
 }
 

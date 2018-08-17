@@ -202,10 +202,13 @@ int main(int argc, char** argv) {
 			settings.selectROI = true;
 		} 
 		processFrame(vcount, settings, colourSel, frame);	
-		//break;	
+		//break;
+		//if(vcount.frameCount == 4){
+		//	break;
+		//}
 	}
 	
-	finalise(vcount);
+	finalise(vcount, colourSel);
 	return 0;
 }
 

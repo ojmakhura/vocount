@@ -212,7 +212,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
  * 
  * 
  */
-void finalise(vocount& vcount); 
+void finalise(vocount& vcount, selection_t& colourSel); 
 
 /**
  * 
