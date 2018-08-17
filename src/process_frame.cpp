@@ -1496,6 +1496,12 @@ results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints){
 	return res;
 }
 
+
+/**
+ * 
+ * 
+ * 
+ */ 
 results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_minPts, bool analyse, bool singleRun){
 	
 	if(res == NULL){
@@ -1508,7 +1514,6 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 	
 	res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, keypoints.size());
 	res->distancesMap = hdbscan_get_min_max_distances(&scan, res->clusterMap);
-	//clustering_stats stats;
 	hdbscan_calculate_stats(res->distancesMap, &(res->stats));
 	res->validity = hdbscan_analyse_stats(&(res->stats));
 	
@@ -1528,9 +1533,6 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 			res->labels->clear();
 		}	
 		
-		//hdbscan_destroy_cluster_table(c_map);
-		//hdbscan_destroy_distance_map_table(d_map);
-		
 		scan.reRun(m_pts);
 		res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, keypoints.size());
 		
@@ -1539,67 +1541,11 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 			hdbscan_calculate_stats(res->distancesMap, &(res->stats));
 			res->validity = hdbscan_analyse_stats(&(res->stats));
 		}
-		
-		//res->clusterMap = c_map;
-		//res->distancesMap = d_map;
-		//res->stats = stats;
-		//res->validity = val;
 		res->minPts = m_pts;
 		
 		
 	}
 	res->labels->insert(res->labels->begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
-	
-	/*
-	while(val <= 2 && i < 5){
-		
-		if(m_pts > (step * f_minPts)){	
-			scan.reRun(m_pts);
-		}
-		
-		c_map = hdbscan_create_cluster_table(scan.clusterLabels, 0, keypoints.size());
-		
-		if(analyse){
-			d_map = hdbscan_get_min_max_distances(&scan, c_map);
-			hdbscan_calculate_stats(d_map, &stats);
-			val = hdbscan_analyse_stats(&stats);
-		}
-		
-		if(c_map != NULL){
-			uint hsize = res->clusterMap == NULL ? 0 : g_hash_table_size(res->clusterMap);
-			if(g_hash_table_size(c_map) > hsize || val > res->validity){
-				if(res->clusterMap != NULL){
-					hdbscan_destroy_cluster_table(res->clusterMap);
-				}
-				
-				if(res->distancesMap != NULL){
-					hdbscan_destroy_distance_map_table(res->distancesMap);
-				}
-				
-				if(!(res->labels->empty())){
-					res->labels->clear();
-				}	
-				
-				res->clusterMap = c_map;
-				res->distancesMap = d_map;
-				res->stats = stats;
-				res->validity = val;
-				res->minPts = m_pts;
-				res->labels->insert(res->labels->begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
-		
-			} else {
-				hdbscan_destroy_cluster_table(c_map);
-				hdbscan_destroy_distance_map_table(d_map);
-			}
-		}
-		
-		if(singleRun){
-			break;
-		}
-		printf("Testing minPts = %d with validity = %d and cluster map size = %d\n", m_pts, val, g_hash_table_size(c_map));
-		i++;
-		m_pts = (f_minPts + i) * step;
-	}*/
 	res->ogsize = keypoints.size();
 
 	printf("Selected max clustering size = %d and cluster table has %d\n", res->minPts, g_hash_table_size(res->clusterMap));
