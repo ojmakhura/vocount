@@ -1506,13 +1506,51 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 	hdbscan scan(m_pts, DATATYPE_FLOAT);
 	scan.run(res->dataset->ptr<float>(), res->dataset->rows, res->dataset->cols, TRUE);
 	
-	IntIntListMap* c_map = NULL;
-	IntDistancesMap* d_map = NULL;
-	clustering_stats stats;
-	int val = -1;
+	res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, keypoints.size());
+	res->distancesMap = hdbscan_get_min_max_distances(&scan, res->clusterMap);
+	//clustering_stats stats;
+	hdbscan_calculate_stats(res->distancesMap, &(res->stats));
+	res->validity = hdbscan_analyse_stats(&(res->stats));
+	
 	
 	int i = 0;
+	m_pts = 2;
+	if(res->validity < 2){		
+		if(res->clusterMap != NULL){
+			hdbscan_destroy_cluster_table(res->clusterMap);
+		}
+					
+		if(res->distancesMap != NULL){
+			hdbscan_destroy_distance_map_table(res->distancesMap);
+		}
+					
+		if(!(res->labels->empty())){
+			res->labels->clear();
+		}	
+		
+		//hdbscan_destroy_cluster_table(c_map);
+		//hdbscan_destroy_distance_map_table(d_map);
+		
+		scan.reRun(m_pts);
+		res->clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, keypoints.size());
+		
+		if(analyse){
+			res->distancesMap = hdbscan_get_min_max_distances(&scan, res->clusterMap);
+			hdbscan_calculate_stats(res->distancesMap, &(res->stats));
+			res->validity = hdbscan_analyse_stats(&(res->stats));
+		}
+		
+		//res->clusterMap = c_map;
+		//res->distancesMap = d_map;
+		//res->stats = stats;
+		//res->validity = val;
+		res->minPts = m_pts;
+		
+		
+	}
+	res->labels->insert(res->labels->begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
 	
+	/*
 	while(val <= 2 && i < 5){
 		
 		if(m_pts > (step * f_minPts)){	
@@ -1561,7 +1599,7 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 		printf("Testing minPts = %d with validity = %d and cluster map size = %d\n", m_pts, val, g_hash_table_size(c_map));
 		i++;
 		m_pts = (f_minPts + i) * step;
-	}
+	}*/
 	res->ogsize = keypoints.size();
 
 	printf("Selected max clustering size = %d and cluster table has %d\n", res->minPts, g_hash_table_size(res->clusterMap));
@@ -1982,6 +2020,8 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		
 		Mat fr = frame.clone();
 		rectangle(fr, f.roi, value, 2, 8, 0);
+		
+		cout << f.roi << endl;
 		
 		display("frame", fr);
              
