@@ -168,6 +168,7 @@ int main(int argc, char** argv) {
     vocount vcount;
     vsettings settings;
     selection_t colourSel;
+    vcount.isConsole = true;
     colourSel.minPts = -1;
 	vcount.detector = SURF::create(MIN_HESSIAN);
 	

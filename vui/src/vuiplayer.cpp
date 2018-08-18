@@ -16,6 +16,7 @@ using namespace cv::xfeatures2d;
 VUIPlayer::VUIPlayer(QObject *parent)
     : QThread(parent){
     //ocl::setUseOpenCL(true);
+    this->vcount.isConsole = true;
     this->colourSel.minPts = -1;
 	this->vcount.detector = SURF::create(MIN_HESSIAN);
 }

@@ -81,29 +81,29 @@ console/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-20.mkv -t=../voc-18/trut
 console/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-20.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-20 -o=out/voc-18-bd-20/extended -n=1 -w=1 -s -d -f -df -rw=121 -rh=81 -rx=312 -ry=97 -e
 
 # run voc-18-bl-1.mkv
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-1.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-1 -o=out/voc-18-bl-1/unextended -n=1 -w=1 -s -d -f -df -rw=20 -rh=21 -rx=569 -ry=89
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-1.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-1 -o=out/voc-18-bl-1/extended -n=1 -w=1 -s -d -f -df -rw=20 -rh=21 -rx=569 -ry=89 -e
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-1.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-1 -o=out/voc-18-bl-1/unextended -n=1 -w=1 -s -d -f -df -rw=20 -rh=21 -rx=569 -ry=89
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-1.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-1 -o=out/voc-18-bl-1/extended -n=1 -w=1 -s -d -f -df -rw=20 -rh=21 -rx=569 -ry=89 -e
 
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-1.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-1 -o=out/voc-18-bl-1/unextended_rotated -r -n=1 -w=1 -s -d -f -df -rw=20 -rh=21 -rx=569 -ry=89
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-1.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-1 -o=out/voc-18-bl-1/extended_rotated -r -n=1 -w=1 -s -d -f -df -rw=20 -rh=21 -rx=569 -ry=89 -e
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-1.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-1 -o=out/voc-18-bl-1/unextended_rotated -r -n=1 -w=1 -s -d -f -df -rw=20 -rh=21 -rx=569 -ry=89
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-1.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-1 -o=out/voc-18-bl-1/extended_rotated -r -n=1 -w=1 -s -d -f -df -rw=20 -rh=21 -rx=569 -ry=89 -e
 
 # run voc-18-bl-2.mkv
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-2.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-2 -o=out/voc-18-bl-2/unextended -n=1 -w=1 -s -d -f -df -rw=34 -rh=35 -rx=701 -ry=227
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-2.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-2 -o=out/voc-18-bl-2/extended -n=1 -w=1 -s -d -f -df -rw=34 -rh=35 -rx=701 -ry=227 -e
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-2 -o=out/voc-18-bl-2/unextended -n=1 -w=1 -s -d -f -df -rw=34 -rh=35 -rx=701 -ry=227
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-2 -o=out/voc-18-bl-2/extended -n=1 -w=1 -s -d -f -df -rw=34 -rh=35 -rx=701 -ry=227 -e
 
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-2.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-2 -o=out/voc-18-bl-2/unextended_rotated -r -n=1 -w=1 -s -d -f -df -rw=34 -rh=35 -rx=701 -ry=227
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-2.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-2 -o=out/voc-18-bl-2/extended_rotated -r -n=1 -w=1 -s -d -f -df -rw=34 -rh=35 -rx=701 -ry=227 -e
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-2 -o=out/voc-18-bl-2/unextended_rotated -r -n=1 -w=1 -s -d -f -df -rw=34 -rh=35 -rx=701 -ry=227
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-2 -o=out/voc-18-bl-2/extended_rotated -r -n=1 -w=1 -s -d -f -df -rw=34 -rh=35 -rx=701 -ry=227 -e
 
 # run voc-18-bl-3.mkv
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-3 -o=out/voc-18-bl-3/unextended -n=1 -w=1 -s -d -f -df -rw=90 -rh=89 -rx=1377 -ry=377
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-3 -o=out/voc-18-bl-3/extended -n=1 -w=1 -s -d -f -df -rw=90 -rh=89 -rx=1377 -ry=377 -e
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/unextended -n=1 -w=1 -s -d -f -df -rw=90 -rh=89 -rx=1377 -ry=377
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/extended -n=1 -w=1 -s -d -f -df -rw=90 -rh=89 -rx=1377 -ry=377 -e
 
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-3 -o=out/voc-18-bl-3/unextended_rotated -r -n=1 -w=1 -s -d -f -df -rw=90 -rh=89 -rx=1377 -ry=377
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-3 -o=out/voc-18-bl-3/extended_rotated -r -n=1 -w=1 -s -d -f -df -rw=90 -rh=89 -rx=1377 -ry=377 -e
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/unextended_rotated -r -n=1 -w=1 -s -d -f -df -rw=90 -rh=89 -rx=1377 -ry=377
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/extended_rotated -r -n=1 -w=1 -s -d -f -df -rw=90 -rh=89 -rx=1377 -ry=377 -e
 
 # run voc-18-bl-4.mkv
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-4.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-4 -o=out/voc-18-bl-4/unextended -n=1 -w=1 -s -d -f -df -rw=107 -rh=111 -rx=1208 -ry=386
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-4.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-4 -o=out/voc-18-bl-4/extended -n=1 -w=1 -s -d -f -df -rw=107 -rh=111 -rx=1208 -ry=386 -e
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-4 -o=out/voc-18-bl-4/unextended -n=1 -w=1 -s -d -f -df -rw=107 -rh=111 -rx=1208 -ry=386
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-4 -o=out/voc-18-bl-4/extended -n=1 -w=1 -s -d -f -df -rw=107 -rh=111 -rx=1208 -ry=386 -e
 
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-4.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-4 -o=out/voc-18-bl-4/unextended_rotated -r -n=1 -w=1 -s -d -f -df -rw=107 -rh=111 -rx=1208 -ry=386
-console/vocount_cli -v=../voc-18/videos/birds/voc-18-bl-4.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bl-4 -o=out/voc-18-bl-4/extended_rotated -r -n=1 -w=1 -s -d -f -df -rw=107 -rh=111 -rx=1208 -ry=386 -e
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-4 -o=out/voc-18-bl-4/unextended_rotated -r -n=1 -w=1 -s -d -f -df -rw=107 -rh=111 -rx=1208 -ry=386
+console/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-4 -o=out/voc-18-bl-4/extended_rotated -r -n=1 -w=1 -s -d -f -df -rw=107 -rh=111 -rx=1208 -ry=386 -e

@@ -119,7 +119,7 @@ void getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices, Mat& out)
 /**
  * Detect the optimum minPts value for colour clustering.
  */
-selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints, ofstream& trainingFile, ofstream& trackingFile);
+selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints, ofstream& trainingFile, ofstream& trackingFile, bool isConsole);
 
 /**
  * Given a list of keypoints, we find the 2D locations of the keypoints and

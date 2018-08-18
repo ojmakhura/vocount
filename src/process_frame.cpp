@@ -1135,7 +1135,8 @@ Mat getDistanceDataset(Mat descriptors, vector<int> roiIdx){
 Mat getColourDataset(Mat f, vector<KeyPoint> pts){
 	Mat m(pts.size(), 3, CV_32FC1);
 	Mat tmpf;
-	GaussianBlur(f, tmpf, Size( 5, 5), 0, 0 );
+	GaussianBlur(f, tmpf, Size(3, 3), 0, 0 );
+	//tmpf = f.clone();
 	float* data = m.ptr<float>(0);
 	for(size_t i = 0; i < pts.size(); i++){
 		Point2f pt = pts[i].pt;
@@ -1317,9 +1318,23 @@ int chooseMinPts(map<uint, set<int>>& numClusterMap, vector<int>& validities){
 }
 
 /**
+ * 
+ * 
+ */
+int32_t consolePreviewColours(map<int, IntIntListMap* >& clusterMaps ){
+	
+	while(true){
+		cout << "List of results \nminPts\t\tNumber of Clusters" << endl;
+		for(map<int, IntDoubleListMap* >::iterator it = clusterMaps.begin(); it != clusterMaps.end(); ++it){
+			cout << it->first << "\t\t" << g_hash_table_size(it->second) << endl;
+		}		
+	}
+} 
+
+/**
  *
  */
-selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints, ofstream& trainingFile, ofstream& trackingFile){
+selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints, ofstream& trainingFile, ofstream& trackingFile, bool isConsole){
 	
 	map<uint, set<int>> numClusterMap;
 	vector<int> validities;
@@ -1547,9 +1562,7 @@ results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints,
 			hdbscan_calculate_stats(res->distancesMap, &(res->stats));
 			res->validity = hdbscan_analyse_stats(&(res->stats));
 		}
-		res->minPts = m_pts;
-		
-		
+		res->minPts = m_pts;		
 	}
 	res->labels->insert(res->labels->begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
 	res->ogsize = keypoints.size();
@@ -1944,7 +1957,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 	
 	vcount.frameCount++;
 	
-	framed f, index_f, sel_f;
+	framed f;//, index_f, sel_f;
 	Mat templateMatch;
 	
 	if(settings.print){
@@ -1952,12 +1965,12 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 	}
 
 	f.i = vcount.frameCount;
-	index_f.i = f.i;
-	sel_f.i = f.i;
+	//index_f.i = f.i;
+	//sel_f.i = f.i;
 
 	f.frame = frame.clone();
-	index_f.frame = frame.clone();
-	sel_f.frame = frame.clone();
+	//index_f.frame = frame.clone();
+	//sel_f.frame = frame.clone();
 
 	cvtColor(f.frame, f.gray, COLOR_BGR2GRAY);
 	vcount.detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
@@ -2009,7 +2022,7 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 		if(colourSel.minPts == -1 && (settings.isClustering || settings.fdClustering)){
 			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Detecting Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 			printf("Finding proper value of minPts\n");
-			colourSel = trainColourModel(frame, f.descriptors, f.keypoints, vcount.trainingFile, vcount.trackingFile);	
+			colourSel = trainColourModel(frame, f.descriptors, f.keypoints, vcount.trainingFile, vcount.trackingFile, vcount.isConsole);	
 		} 
 		
 		if(colourSel.minPts != -1){
@@ -2080,7 +2093,9 @@ void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, 
 void combineSelDescriptorsRawStructures(vocount& vcount, framed& f, selection_t& colourSel, String& dfComboDir, bool print){
 	vector<int32_t> keypointStructures(colourSel.selectedKeypoints.size(), -1);
 	set<uint> selectedStructures;
-	results_t* descriptorResults = f.results[ResultIndex::Descriptors];;
+	results_t* descriptorResults = f.results[ResultIndex::Descriptors];
+	//extendBoxClusters(f.frame, descriptorResults);
+	//extractProminentStructures(descriptorResults->clusterMap, descriptorResults->clusterStructures, descriptorResults->keypoints, descriptorResults->boxStructures);
 	
 	/**
 	 * For each keypoint in the selected set, we find all box_structures that 
@@ -2165,6 +2180,16 @@ results_t* clusterDescriptors(framed& f, Mat& dataset, vector<KeyPoint>& keypoin
 	 * the original. We use histograms to match.
 	 */ 
 	extractProminentStructures(res->clusterMap, res->clusterStructures, res->keypoints, res->boxStructures);
+	
+	// Since we forced over-segmentation of the clusters
+	// we must make it up by extending the box structures
+	if(res->minPts == 2){
+		extendBoxClusters(f.frame, res);
+		extractProminentStructures(res->clusterMap, res->clusterStructures, res->keypoints, res->boxStructures);
+		
+		//extendBoxClusters(f.frame, res);
+		//extractProminentStructures(res->clusterMap, res->clusterStructures, res->keypoints, res->boxStructures);
+	}
 			
 	if(extend){
 		extendBoxClusters(f.frame, res);

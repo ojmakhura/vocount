@@ -147,7 +147,7 @@ typedef struct VSETTINGS{
 		 dfiClustering = false,											/// Combine descriptor, filtered descriptor and image space clustering
 		 extend = false,
 		 rotationalInvariance = false;											
-	
+	bool isConsole = true;
 } vsettings;
 
 typedef struct {
