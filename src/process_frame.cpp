@@ -1318,18 +1318,135 @@ int chooseMinPts(map<uint, set<int>>& numClusterMap, vector<int>& validities){
 }
 
 /**
- * 
+ * Using the map of clusters, allow the user to select the minPts
+ * they want.
  * 
  */
-int32_t consolePreviewColours(map<int, IntIntListMap* >& clusterMaps ){
+void consolePreviewColours(map<int, IntIntListMap* >& clusterMaps, int32_t& autoChoice){
 	
+	std::string choice = "yes";
+	cout << "minPts = " << autoChoice << " has been detected. Use it? (YES/no): ";
+	cin >> choice;
+	
+	if(choice.compare("yes") == 0 || choice.compare("Yes") == 0 || choice.compare("YES") == 0){
+		return;
+	}
+		
 	while(true){
 		cout << "List of results \nminPts\t\tNumber of Clusters" << endl;
 		for(map<int, IntDoubleListMap* >::iterator it = clusterMaps.begin(); it != clusterMaps.end(); ++it){
 			cout << it->first << "\t\t" << g_hash_table_size(it->second) << endl;
-		}		
+		}
+		
+		int32_t sel;
+		cout << "Select minPts to preview: " << endl;
+		cin >> sel;
+		
+		map<int, IntDoubleListMap* >::iterator it = clusterMaps.at(sel);
+		
+		if(it == clusterMaps.end()){
+			cout << "minPts = " << sel << " is not in the results." << endl;
+			continue;
+		}
+		
+		IntIntListMap* tmp_map = it->second;
+		
+		GHashTableIter iter;
+		gpointer key;
+		gpointer value;
+		g_hash_table_iter_init (&iter, tmp_map);
+
+		while (g_hash_table_iter_next (&iter, &key, &value)){
+			IntArrayList* list = (IntArrayList*)value;
+			int32_t* k = (int32_t *)key;
+			vector<KeyPoint> kps;
+			getListKeypoints(keypoints, list, kps);
+			Mat m = drawKeyPoints(frame, kps, colours.red, -1);
+			// print the choice images
+			String imName = "choice_cluster_";
+			imName += std::to_string(*k).c_str();	
+			
+			if(*k != 0){
+				String windowName = "Choose ";
+				windowName += std::to_string(*k).c_str();
+				windowName += "?";
+				display(windowName.c_str(), m);
+				
+				
+				// Listen for a key pressed
+				char c = ' ';
+				while(true){
+					if (c == 'a') {
+						
+						break;
+					} else if (c == 'q'){
+						break;
+					}
+					c = (char) waitKey(20);
+				}
+				destroyWindow(windowName.c_str());
+				if(c == 'q'){
+					break
+				}
+			}
+		}
 	}
-} 
+	
+	return 0;
+}
+
+/**
+ * Select the colour model from the selected minPts clusters
+ */ 
+void selectColourModel(selection_t& colourSelection){
+	
+	GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	g_hash_table_iter_init (&iter, colourSelection.clusterKeypointIdx);
+
+	while (g_hash_table_iter_next (&iter, &key, &value)){
+		IntArrayList* list = (IntArrayList*)value;
+		int32_t* k = (int32_t *)key;
+		vector<KeyPoint> kps;
+		getListKeypoints(keypoints, list, kps);
+		Mat m = drawKeyPoints(frame, kps, colours.red, -1);
+		// print the choice images
+		String imName = "choice_cluster_";
+		imName += std::to_string(*k).c_str();	
+		
+		if(*k != 0){
+			String windowName = "Choose ";
+			windowName += std::to_string(*k).c_str();
+			windowName += "?";
+			display(windowName.c_str(), m);
+			
+			
+			// Listen for a key pressed
+			char c = ' ';
+			while(true){
+				if (c == 'a') {
+					cout << "Chosen cluster " << *k << endl;
+					Mat xx ;
+					getSelectedKeypointsDescriptors(descriptors, list, xx);
+					colourSelection.selectedClusters.insert(*k);
+					colourSelection.selectedKeypoints.insert(colourSelection.selectedKeypoints.end(), kps.begin(), kps.end());
+					if(colourSelection.selectedDesc.empty()){
+						colourSelection.selectedDesc = xx.clone();
+					} else{
+						colourSelection.selectedDesc.push_back(xx);
+					}
+					break;
+				} else if (c == 'q'){
+					break;
+				}
+				c = (char) waitKey(20);
+			}
+			destroyWindow(windowName.c_str());
+		}
+	}
+}
+
 
 /**
  *
@@ -1347,7 +1464,6 @@ selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 	//printMatToFile(dataset, "out", "colour_training_dset", Formatter::FMT_MATLAB);
 	//printMatToFile(dataset, "out", "colour_training_dset", Formatter::FMT_NUMPY);
 	
-	selection_t colourSelection;
 	hdbscan scan(3, DATATYPE_FLOAT);
 	scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);	
 	
@@ -1396,7 +1512,8 @@ selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 		labelsList.push_back(labelsCopy);
 		hdbscan_destroy_distance_map_table(distancesMap);		
 	}
-		
+	
+	selection_t colourSelection;	
 	colourSelection.minPts = chooseMinPts(numClusterMap, validities);
 	
 	//printLabelsToFile(labelsList[colourSelection.minPts - 3], scan.numPoints, "out", Formatter::FMT_CSV);
@@ -1421,8 +1538,8 @@ selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 		trainingFile << "Selected minPts," << colourSelection.minPts << "\n";
 		trainingFile.close();
 	}
-	
-	GHashTableIter iter;
+	selectColourModel(colourSelection);
+	/*GHashTableIter iter;
 	gpointer key;
 	gpointer value;
 	g_hash_table_iter_init (&iter, colourSelection.clusterKeypointIdx);
@@ -1467,7 +1584,7 @@ selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 			destroyWindow(windowName.c_str());
 		}
 	}
-	
+	*/
 	if(trackingFile.is_open()){
 		trackingFile << 1 << "," << keypoints.size() << "," << colourSelection.selectedDesc.rows << "," << colourSelection.minPts << "," << colourSelection.numClusters << "," << colourSelection.validity << endl;
 	}
