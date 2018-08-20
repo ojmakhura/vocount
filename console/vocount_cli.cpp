@@ -161,15 +161,105 @@ bool processOptions(vocount& vcount, vsettings& settings, CommandLineParser& par
 	return true;
 }
 
+
+/**
+ * Using the map of clusters, allow the user to select the minPts
+ * they want.
+ * 
+ */
+void consolePreviewColours(Mat& frame, vector<KeyPoint>& keypoints, map<int, IntIntListMap* >& clusterMaps, vector<int32_t>& validities, int32_t& autoChoice){
+	
+	COLOURS c;
+	std::string choiceStr = "yes";
+	cout << "minPts = " << autoChoice << " has been detected. Use it? (yes/no): ";
+	cin >> choiceStr;
+		
+	if(choiceStr.compare("yes") == 0 || choiceStr.compare("Yes") == 0 || choiceStr.compare("YES") == 0){
+		return;
+	}
+	
+	bool done = false;
+	while(!done){
+		cout << "-------------------------------------------------------------------------------" << endl;
+		cout << "List of results \nminPts\t\tNumber of Clusters\t\tValidity" << endl;
+		for(map<int, IntDoubleListMap* >::iterator it = clusterMaps.begin(); it != clusterMaps.end(); ++it){
+			cout << it->first << "\t\t" << g_hash_table_size(it->second) << "\t\t" << validities[it->first - 3] << endl;
+		}
+		
+		int32_t sel;
+		cout << "Select minPts to preview: ";
+		cin >> sel;
+		cout << "Use 'n' to step through clusters and 'q' to exit preview." << endl;
+		map<int, IntDoubleListMap* >::iterator it = clusterMaps.find(sel);
+		
+		if(it == clusterMaps.end()){
+			cout << "minPts = " << sel << " is not in the results." << endl;
+			continue;
+		}
+		
+		IntIntListMap* tmp_map = it->second;
+		
+		GHashTableIter iter;
+		gpointer key;
+		gpointer value;
+		g_hash_table_iter_init (&iter, tmp_map);
+
+		while (g_hash_table_iter_next (&iter, &key, &value)){
+			IntArrayList* list = (IntArrayList*)value;
+			int32_t* k = (int32_t *)key;
+			vector<KeyPoint> kps;
+			getListKeypoints(keypoints, list, kps);
+			Mat m = drawKeyPoints(frame, kps, c.red, -1);
+			// print the choice images
+			String imName = "choice_cluster_";
+			imName += std::to_string(*k).c_str();	
+			
+			if(*k != 0){
+				String windowName = "Choose ";
+				windowName += std::to_string(*k).c_str();
+				windowName += "?";
+				display(windowName.c_str(), m);				
+				
+				// Listen for a key pressed
+				char c = ' ';
+				while(true){
+					if (c == 'n') { // next cluster
+						
+						break;
+					} else if (c == 'q'){ // stop preview
+						break;
+					}
+					c = (char) waitKey(20);
+				}
+				destroyWindow(windowName.c_str());
+				if(c == 'q'){
+					break;
+				}
+			}
+		}
+		
+		cout << "You previewed minPts = " << sel << ". Do you want to use it? (yes/no): ";		
+		cin >> choiceStr;
+		
+		if(choiceStr.compare("yes") == 0 || choiceStr.compare("Yes") == 0 || choiceStr.compare("YES") == 0){
+			cout << "Chosen " << sel << endl;
+			autoChoice = sel;
+			done = true;
+		}
+	}
+	cout << "-------------------------------------------------------------------------------" << endl;
+}
+
+
 int main(int argc, char** argv) {
 	ocl::setUseOpenCL(true);
 	Mat frame;
 	VideoCapture cap;
     vocount vcount;
     vsettings settings;
-    selection_t colourSel;
-    vcount.isConsole = true;
-    colourSel.minPts = -1;
+    //selection_t colourSel;
+    settings.isConsole = true;
+    vcount.colourSel.minPts = -1;
 	vcount.detector = SURF::create(MIN_HESSIAN);
 	
 	cv::CommandLineParser parser(argc, argv,
@@ -194,7 +284,28 @@ int main(int argc, char** argv) {
     }
 
     while(cap.read(frame))
-    {	
+    {
+		framed f;
+		vcount.detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
+		/**
+		 * Finding the colour model for the current frame
+		 * 
+		 */ 
+		if(vcount.frameCount == 0 && (settings.isClustering || settings.fdClustering)){
+			cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Detecting Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+			printf("Finding proper value of minPts\n");
+			map<int, IntIntListMap* > clusterMaps;
+			vector<int32_t> validities = trainColourModel(vcount.colourSel, frame, f.keypoints, clusterMaps, vcount.trainingFile, settings.isConsole);	
+			consolePreviewColours(frame, f.keypoints, clusterMaps, validities, vcount.colourSel.minPts);
+			getLearnedColourModel(vcount.colourSel, clusterMaps, validities);
+			//cout << " Selected ............ " << vcount.colourSel.minPts << endl;
+			chooseColourModel(frame, f.descriptors, f.keypoints, vcount.colourSel);
+			//consolePreviewColours(frame, keypoints, clusterMaps, vcount.colourSel.minPts);
+			if(vcount.trackingFile.is_open()){
+				vcount.trackingFile << 1 << "," << f.keypoints.size() << "," << vcount.colourSel.selectedDesc.rows << "," << vcount.colourSel.minPts << "," << vcount.colourSel.numClusters << "," << vcount.colourSel.validity << endl;
+			}
+		}
+		
 		// Listen for a key pressed
 		char c = (char) waitKey(20);
 		if (c == 'q') {
@@ -202,14 +313,14 @@ int main(int argc, char** argv) {
 		} else if (c == 's') { // select a roi if c has een pressed or if the program was run with -s option
 			settings.selectROI = true;
 		} 
-		processFrame(vcount, settings, colourSel, frame);	
+		processFrame(vcount, settings, f, frame);	
 		//break;
 		//if(vcount.frameCount == 4){
 		//	break;
 		//}
 	}
 	
-	finalise(vcount, colourSel);
+	finalise(vcount);
 	return 0;
 }
 

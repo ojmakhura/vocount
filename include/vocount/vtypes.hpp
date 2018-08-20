@@ -111,8 +111,8 @@ typedef struct FRAMED{
 } framed;
 
 typedef struct VOCOUNT{
-    int frameCount = 0;
-    int colourMinPts;
+    int32_t frameCount = 0;
+    int32_t colourMinPts;
 	bool roiExtracted = false;
 	Ptr<Feature2D> detector;
     Ptr<Tracker> tracker;
@@ -127,6 +127,7 @@ typedef struct VOCOUNT{
     ofstream diClusterFile, diEstimatesFile;
     ofstream dfiClusterFile, dfiEstimatesFile;
     ofstream trainingFile, trackingFile;
+	selection_t colourSel;
 } vocount;
 
 typedef struct VSETTINGS{

@@ -16,8 +16,8 @@ using namespace cv::xfeatures2d;
 VUIPlayer::VUIPlayer(QObject *parent)
     : QThread(parent){
     //ocl::setUseOpenCL(true);
-    this->vcount.isConsole = true;
-    this->colourSel.minPts = -1;
+    this->settings.isConsole = true;
+    this->vcount.colourSel.minPts = -1;
 	this->vcount.detector = SURF::create(MIN_HESSIAN);
 }
 
@@ -57,7 +57,26 @@ void VUIPlayer::run(){
                 _stop = true;
                 continue;
             }
-            processFrame(vcount, settings, colourSel, frame);
+
+            framed f;
+            vcount.detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
+
+            /**
+             * Finding the colour model for the current frame
+             *
+             */
+            if(vcount.frameCount == 0 && (settings.isClustering || settings.fdClustering)){
+                cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Detecting Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+                printf("Finding proper value of minPts\n");
+                map<int, IntIntListMap* > clusterMaps;
+                vector<int32_t> validities = trainColourModel(this->vcount.colourSel, frame, f.keypoints, clusterMaps, vcount.trainingFile, settings.isConsole);
+                getLearnedColourModel(vcount.colourSel, clusterMaps, validities);
+                chooseColourModel(frame, f.descriptors, f.keypoints, vcount.colourSel);
+                if(vcount.trackingFile.is_open()){
+                    vcount.trackingFile << 1 << "," << f.keypoints.size() << "," << vcount.colourSel.selectedDesc.rows << "," << vcount.colourSel.minPts << "," << vcount.colourSel.numClusters << "," << vcount.colourSel.validity << endl;
+                }
+            }
+            processFrame(vcount, settings, f, frame);
         }
         this->msleep(0);
     }
@@ -91,7 +110,7 @@ bool VUIPlayer::isPaused(){
 void VUIPlayer::stop(){
     this->initialised = false;
     this->cap.release();
-    finalise(vcount, colourSel);
+    finalise(vcount);
     _stop = true;
 }
 

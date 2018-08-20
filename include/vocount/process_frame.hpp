@@ -99,7 +99,7 @@ void getFrameTruth(String truthFolder, map<int, int>& truth);
  * @param - colourSel
  * @param - frame 
  */
-void trackFrameColourModel(vocount& vcount, framed& f, selection_t& colourSel, Mat& frame); 
+void trackFrameColourModel(vocount& vcount, framed& f, Mat& frame); 
 
 /**
  *
@@ -119,7 +119,7 @@ void getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices, Mat& out)
 /**
  * Detect the optimum minPts value for colour clustering.
  */
-selection_t trainColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints, ofstream& trainingFile, ofstream& trackingFile, bool isConsole);
+vector<int32_t> trainColourModel(selection_t& colourSelection, Mat& frame, vector<KeyPoint>& keypoints, map<int, IntIntListMap* >& clusterMaps, ofstream& trainingFile, bool isConsole);
 
 /**
  * Given a list of keypoints, we find the 2D locations of the keypoints and
@@ -133,7 +133,8 @@ Mat getImageSpaceDataset(vector<KeyPoint> keypoint);
 /**
  *
  */
-results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_minPts, bool mapDistances, bool singleRun);
+results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_minPts, bool analyse, bool singleRun);
+results_t* do_cluster(results_t* res, Mat& dataset, vector<KeyPoint>& keypoints, int step, int f_minPts, bool analyse);
 
 /**
  * Takes a hash table of cluster point indices anc creates a map
@@ -183,8 +184,7 @@ void expandClusters(results_t* res);
  * 
  */ 
 void getClustersBoxStructures(Rect2d& roi, Mat& frame, IntIntListMap* clusterMap, map_st* clusterStructures,
-						vector<KeyPoint>* keypoints, vector<int32_t>* labels,
-						map_kp* finalPointClusters);
+						vector<KeyPoint>* keypoints, vector<int32_t>* labels);
 			
 /**
  * 
@@ -206,13 +206,13 @@ cv::Ptr<cv::Tracker> createTrackerByName(cv::String name);
  * 
  * 
  */ 
-void processFrame(vocount& vcount, vsettings& settings, selection_t& colourSel, Mat& frame);
+void processFrame(vocount& vcount, vsettings& settings, framed& f, Mat& frame);
 
 /**
  * 
  * 
  */
-void finalise(vocount& vcount, selection_t& colourSel); 
+void finalise(vocount& vcount); 
 
 /**
  * 
@@ -224,7 +224,7 @@ results_t* clusterDescriptors(framed& f, Mat& dataset, vector<KeyPoint>& keypoin
  * 
  * 
  */ 
-void combineSelDescriptorsRawStructures(vocount& vcount, framed& f, selection_t& colourSel, String& dfComboDir, bool print);
+void combineSelDescriptorsRawStructures(vocount& vcount, framed& f, String& dfComboDir, bool print);
 
 /**
  * 
@@ -235,11 +235,20 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame);
 /**
  * 
  */
-void imageSpaceClustering(vocount& vcount, vsettings& settings, selection_t& colourSel, framed& f);
+void imageSpaceClustering(vocount& vcount, vsettings& settings, framed& f);
 
 /**
  * 
  */
-void filteredDescriptorClustering(vocount& vcount, vsettings& settings, selection_t& colourSel, framed& f, Mat& frame); 
+void filteredDescriptorClustering(vocount& vcount, vsettings& settings, framed& f, Mat& frame); 
 
+/**
+ * 
+ */ 
+void chooseColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints, selection_t& colourSelection);
+
+/**
+ * 
+ */
+void getLearnedColourModel(selection_t& colourSelection, map<int, IntIntListMap* >& clusterMaps, vector<int32_t>& validities); 
 #endif
