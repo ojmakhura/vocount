@@ -15,7 +15,7 @@ class PreviewDialog : public QDialog
 
 public:
     explicit PreviewDialog(QWidget *parent = 0);
-    PreviewDialog(QWidget *parent = 0, Mat& frame, vector<KeyPoint>& keypoints, map<int, IntIntListMap* >& clusterMaps, vector<int32_t>& validities, int32_t& autoChoice);
+    PreviewDialog(QWidget *parent, map<int, IntIntListMap* >* clusterMaps, vector<int32_t>& validities);
     ~PreviewDialog();
 
 private slots:

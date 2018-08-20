@@ -1,4 +1,4 @@
-#include "include/previewtablemodel.h"
+#include "previewtablemodel.h"
 
 PreviewTableModel::PreviewTableModel(QObject *parent)
     : QAbstractTableModel(parent)

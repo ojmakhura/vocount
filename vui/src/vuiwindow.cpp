@@ -13,7 +13,8 @@ VUIWindow::VUIWindow(QWidget *parent) :
 {
     player = new VUIPlayer();
     ui->setupUi(this);
-    dialog = new PreviewDialog(this);
+
+    ///dialog = new PreviewDialog(this);
     ui->trackerComboBox->addItem("BOOSTING");
     ui->trackerComboBox->addItem("KCF");
     ui->trackerComboBox->addItem("TLD");

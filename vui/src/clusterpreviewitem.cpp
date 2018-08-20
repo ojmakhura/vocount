@@ -1,4 +1,4 @@
-#include "include/clusterpreviewitem.h"
+#include "clusterpreviewitem.h"
 
 ClusterPreviewItem::ClusterPreviewItem()
 {
