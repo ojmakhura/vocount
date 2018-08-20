@@ -18,7 +18,6 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 
 add_definitions(${Qt5Widgets_DEFINITIONS})
-#include_directories(${Qt5Widgets_INCLUDES})
 
 #
 # project main
@@ -29,6 +28,7 @@ set(VUI_CPPSRC
 	${VUI_SRC_DIR}/main.cpp
 	${VUI_SRC_DIR}/vuiwindow.cpp
 	${VUI_SRC_DIR}/vuiplayer.cpp
+	${VUI_SRC_DIR}/previewdialog.cpp
 )
 
 set(CMAKE_AUTOUIC_SEARCH_PATHS ${VUI_FORMS_DIR})
@@ -37,14 +37,13 @@ set ( RESOURCES icons.qrc)
 
 set ( MOC_HEADERS
 	${VUI_INCLUDE_DIR}/vuiwindow.h
+	${VUI_INCLUDE_DIR}/previewdialog.h
 )
 
 QT5_ADD_RESOURCES( RES_SOURCES ${RESOURCES} )
 QT5_WRAP_CPP( MOC_SRCS ${MOC_HEADERS} )
 
 add_executable(${TARGET} ${VUI_CPPSRC} ${MOC_SRCS} ${RES_SOURCES})
-target_link_libraries(${TARGET} ${VOCOUNT_LIB} )# ${Qt5Widgets_LIBRARIES})
+target_link_libraries(${TARGET} ${VOCOUNT_LIB} )
 include_directories( ${VOCOUNT_INCLUDE_DIR} ${VUI_INCLUDE_DIR} ${CMAKE_BINARY_DIR} ${HDBSCAN_INCLUDE_DIRS} ${GLIB2_INCLUDE_DIRS} ${LISTLIB_INCLUDE_DIR} ${GNULIB_INCLUDE_DIR})
 qt5_use_modules(${TARGET} Widgets)
-
-# ${Qt5Widgets_INCLUDES})

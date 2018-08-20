@@ -27,14 +27,21 @@ SOURCES += \
         src/vuiwindow.cpp \
         src/vuiplayer.cpp \
         ../src/print_utils.cpp \
-        ../src/process_frame.cpp
+        ../src/process_frame.cpp \
+        src/previewdialog.cpp \
+    src/previewtablemodel.cpp \
+    src/clusterpreviewitem.cpp
 
 HEADERS += \
         include/vuiplayer.h \
-        include/vuiwindow.h
+        include/vuiwindow.h \
+        include/previewdialog.h \
+    include/previewtablemodel.h \
+    include/clusterpreviewitem.h
 
 FORMS += \
-        forms/vuiwindow.ui
+        forms/vuiwindow.ui \
+        forms/previewdialog.ui
 
 INCLUDEPATH += "include" \
             "../include" \

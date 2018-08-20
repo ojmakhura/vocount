@@ -5,9 +5,37 @@ PreviewTableModel::PreviewTableModel(QObject *parent)
 {
 }
 
+PreviewTableModel::PreviewTableModel(QList<ClusterPreviewItem> items, QObject *parent = nullptr)
+    : QAbstractTableModel(parent)
+    , items(items)
+{
+
+}
+
 QVariant PreviewTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    // FIXME: Implement me!
+    if (role != Qt::DisplayRole)
+            return QVariant();
+
+    if (orientation == Qt::Horizontal) {
+        switch (section) {
+            case 0:
+                return tr("minPts");
+
+            case 1:
+                return tr("Num. of Clusters");
+
+            case 2:
+                return tr("Validity");
+
+            case 3:
+                return tr("Preview");
+
+            default:
+                return QVariant();
+        }
+    }
+    return QVariant();
 }
 
 int PreviewTableModel::rowCount(const QModelIndex &parent) const
@@ -15,7 +43,7 @@ int PreviewTableModel::rowCount(const QModelIndex &parent) const
     if (parent.isValid())
         return 0;
 
-    // FIXME: Implement me!
+    return items.size();
 }
 
 int PreviewTableModel::columnCount(const QModelIndex &parent) const
@@ -23,7 +51,7 @@ int PreviewTableModel::columnCount(const QModelIndex &parent) const
     if (parent.isValid())
         return 0;
 
-    // FIXME: Implement me!
+    return 4;
 }
 
 QVariant PreviewTableModel::data(const QModelIndex &index, int role) const
@@ -31,6 +59,32 @@ QVariant PreviewTableModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    // FIXME: Implement me!
+    if (index.row() >= contacts.size() || index.row() < 0)
+           return QVariant();
+
+    if(role == Qt::DisplayRole){
+        const auto &item = items.at(index.row());
+
+        if (index.column() == 0)
+            return item.minPts;
+        else if (index.column() == 1)
+            return item.numberOfClusters;
+        else if (index.column() == 2)
+            return item.getValidity();
+        else if (index.column() == 3)
+            return "QButton";
+
+    }
+
     return QVariant();
+}
+
+QList<ClusterPreviewItem> PreviewTableModel::getItems() const
+{
+    return items;
+}
+
+void PreviewTableModel::setItems(const QList<ClusterPreviewItem> &value)
+{
+    items = value;
 }

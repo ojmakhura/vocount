@@ -2,6 +2,7 @@
 #define PREVIEWTABLEMODEL_H
 
 #include <QAbstractTableModel>
+#include "clusterpreviewitem.h"
 
 class PreviewTableModel : public QAbstractTableModel
 {
@@ -9,6 +10,7 @@ class PreviewTableModel : public QAbstractTableModel
 
 public:
     explicit PreviewTableModel(QObject *parent = nullptr);
+    PreviewTableModel(QList<ClusterPreviewItem> items, QObject *parent = nullptr);
 
     // Header:
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
@@ -19,7 +21,11 @@ public:
 
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
+    QList<ClusterPreviewItem> getItems() const;
+    void setItems(const QList<ClusterPreviewItem> &value);
+
 private:
+    QList<ClusterPreviewItem> items;
 };
 
 #endif // PREVIEWTABLEMODEL_H

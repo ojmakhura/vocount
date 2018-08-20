@@ -4,6 +4,7 @@
 #include <QMainWindow>
 
 #include "vuiplayer.h"
+#include "previewdialog.h"
 
 namespace Ui {
 class VUIWindow;
@@ -41,6 +42,8 @@ private slots:
 private:
     Ui::VUIWindow *ui;
     VUIPlayer *player;
+    PreviewDialog *dialog;
+
 };
 
 #endif // VUIWINDOW_H
