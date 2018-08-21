@@ -122,10 +122,7 @@ typedef struct VOCOUNT{
     map<int32_t, int32_t> truth;
     ofstream descriptorsClusterFile, descriptorsEstimatesFile;
     ofstream selDescClusterFile, selDescEstimatesFile;
-    ofstream indexClusterFile, indexEstimatesFile;
     ofstream dfClusterFile, dfEstimatesFile;
-    ofstream diClusterFile, diEstimatesFile;
-    ofstream dfiClusterFile, dfiEstimatesFile;
     ofstream trainingFile, trackingFile;
 	selection_t colourSel;
 } vocount;

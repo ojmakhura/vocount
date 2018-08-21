@@ -5,7 +5,7 @@ PreviewTableModel::PreviewTableModel(QObject *parent)
 {
 }
 
-PreviewTableModel::PreviewTableModel(QList<ClusterPreviewItem> items, QObject *parent = nullptr)
+PreviewTableModel::PreviewTableModel(QList<ClusterPreviewItem> items, QObject *parent)
     : QAbstractTableModel(parent)
     , items(items)
 {
@@ -59,16 +59,16 @@ QVariant PreviewTableModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    if (index.row() >= contacts.size() || index.row() < 0)
+    if (index.row() >= items.size() || index.row() < 0)
            return QVariant();
 
     if(role == Qt::DisplayRole){
         const auto &item = items.at(index.row());
 
         if (index.column() == 0)
-            return item.minPts;
+            return item.getMinPts();
         else if (index.column() == 1)
-            return item.numberOfClusters;
+            return item.getNumberOfClusters();
         else if (index.column() == 2)
             return item.getValidity();
         else if (index.column() == 3)

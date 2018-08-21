@@ -29,12 +29,9 @@ static void help(){
 			"     [-t=<truth count dir>]			# The folder that contains binary images for each frame in the video with objects tagged \n"
 			"     [-s]       						# select roi from the first \n"
 			"     [-d]       						# raw descriptors\n"
-			"     [-i]       						# image space clustering\n"
 			"     [-f]       						# filtered keypoints\n"
 			"     [-c]       						# cluster analysis method \n"
 			"     [-df]       						# Combine descriptor clustering and filtered descriptors clustering\n"
-			"     [-di]       						# Combine descriptor clustering and image index based clustering\n"
-			"     [-dfi]       					# Combine descriptor clustering, filtered descriptors and index based clustering\n"
 			"     [-rx]       					# roi x coordiate\n"
 			"     [-ry]       					# roi y coordinate\n"
 			"     [-rh]       					# roi height\n"
@@ -95,17 +92,12 @@ bool processOptions(vocount& vcount, vsettings& settings, CommandLineParser& par
 		settings.selectROI = true;
 	}
 	
-	if(parser.has("d") || parser.has("df") || parser.has("di") || parser.has("dfi")){
+	if(parser.has("d") || parser.has("df")){
 		printf("*** Raw descriptor clustering activated\n");
 		settings.dClustering = true;
 	}
 	
-	if(parser.has("i") || parser.has("di") || parser.has("dfi")){
-		printf("*** Image space clustering activated\n");
-		settings.isClustering = true;
-	}
-	
-	if(parser.has("f") || parser.has("df") || parser.has("dfi")){
+	if(parser.has("f") || parser.has("df")){
 		printf("*** Filtered descriptor clustering activated\n");
 		settings.fdClustering = true;
 	}
@@ -114,17 +106,7 @@ bool processOptions(vocount& vcount, vsettings& settings, CommandLineParser& par
 		printf("*** Will combine descriptors and filtered descriptors results\n");
 		settings.dfClustering = true;
 	}
-	
-	if(parser.has("di")){
-		printf("*** Will combine descriptors and image space clustering results\n");
-		settings.diClustering = true;
-	}
-	
-	if(parser.has("dfi")){
-		printf("*** Will combine descriptors, filtered descriptors and image space clustering results\n");
-		settings.dfiClustering = true;
-	}
-	
+		
 	if(parser.has("e")){
 		printf("*** Will extend the box structures\n");
 		settings.extend = true;
@@ -265,8 +247,8 @@ int main(int argc, char** argv) {
 	cv::CommandLineParser parser(argc, argv,
 					"{help ||}{o||}{n|1|}"
 					"{v||}{video||}{w|1|}{s||}"
-					"{i||}{c||}{t||}{l||}{ta|BOOSTING|}"
-					"{d||}{f||}{df||}{di||}{dfi||}"
+					"{c||}{t||}{l||}{ta|BOOSTING|}"
+					"{d||}{f||}{df||}"
 					"{rx||}{ry||}{rw||}{rh||}{e||}{r||}{D||}");
 
 	if(!processOptions(vcount, settings, parser, cap)){

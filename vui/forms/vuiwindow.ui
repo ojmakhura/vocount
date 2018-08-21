@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>610</width>
-    <height>602</height>
+    <width>1135</width>
+    <height>616</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,7 +18,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>20</y>
+      <y>30</y>
       <width>551</width>
       <height>91</height>
      </rect>
@@ -113,8 +113,8 @@
    <widget class="QSplitter" name="splitter">
     <property name="geometry">
      <rect>
-      <x>80</x>
-      <y>130</y>
+      <x>140</x>
+      <y>140</y>
       <width>121</width>
       <height>25</height>
      </rect>
@@ -136,8 +136,8 @@
    <widget class="QSplitter" name="splitter_2">
     <property name="geometry">
      <rect>
-      <x>210</x>
-      <y>130</y>
+      <x>270</x>
+      <y>140</y>
       <width>221</width>
       <height>25</height>
      </rect>
@@ -165,32 +165,19 @@
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
-      <x>60</x>
-      <y>220</y>
-      <width>471</width>
-      <height>161</height>
+      <x>140</x>
+      <y>250</y>
+      <width>361</width>
+      <height>111</height>
      </rect>
     </property>
     <property name="title">
      <string>Clustering</string>
     </property>
-    <widget class="QCheckBox" name="imageSpaceBox">
-     <property name="geometry">
-      <rect>
-       <x>350</x>
-       <y>40</y>
-       <width>116</width>
-       <height>23</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Image Space</string>
-     </property>
-    </widget>
     <widget class="QCheckBox" name="filteredDescriptorBox">
      <property name="geometry">
       <rect>
-       <x>188</x>
+       <x>182</x>
        <y>40</y>
        <width>156</width>
        <height>23</height>
@@ -203,7 +190,7 @@
     <widget class="QCheckBox" name="descriptorSpaceBox">
      <property name="geometry">
       <rect>
-       <x>36</x>
+       <x>30</x>
        <y>39</y>
        <width>145</width>
        <height>23</height>
@@ -219,7 +206,7 @@
     <widget class="QCheckBox" name="descFilteredDescBox">
      <property name="geometry">
       <rect>
-       <x>36</x>
+       <x>30</x>
        <y>79</y>
        <width>211</width>
        <height>23</height>
@@ -229,38 +216,12 @@
       <string>Descriptor + Filtered Desc</string>
      </property>
     </widget>
-    <widget class="QCheckBox" name="combineAllBox">
-     <property name="geometry">
-      <rect>
-       <x>36</x>
-       <y>119</y>
-       <width>161</width>
-       <height>23</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Combine All</string>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="descImageSpaceBox">
-     <property name="geometry">
-      <rect>
-       <x>276</x>
-       <y>79</y>
-       <width>191</width>
-       <height>23</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Descriptor + Img Space</string>
-     </property>
-    </widget>
    </widget>
    <widget class="QCheckBox" name="extendCheckBox">
     <property name="geometry">
      <rect>
-      <x>80</x>
-      <y>180</y>
+      <x>140</x>
+      <y>190</y>
       <width>111</width>
       <height>23</height>
      </rect>
@@ -272,8 +233,8 @@
    <widget class="QGroupBox" name="groupBox_2">
     <property name="geometry">
      <rect>
-      <x>60</x>
-      <y>390</y>
+      <x>140</x>
+      <y>380</y>
       <width>241</width>
       <height>121</height>
      </rect>
@@ -353,8 +314,8 @@
    <widget class="QCheckBox" name="rotationInvariance">
     <property name="geometry">
      <rect>
-      <x>290</x>
-      <y>180</y>
+      <x>350</x>
+      <y>190</y>
       <width>161</width>
       <height>23</height>
      </rect>
@@ -363,13 +324,26 @@
      <string>Rotation Invariance</string>
     </property>
    </widget>
+   <widget class="QGroupBox" name="groupBox_3">
+    <property name="geometry">
+     <rect>
+      <x>590</x>
+      <y>10</y>
+      <width>531</width>
+      <height>491</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Frame Data</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>610</width>
+     <width>1135</width>
      <height>22</height>
     </rect>
    </property>

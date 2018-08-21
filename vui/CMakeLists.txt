@@ -29,6 +29,8 @@ set(VUI_CPPSRC
 	${VUI_SRC_DIR}/vuiwindow.cpp
 	${VUI_SRC_DIR}/vuiplayer.cpp
 	${VUI_SRC_DIR}/previewdialog.cpp
+	${VUI_SRC_DIR}/previewtablemodel.cpp
+	${VUI_SRC_DIR}/clusterpreviewitem.cpp
 )
 
 set(CMAKE_AUTOUIC_SEARCH_PATHS ${VUI_FORMS_DIR})
@@ -38,6 +40,7 @@ set ( RESOURCES icons.qrc)
 set ( MOC_HEADERS
 	${VUI_INCLUDE_DIR}/vuiwindow.h
 	${VUI_INCLUDE_DIR}/previewdialog.h
+	${VUI_INCLUDE_DIR}/previewtablemodel.h
 )
 
 QT5_ADD_RESOURCES( RES_SOURCES ${RESOURCES} )

@@ -128,7 +128,7 @@ vector<int32_t> trainColourModel(selection_t& colourSelection, Mat& frame, vecto
  * @param points - a vector of KeyPoint objects
  * @return an array of floats for the positions of the keypoints
  */
-Mat getImageSpaceDataset(vector<KeyPoint> keypoint);
+//Mat getImageSpaceDataset(vector<KeyPoint> keypoint);
 
 /**
  *
@@ -168,7 +168,7 @@ void createBoxStructureImages(vector<box_structure>* boxStructures, map<String, 
 void extendBoxClusters(Mat& frame, results_t* res);
 
 /**
- * 
+ * Calculate histogram for the image patch denoted by bst.box
  * 
  */
 void calculateHistogram(box_structure& bst);
@@ -231,11 +231,6 @@ void combineSelDescriptorsRawStructures(vocount& vcount, framed& f, String& dfCo
  * 
  */ 
 void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame);
-
-/**
- * 
- */
-void imageSpaceClustering(vocount& vcount, vsettings& settings, framed& f);
 
 /**
  * 

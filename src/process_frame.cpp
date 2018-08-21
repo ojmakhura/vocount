@@ -1478,7 +1478,7 @@ vector<int32_t> trainColourModel(selection_t& colourSelection, Mat& frame, vecto
  * 
  * 
  */ 
-Mat getImageSpaceDataset(vector<KeyPoint> keypoints){
+/*Mat getImageSpaceDataset(vector<KeyPoint> keypoints){
 	Mat m(keypoints.size(), 2, CV_32FC1);
 	float *data = m.ptr<float>(0);
 	for(size_t i = 0; i < keypoints.size(); i++){
@@ -1487,7 +1487,7 @@ Mat getImageSpaceDataset(vector<KeyPoint> keypoints){
 		data[idx+1] = keypoints[i].pt.y;
 	}
 	return m;
-}
+}*/
 
 /**
  * 
@@ -1888,6 +1888,9 @@ void trackFrameColourModel(vocount& vcount, framed& f, Mat& frame){
 	colourSel.selectedDesc = selDesc.clone();
 }
 
+/**
+ * 
+ */ 
 void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 	if (settings.selectROI && !vcount.roiExtracted) { // select a roi if c has been pressed or if the program was run with -s option
 				
@@ -1921,6 +1924,7 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 		double d2 = r.area();
 					
 		int rdx = 1;
+		vector<int32_t> checkedIdxs;
 		int xz = 1;
 		/**
 		 * select a new roi as long as either d2 < d1 or 
@@ -1933,7 +1937,17 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 			vector<box_structure>* bxs = vcount.frameHistory[vcount.frameHistory.size()-xz].results.at(ResultIndex::Descriptors)->boxStructures;
 			
 			if(!bxs->empty()){	
-				f.roi = bxs->at(rdx).box;
+				double minMoments = bxs->at(1).momentsCompare;
+				size_t idx = 1;
+				for(size_t i = 2; i < bxs->size(); i++){
+					vector<int32_t>::iterator itr = std::find(checkedIdxs.begin(), checkedIdxs.end(), idx);
+					if(bxs->at(i).momentsCompare < minMoments && itr == checkedIdxs.end()){
+						idx = i;
+						minMoments = bxs->at(i).momentsCompare;
+					}
+				}
+			
+				f.roi = bxs->at(idx).box;
 				Rect2d prev = f.roi;
 				Rect2d nRect = f.roi;
 				stabiliseRect(frame, prev, nRect);
@@ -1957,75 +1971,6 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 		f.hasRoi = vcount.roiExtracted;
 	}
 }
-
-void imageSpaceClustering(vocount& vcount, vsettings& settings, framed& f){
-	selection_t& colourSel = vcount.colourSel;
-	results_t* res1 = f.results[ResultIndex::Descriptors];
-	Mat ds = getImageSpaceDataset(colourSel.selectedKeypoints);
-	results_t* idxClusterRes = do_cluster(NULL, ds, colourSel.selectedKeypoints, 1, 3, true, true);
-	set<int> ss(idxClusterRes->labels->begin(), idxClusterRes->labels->end());
-	printf("We found %lu objects by index points clustering.\n", ss.size() - 1);
-	getKeypointMap(idxClusterRes->clusterMap, &colourSel.selectedKeypoints, *(idxClusterRes->finalPointClusters));
-			
-	if(settings.print){
-		generateClusterImages(f.frame, idxClusterRes);
-		String iSpaceFrameDir = createDirectory(settings.imageSpaceDir, to_string(vcount.frameCount));					
-		generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, idxClusterRes, f.i);
-		Mat frm = drawKeyPoints(f.frame, colourSel.selectedKeypoints, colours.red, -1);
-		printImage(settings.imageSpaceDir, vcount.frameCount, "frame_kp", frm);
-		printImages(iSpaceFrameDir, idxClusterRes->selectedClustersImages, vcount.frameCount);
-		printEstimates(vcount.indexEstimatesFile, idxClusterRes->odata);
-		printClusterEstimates(vcount.indexClusterFile, idxClusterRes->odata, idxClusterRes->cest);	
-	}
-	f.results[ResultIndex::ImageSpace] = idxClusterRes;		
-						
-	if(settings.diClustering || settings.dfiClustering){
-		vector<int32_t> boxLabel(colourSel.selectedKeypoints.size(), -1);
-		
-	#pragma omp parallel for
-		for(uint i = 0; i < colourSel.selectedKeypoints.size(); i++){
-			KeyPoint kp = colourSel.selectedKeypoints[i];
-			vector<int32_t> tmpids;
-			for(uint j = 0; j < res1->boxStructures->size(); j++){
-				box_structure& bs = res1->boxStructures->at(j);
-				if(bs.box.contains(kp.pt)){
-					tmpids.push_back(j);
-				}
-			}
-			
-			if(!tmpids.empty()){
-				double minMoments = res1->boxStructures->at(tmpids[0]).momentsCompare;
-				int minIdx = tmpids[0];
-				
-				for(uint j = 0; j < tmpids.size(); j++){
-					double mm = res1->boxStructures->at(tmpids[j]).momentsCompare;
-					
-					if(mm < minMoments){
-						minMoments = mm;
-						minIdx = tmpids[j];
-					}
-				}
-				
-				boxLabel[i] = minIdx;
-			}					
-		}
-		set<int32_t> lst(boxLabel.begin(), boxLabel.end());
-		
-		vector<box_structure> bsts;
-		Mat fdi = f.frame.clone();
-		for(set<int32_t>::iterator it = lst.begin(); it != lst.end(); ++it){
-			int32_t bidx = *it;
-			if(bidx != -1){
-				bsts.push_back(res1->boxStructures->at(bidx));
-			}
-		}
-		
-		map<String, Mat> selectedClustersImages;
-		selectedClustersImages["img_allkps"] = idxClusterRes->selectedClustersImages->at("img_allkps");
-		createBoxStructureImages(&bsts, &selectedClustersImages);
-	}		
-}
-
 
 /**
  * 
@@ -2097,18 +2042,7 @@ void processFrame(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 			
 			Mat roiDesc;
 			int32_t ce;
-			findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.roi, colourSel.roiFeatures, roiDesc, ce);			
-				
-			/****************************************************************************************************/
-			/// Image Space Clustering
-			/// -------------------------
-			/// 
-			/****************************************************************************************************/
-			if(settings.isClustering){
-				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Image Space Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-				printf("Clustering selected keypoints in image space\n\n\n");
-				imageSpaceClustering(vcount, settings, f);			
-			}				
+			findROIFeature(colourSel.selectedKeypoints, colourSel.selectedDesc, f.roi, colourSel.roiFeatures, roiDesc, ce);
 				
 			/****************************************************************************************************/
 			/// Selected Colour Model Descriptor Clustering
@@ -2116,32 +2050,13 @@ void processFrame(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 			/// Create a dataset of descriptors based on the selected colour model
 			/// 
 			/****************************************************************************************************/
-			if(settings.fdClustering || settings.dfClustering || settings.dfiClustering){
+			if(settings.fdClustering || settings.dfClustering ){
 				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Selected Colour Model Descriptor Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				printf("Clustering selected keypoints in descriptor space\n\n");
 				
 				Mat dset = getDescriptorDataset(vcount.frameHistory, settings.step, colourSel.selectedDesc, colourSel.selectedKeypoints, settings.rotationalInvariance, false);	
 				results_t* selDescRes = clusterDescriptors(f, dset, colourSel.selectedKeypoints, settings.step, settings.extend);
-				
-				// Find all valid clusters
-				/*set<int32_t> allValidClusters(selDescRes->labels->begin(), selDescRes->labels->end());
-				set<int32_t> extras;
-				
-				// Find all valid clusters that have not been processed
-				for(set<int32_t>::iterator it = allValidClusters.begin(); it != allValidClusters.end(); ++it){
-					if(selDescRes->clusterStructures->find(*it) == selDescRes->clusterStructures->end()){
-						extras.insert(*it);
-					}
-				}
-				
-				// Use the remaining clusters to estimate the ROI
-				for(set<int32_t>::iterator it = extras.begin(); it != extras.end(); ++it){
-					int32_t key = *it;
-					IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(clusterMap, &key);
-					vector<box_structure>& rects = (*clusterStructures)[key];		
-					
-				}*/	
-									
+												
 				if(settings.print){	
 					
 					String selectedDescFrameDir = createDirectory(settings.filteredDescDir, to_string(vcount.frameCount));										
@@ -2165,7 +2080,7 @@ void processFrame(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Selected Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				printf("Filtering detected objects with colour model\n\n");				
 				combineSelDescriptorsRawStructures(vcount, f, settings.dfComboDir, settings.print);
-	
+					
 			}
 		}		
 	}
@@ -2181,28 +2096,10 @@ void combineSelDescriptorsRawStructures(vocount& vcount, framed& f, String& dfCo
 	results_t* filteredResults = f.results[ResultIndex::SelectedKeypoints];
 	
 	//create a new vector from the ResultIndex::SelectedKeypoints structures
-	vector<box_structure> combinedStructures(descriptorResults->boxStructures->end(), descriptorResults->boxStructures->end());
-	
-	// There might be locations in the filtered keypoints location
-	// that were missed by the raw descriptors
-	for(size_t i = 0; i < filteredResults->boxStructures->size(); i++){
-		box_structure& a = filteredResults->boxStructures->at(i);
-		int exist = rectExist(combinedStructures, a);
+	// Combine the raw descriptor results and filtered descriptor results
+	vector<box_structure> combinedStructures(descriptorResults->boxStructures->begin(), descriptorResults->boxStructures->end());	
+	combinedStructures.insert(combinedStructures.end(), filteredResults->boxStructures->begin(), filteredResults->boxStructures->end());
 		
-		if(exist >= 0){
-			box_structure& b = combinedStructures.at(exist);
-			if(b.momentsCompare > a.momentsCompare){
-				b.box = a.box;
-			}
-		} else{
-			combinedStructures.push_back(a);
-		}
-	}
-	
-	// TODO: do not mess with descriptor clustering results
-	// This extension should not change them.
-	//extendBoxClusters(f.frame, descriptorResults);
-	//extractProminentStructures(descriptorResults->clusterMap, descriptorResults->clusterStructures, descriptorResults->keypoints, descriptorResults->boxStructures);
 	
 	/**
 	 * For each keypoint in the selected set, we find all box_structures that 
@@ -2210,25 +2107,28 @@ void combineSelDescriptorsRawStructures(vocount& vcount, framed& f, String& dfCo
 	 */ 
 	selection_t& colourSel = vcount.colourSel;
 	vector<vector<uint>> filteredStructures(colourSel.selectedKeypoints.size(), vector<uint>());
-	for(uint i = 0; i < colourSel.selectedKeypoints.size(); i++){
+#pragma omp parallel for 
+	for(uint i = 0; i < filteredStructures.size(); i++){
 		vector<uint>& structures = filteredStructures[i];
 		KeyPoint kp = colourSel.selectedKeypoints[i];
 		for(uint j = 0; j < combinedStructures.size(); j++){
 			box_structure& bx = combinedStructures.at(j);
 			
 			if(bx.box.contains(kp.pt)){
+			#pragma omp critical
 				structures.push_back(j);
 			}
 		}
 	
 	}
-		
+//#pragma omp critical	
 	/**
 	 * For those keypoints that are inside multiple structures,
 	 * we find out which structure has the smallest moment comparison
 	 */ 
 	set<uint> selectedStructures;
-	for(uint i = 0; i < colourSel.selectedKeypoints.size(); i++){
+#pragma omp parallel for 
+	for(uint i = 0; i < filteredStructures.size(); i++){
 		vector<uint>& strs = filteredStructures[i];
 		
 		if(strs.size() > 0){
@@ -2243,11 +2143,11 @@ void combineSelDescriptorsRawStructures(vocount& vcount, framed& f, String& dfCo
 					minMoment = moment;
 				}
 			}
+#pragma omp critical
 			selectedStructures.insert(minIdx);
 		}
 	}
-		
-	printf("combinedStructures.size() = %ld\n", combinedStructures.size());
+	
 	printf("selStructures.size() = %ld\n", selectedStructures.size());
 
 	if(print){
@@ -2336,14 +2236,6 @@ void finalise(vocount& vcount){
 
     if(vcount.selDescEstimatesFile.is_open()){
         vcount.selDescEstimatesFile.close();
-    }
-
-    if(vcount.indexClusterFile.is_open()){
-        vcount.indexClusterFile.close();
-    }
-
-    if(vcount.indexEstimatesFile.is_open()){
-        vcount.indexEstimatesFile.close();
     }
 
     if(vcount.trackingFile.is_open()){
