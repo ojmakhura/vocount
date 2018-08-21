@@ -1123,7 +1123,13 @@ Mat getDistanceDataset(Mat descriptors, vector<int> roiIdx){
 	return dset;
 }
 
-
+/**
+ * Given the frame and the keypoints, a Mat object is created based on
+ * the colours at the keypoint locations.
+ * 
+ * @param f - frame
+ * @param pts - local features keypoints
+ */ 
 Mat getColourDataset(Mat f, vector<KeyPoint> pts){
 	Mat m(pts.size(), 3, CV_32FC1);
 	Mat tmpf;
@@ -1143,6 +1149,9 @@ Mat getColourDataset(Mat f, vector<KeyPoint> pts){
 	return m;
 }
 
+/**
+ * 
+ */ 
 void getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices, Mat& out){
 	int32_t *dt = (int32_t *)indices->data;
 	for(int i = 0; i < indices->size; i++){
@@ -1150,6 +1159,10 @@ void getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices, Mat& out)
 	}
 }
 
+/**
+ * 
+ * 
+ */ 
 void getKeypointMap(IntIntListMap* listMap, vector<KeyPoint>* keypoints, map_kp& mp){
 	
 	GHashTableIter iter;
@@ -1164,6 +1177,9 @@ void getKeypointMap(IntIntListMap* listMap, vector<KeyPoint>* keypoints, map_kp&
 	}
 }
 
+/**
+ * 
+ */ 
 void getListKeypoints(vector<KeyPoint>& keypoints, IntArrayList* list, vector<KeyPoint>& out){
 	int32_t* dt = (int32_t *)list->data;
 	for(int i = 0; i < list->size; i++){
@@ -1172,6 +1188,9 @@ void getListKeypoints(vector<KeyPoint>& keypoints, IntArrayList* list, vector<Ke
 	}
 }
 
+/**
+ * 
+ */ 
 void getVectorKeypoints(vector<KeyPoint>& keypoints, vector<int32_t>& list, vector<KeyPoint>& out){
 	for(size_t i = 0; i < list.size(); i++){
 		int32_t idx = list[i];
@@ -1233,6 +1252,9 @@ bool isValid(set<int>& minPtsList, vector<int>& validities){
 	return validCount > invalidCount;
 }
 
+/**
+ * 
+ */ 
 int findLargestSet(map<uint, set<int>>& numClusterMap){
 	
 	uint numClusters = 0;
