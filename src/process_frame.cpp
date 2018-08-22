@@ -1496,20 +1496,6 @@ vector<int32_t> trainColourModel(selection_t& colourSelection, Mat& frame, vecto
 	return validities;
 }
 
-/**
- * 
- * 
- */ 
-/*Mat getImageSpaceDataset(vector<KeyPoint> keypoints){
-	Mat m(keypoints.size(), 2, CV_32FC1);
-	float *data = m.ptr<float>(0);
-	for(size_t i = 0; i < keypoints.size(); i++){
-		int idx = i *2;
-		data[idx] = keypoints[i].pt.x;
-		data[idx+1] = keypoints[i].pt.y;
-	}
-	return m;
-}*/
 
 /**
  * 
@@ -1525,6 +1511,7 @@ results_t* initResult_t(Mat& dataset, vector<KeyPoint>& keypoints){
 	res->odata = new map<OutDataIndex, int32_t>();
 	res->labels = new vector<int32_t>(res->keypoints->size());
 	res->boxStructures = new vector<box_structure>();
+	//res->filteredBoxStructures = new vector<box_structure>();
 	res->cest = new vector<int32_t>();
 	res->selectedClustersImages = new map<String, Mat>();
 	res->leftoverClusterImages = new map<String, Mat>();
@@ -1911,30 +1898,30 @@ void trackFrameColourModel(vocount& vcount, framed& f, Mat& frame){
 }
 
 /**
- * 
+ * Create a new ROI or update the tracker to get a new one
  */ 
 void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
-	if (settings.selectROI && !vcount.roiExtracted) { // select a roi if c has been pressed or if the program was run with -s option
-				
-		Mat f2 = frame.clone();
-		f.roi = selectROI("Select ROI", f2);
-		destroyWindow("Select ROI");
-				
-		vcount.tracker = createTrackerByName(settings.trackerAlgorithm);
-		vcount.tracker->init( frame, f.roi);
-			
-		vcount.roiExtracted = true;
+	bool roiUpdate = true;
+	
+	if(!vcount.roiExtracted){
+		if(settings.selectROI){ // if c has been pressed or program started with -s option
+			Mat f2 = frame.clone();
+			vcount.roi = selectROI("Select ROI", f2);
+			destroyWindow("Select ROI");
+		}
 		
-		settings.selectROI = false;
-	} else if(vcount.roiExtracted && vcount.roi.area() > 0){
-			
-		f.roi = vcount.roi;
-		vcount.tracker = createTrackerByName(settings.trackerAlgorithm);
-		vcount.tracker->init( frame, vcount.roi );
-		vcount.roi = Rect2d(0,0,0,0);
+		if(vcount.roi.area() > 0){	// if there is a viable roi	
+			vcount.tracker = createTrackerByName(settings.trackerAlgorithm);
+			vcount.tracker->init( frame, vcount.roi);			
+			vcount.roiExtracted = true;		
+			settings.selectROI = false;
+			f.roi = vcount.roi;
+		}
+		
+		roiUpdate = false;
 	}
-
-	if (vcount.roiExtracted ){
+	
+	if (vcount.roiExtracted && roiUpdate){
 		
 		vcount.tracker->update(frame, f.roi);
 		int32_t cf;
@@ -1944,10 +1931,17 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 		double d1 = r.area();
 		trimRect(r, frame.rows, frame.cols, 10);
 		double d2 = r.area();
-					
-		int rdx = 1;
+		
 		vector<int32_t> checkedIdxs;
-		int xz = 1;
+		framed& p_framed = vcount.frameHistory[vcount.frameHistory.size()-1];
+		results_t* res = p_framed.results.at(ResultIndex::Descriptors);
+		vector<box_structure>* bxs;
+		if(f.filteredBoxStructures.empty()){
+			bxs = res->boxStructures;
+		} else {
+			bxs = &p_framed.filteredBoxStructures;
+		}
+		
 		/**
 		 * select a new roi as long as either d2 < d1 or 
 		 * no roi features were found
@@ -1956,40 +1950,42 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 			f.roiFeatures.clear();
 			f.roiDesc = Mat();
 			
-			vector<box_structure>* bxs = vcount.frameHistory[vcount.frameHistory.size()-xz].results.at(ResultIndex::Descriptors)->boxStructures;
 			
 			if(!bxs->empty()){	
+				double maxHist = bxs->at(1).histCompare;
 				double minMoments = bxs->at(1).momentsCompare;
 				size_t idx = 1;
 				for(size_t i = 2; i < bxs->size(); i++){
-					vector<int32_t>::iterator itr = std::find(checkedIdxs.begin(), checkedIdxs.end(), idx);
+					vector<int32_t>::iterator itr = std::find(checkedIdxs.begin(), checkedIdxs.end(), i);
+					//if(bxs->at(i).momentsCompare < minMoments && bxs->at(i).histCompare > maxHist && itr == checkedIdxs.end()){
 					if(bxs->at(i).momentsCompare < minMoments && itr == checkedIdxs.end()){
 						idx = i;
+						maxHist = bxs->at(i).histCompare;
 						minMoments = bxs->at(i).momentsCompare;
 					}
 				}
-			
-				f.roi = bxs->at(idx).box;
-				Rect2d prev = f.roi;
-				Rect2d nRect = f.roi;
-				stabiliseRect(frame, prev, nRect);
+				
+				checkedIdxs.push_back(idx);
+				Rect2d prev = vcount.roi;
+				//f.roi = bxs->at(idx).box;
+				Rect2d nRect = bxs->at(idx).box;
+				stabiliseRect(p_framed.frame, prev, nRect);
 				
 				vcount.tracker = createTrackerByName(settings.trackerAlgorithm);
-				vcount.tracker->init(vcount.frameHistory[vcount.frameHistory.size()-1].frame, f.roi);
-				vcount.tracker->update(frame, f.roi);				
-				r = f.roi;
+				vcount.tracker->init(p_framed.frame, nRect);
+				vcount.tracker->update(frame, nRect);				
+				r = nRect;
 				d1 = r.area();
 				trimRect(r, frame.rows, frame.cols, 10);
 				
 				d2 = r.area();
 				int32_t cf;
-				findROIFeature(f.keypoints, f.descriptors, f.roi, f.roiFeatures, f.roiDesc, cf);
-				sortbyDistanceFromCenter(f.roi, f.roiFeatures, &f.keypoints);
-			}else{
-				xz++;
+				findROIFeature(f.keypoints, f.descriptors, r, f.roiFeatures, f.roiDesc, cf);
+				sortbyDistanceFromCenter(r, f.roiFeatures, &f.keypoints);
 			}
-			rdx++;
 		}
+		f.roi = r;
+		vcount.roi = f.roi;
 		f.hasRoi = vcount.roiExtracted;
 	}
 }
@@ -2055,7 +2051,7 @@ void processFrame(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 		}
 				
 		//cout << "***************************** " << colourSel.minPts << " *****************************" << endl;
-		if(colourSel.minPts >= 3){
+		if(colourSel.minPts >= 3 && !colourSel.selectedKeypoints.empty()){
 			
 			if(vcount.frameHistory.size() > 0){
 				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Track Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
@@ -2101,8 +2097,7 @@ void processFrame(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 			if(settings.dfClustering){
 				cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Selected Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 				printf("Filtering detected objects with colour model\n\n");				
-				combineSelDescriptorsRawStructures(vcount, f, settings.dfComboDir, settings.print);
-					
+				combineSelDescriptorsRawStructures(vcount, f, settings.dfComboDir, settings.print);					
 			}
 		}		
 	}
@@ -2175,6 +2170,7 @@ void combineSelDescriptorsRawStructures(vocount& vcount, framed& f, String& dfCo
 	if(print){
 		Mat kimg = drawKeyPoints(f.frame, colourSel.selectedKeypoints, colours.red, -1);
 		for(set<uint>::iterator it = selectedStructures.begin(); it != selectedStructures.end(); it++){
+			f.filteredBoxStructures.push_back(combinedStructures.at(*it));
 			Scalar value;
 			
 			RNG rng(12345);
@@ -2191,6 +2187,8 @@ void combineSelDescriptorsRawStructures(vocount& vcount, framed& f, String& dfCo
 		} 
 		vcount.dfEstimatesFile << f.i << "," <<  selectedStructures.size() << "," << vcount.truth[f.i] << "," << accuracy << "\n";
 	}
+	
+	cout << " filtered structures is " << f.filteredBoxStructures.size() << endl;
 }
 
 /**

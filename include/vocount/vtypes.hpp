@@ -104,10 +104,10 @@ typedef struct FRAMED{
 	vector<KeyPoint> keypoints; 									/// Frame keypoints
 	Rect2d roi;														/// region of interest rectangle
 	vector<int32_t> roiFeatures;										/// indices of the features inside the roi
-	//int32_t centerFeature = -1;											/// index of the roi central feature
 	Mat roiDesc;													/// region of interest descriptors
 	bool hasRoi = false;
 	map<ResultIndex, results_t*> results;
+	vector<box_structure> filteredBoxStructures;									/// Bounding boxes for the individual objects in the frame
 } framed;
 
 typedef struct VOCOUNT{

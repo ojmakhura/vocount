@@ -134,7 +134,7 @@ bool processOptions(vocount& vcount, vsettings& settings, CommandLineParser& par
 		s = parser.get<String>("rh");
 		int h = atoi(s.c_str());
 		
-		vcount.roiExtracted = true;
+		//vcount.roiExtracted = true;
 		vcount.roi = Rect2d(x, y, w, h);;
 	} else{
 		vcount.roi = Rect2d(0, 0, 0, 0);		
@@ -282,7 +282,6 @@ int main(int argc, char** argv) {
 			getLearnedColourModel(vcount.colourSel, clusterMaps, validities);
 			//cout << " Selected ............ " << vcount.colourSel.minPts << endl;
 			chooseColourModel(frame, f.descriptors, f.keypoints, vcount.colourSel);
-			//consolePreviewColours(frame, keypoints, clusterMaps, vcount.colourSel.minPts);
 			if(vcount.trackingFile.is_open()){
 				vcount.trackingFile << 1 << "," << f.keypoints.size() << "," << vcount.colourSel.selectedDesc.rows << "," << vcount.colourSel.minPts << "," << vcount.colourSel.numClusters << "," << vcount.colourSel.validity << endl;
 			}
@@ -296,10 +295,6 @@ int main(int argc, char** argv) {
 			settings.selectROI = true;
 		} 
 		processFrame(vcount, settings, f, frame);	
-		//break;
-		//if(vcount.frameCount == 4){
-		//	break;
-		//}
 	}
 	
 	finalise(vcount);
