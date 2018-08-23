@@ -165,7 +165,7 @@ void consolePreviewColours(Mat& frame, vector<KeyPoint>& keypoints, map<int, Int
 		cout << "-------------------------------------------------------------------------------" << endl;
 		cout << "List of results \nminPts\t\tNumber of Clusters\t\tValidity" << endl;
 		for(map<int, IntDoubleListMap* >::iterator it = clusterMaps.begin(); it != clusterMaps.end(); ++it){
-			cout << it->first << "\t\t" << g_hash_table_size(it->second) << "\t\t" << validities[it->first - 3] << endl;
+			cout << it->first << "\t\t" << g_hash_table_size(it->second) - 1 << "\t\t" << validities[it->first - 3] << endl;
 		}
 		
 		int32_t sel;

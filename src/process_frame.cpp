@@ -1294,6 +1294,8 @@ int findLargestSet(map<uint, set<int>>& numClusterMap){
 int chooseMinPts(map<uint, set<int>>& numClusterMap, vector<int>& validities){
 	
 	uint numClusters = findLargestSet(numClusterMap);
+	set<uint> checked;
+	pair<set<uint>::iterator, bool> ret = checked.insert(numClusters);
 		
 	bool found = false;
 	while(!found){
@@ -1323,6 +1325,11 @@ int chooseMinPts(map<uint, set<int>>& numClusterMap, vector<int>& validities){
 			}
 			
 			numClusters = findLargestSet(tmp);
+			ret = checked.insert(numClusters);
+			
+			if(!ret.second){
+				return 3;
+			}
 		}
 	}
 	
