@@ -1937,8 +1937,10 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 		results_t* res = p_framed.results.at(ResultIndex::Descriptors);
 		vector<box_structure>* bxs;
 		if(f.filteredBoxStructures.empty()){
+			//cout << "f.filteredBoxStructures.empty()" << endl;
 			bxs = res->boxStructures;
 		} else {
+			//cout << "not f.filteredBoxStructures.empty()" << endl;
 			bxs = &p_framed.filteredBoxStructures;
 		}
 		
@@ -1946,31 +1948,21 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 		 * select a new roi as long as either d2 < d1 or 
 		 * no roi features were found
 		 */ 
+		size_t in = 1;
 		while(d2 < d1 || f.roiFeatures.empty()){
 			f.roiFeatures.clear();
 			f.roiDesc = Mat();
 			
-			
 			if(!bxs->empty()){	
-				double maxHist = bxs->at(1).histCompare;
-				double minMoments = bxs->at(1).momentsCompare;
-				size_t idx = 1;
-				for(size_t i = 2; i < bxs->size(); i++){
-					vector<int32_t>::iterator itr = std::find(checkedIdxs.begin(), checkedIdxs.end(), i);
-					//if(bxs->at(i).momentsCompare < minMoments && bxs->at(i).histCompare > maxHist && itr == checkedIdxs.end()){
-					if(bxs->at(i).momentsCompare < minMoments && itr == checkedIdxs.end()){
-						idx = i;
-						maxHist = bxs->at(i).histCompare;
-						minMoments = bxs->at(i).momentsCompare;
-					}
+				//Rect2d prev = vcount.roi;
+				Rect2d nRect = bxs->at(in).box;
+				trimRect(nRect, frame.rows, frame.cols, 10);
+				in++;
+				cout << nRect << endl;
+				if(nRect.area() < f.roi.area()){
+					continue;
 				}
-				
-				checkedIdxs.push_back(idx);
-				Rect2d prev = vcount.roi;
-				//f.roi = bxs->at(idx).box;
-				Rect2d nRect = bxs->at(idx).box;
-				stabiliseRect(p_framed.frame, prev, nRect);
-				
+				//stabiliseRect(p_framed.frame, prev, nRect);
 				vcount.tracker = createTrackerByName(settings.trackerAlgorithm);
 				vcount.tracker->init(p_framed.frame, nRect);
 				vcount.tracker->update(frame, nRect);				
@@ -1981,6 +1973,7 @@ void getROI(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 				d2 = r.area();
 				int32_t cf;
 				findROIFeature(f.keypoints, f.descriptors, r, f.roiFeatures, f.roiDesc, cf);
+				
 				sortbyDistanceFromCenter(r, f.roiFeatures, &f.keypoints);
 			}
 		}
@@ -2039,7 +2032,7 @@ void processFrame(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 				String descriptorFrameDir = createDirectory(settings.descriptorDir, to_string(vcount.frameCount));
 				generateClusterImages(f.frame, res);
 				createBoxStructureImages(res->boxStructures, res->selectedClustersImages);
-				Mat frm = drawKeyPoints(f.frame, f.keypoints, colours.red, -1);
+				Mat frm = drawKeyPoints(fr, f.keypoints, colours.red, -1);
 				printImage(settings.descriptorDir, vcount.frameCount, "frame_kp", frm);					
 				generateOutputData(vcount, f.frame, f.keypoints, f.roiFeatures, res, f.i);
 				printImages(descriptorFrameDir, res->selectedClustersImages, vcount.frameCount);
@@ -2080,7 +2073,7 @@ void processFrame(vocount& vcount, vsettings& settings, framed& f, Mat& frame){
 					String selectedDescFrameDir = createDirectory(settings.filteredDescDir, to_string(vcount.frameCount));										
 					generateClusterImages(f.frame, selDescRes);
 					createBoxStructureImages(selDescRes->boxStructures, selDescRes->selectedClustersImages);
-					Mat frm = drawKeyPoints(frame, colourSel.selectedKeypoints, colours.red, -1);
+					Mat frm = drawKeyPoints(fr, colourSel.selectedKeypoints, colours.red, -1);
 					printImage(settings.filteredDescDir, vcount.frameCount, "frame_kp", frm);
 					generateOutputData(vcount, f.frame, colourSel.selectedKeypoints, colourSel.roiFeatures, selDescRes, f.i);
 					printImages(selectedDescFrameDir, selDescRes->selectedClustersImages, vcount.frameCount);
@@ -2187,8 +2180,6 @@ void combineSelDescriptorsRawStructures(vocount& vcount, framed& f, String& dfCo
 		} 
 		vcount.dfEstimatesFile << f.i << "," <<  selectedStructures.size() << "," << vcount.truth[f.i] << "," << accuracy << "\n";
 	}
-	
-	cout << " filtered structures is " << f.filteredBoxStructures.size() << endl;
 }
 
 /**
