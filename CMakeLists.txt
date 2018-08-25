@@ -65,6 +65,6 @@ find_package( OpenCV REQUIRED )
 find_package(GSL REQUIRED) 
 
 add_subdirectory(src)
-add_subdirectory(console)
-add_subdirectory(vui)
+add_subdirectory(cli)
+#add_subdirectory(vui)
  

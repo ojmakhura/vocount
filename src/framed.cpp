@@ -1,0 +1,284 @@
+#include "vocount/framed.hpp"
+#include "vocount/vocutils.hpp"
+
+namespace vocount
+{
+Framed::Framed()
+{
+    //ctor
+}
+
+Framed::Framed(int32_t frameId, UMat frame, UMat descriptors, vector<KeyPoint> keypoints, vector<int32_t> roiFeatures, Rect2d roi, int32_t groundTruth)
+{
+	this->roiFeatures = roiFeatures;
+    this->keypoints = keypoints;
+    this->descriptors = descriptors.clone();
+    this->frame = frame.clone();
+    this->roi = roi;
+    this->frameId = frameId;
+    this->groundTruth = groundTruth;
+}
+
+Framed::~Framed()
+{
+    //dtor
+}
+
+/**********************************************************************************************************************
+ *   GETTERS AND SETTERS
+ **********************************************************************************************************************/
+
+///
+/// frameId
+///
+int32_t Framed::getFrameId()
+{
+    return this->frameId;
+}
+
+void Framed::setFrameId(int32_t frameId)
+{
+    this->frameId = frameId;
+}
+
+
+///
+/// descriptors
+///
+UMat Framed::getDescriptors()
+{
+    return this->descriptors;
+}
+
+///
+/// frame
+///
+UMat Framed::getFrame()
+{
+    return this->frame;
+}
+
+///
+/// keypoints
+///
+vector<KeyPoint>* Framed::getKeypoints()
+{
+    return &this->keypoints;
+}
+
+///
+/// roi
+///
+Rect2d Framed::getROI()
+{
+    return roi;
+}
+
+void Framed::setROI(Rect2d roi)
+{
+    this->roi = roi;
+}
+
+///
+/// roiFeatures
+///
+vector<int32_t>* Framed::getRoiFeatures()
+{
+    return &this->roiFeatures;
+}
+
+///
+/// results
+///
+map_r* Framed::getResults()
+{
+    return &this->results;
+}
+
+///
+/// filteredLocatedObjects
+///
+vector<LocatedObject>* Framed::getFilteredLocatedObjects()
+{
+    return &this->filteredLocatedObjects;
+}
+
+///
+/// groundTruth
+///
+int32_t Framed::getGroundTruth()
+{
+    return this->groundTruth;
+}
+
+void Framed::setGroundTruth(int32_t groundTruth)
+{
+    this->groundTruth = groundTruth;
+}
+
+/**********************************************************************************************************************
+ *   PRIVATE FUNCTIONS
+ **********************************************************************************************************************/
+
+/**
+ *
+ */
+shared_ptr<CountingResults> Framed::doCluster(UMat dataset, int step, int f_minPts, bool analyse, bool singleRun)
+{
+    //CV_ASSERT(dataset.isContinuous());
+
+    shared_ptr<CountingResults> res = make_shared<CountingResults>();
+    res->setDataset(dataset);
+    res->setKeypoints(keypoints);
+
+    int m_pts = step * f_minPts;
+    hdbscan scan(m_pts, DATATYPE_FLOAT);
+    scan.run(dataset.getMat(ACCESS_RW).ptr<float>(), dataset.rows, dataset.cols, TRUE);
+
+    IntIntListMap* c_map = NULL;
+    IntDistancesMap* d_map = NULL;
+    clustering_stats stats;
+    int val = -1;
+
+    int i = 0;
+
+    while(val <= 2 && i < 5)
+    {
+
+        if(m_pts > (step * f_minPts))
+        {
+            scan.reRun(m_pts);
+        }
+
+        c_map = hdbscan_create_cluster_table(scan.clusterLabels, 0, keypoints.size());
+
+        if(analyse)
+        {
+            d_map = hdbscan_get_min_max_distances(&scan, c_map);
+            hdbscan_calculate_stats(d_map, &stats);
+            val = hdbscan_analyse_stats(&stats);
+        }
+
+        if(c_map != NULL)
+        {
+            uint hsize = res->getClusterMap() == NULL ? 0 : g_hash_table_size(res->getClusterMap());
+            if(g_hash_table_size(c_map) > hsize || val > res->getValidity())
+            {
+                if(res->getClusterMap() != NULL)
+                {
+                    hdbscan_destroy_cluster_table(res->getClusterMap());
+                    res->setClusterMap(NULL);
+                }
+
+                if(res->getDistancesMap() != NULL)
+                {
+                    hdbscan_destroy_distance_map_table(res->getDistancesMap());
+                    res->setDistancesMap(NULL);
+                }
+
+                if(!(res->getLabels()->empty())){
+                	res->getLabels()->clear();
+                }
+
+                res->setClusterMap(c_map);
+                res->setDistancesMap(d_map);
+                res->getLabels()->insert(res->getLabels()->begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
+                res->setMinPts(m_pts);
+                res->setValidity(val);
+                res->setStats(stats);
+            }
+            else
+            {
+                hdbscan_destroy_cluster_table(c_map);
+                hdbscan_destroy_distance_map_table(d_map);
+            }
+        }
+
+        if(singleRun)
+        {
+            break;
+        }
+        printf("Testing minPts = %d with validity = %d and cluster map size = %d\n", m_pts, val, g_hash_table_size(c_map));
+        i++;
+        m_pts = (f_minPts + i) * step;
+    }
+
+    printf("Selected minPts = %d and cluster table has %d\n", res->getMinPts(), g_hash_table_size(res->getClusterMap()));
+
+    return res;
+}
+
+
+/**********************************************************************************************************************
+ *   PUBLIC FUNCTIONS
+ **********************************************************************************************************************/
+
+/**
+ * Takes a dataset and the associated keypoints and extracts clusters. The
+ * clusters are used to extract the box_structures for each clusters.
+ * Prominent structures are extracted by comapring the structure in each
+ * cluster.
+ */
+shared_ptr<CountingResults> Framed::detectDescriptorsClusters(ResultIndex idx, int32_t step, bool extend, bool includeAngle, bool includeOctave)
+{
+    UMat dset = VOCUtils::getDescriptorDataset(descriptors, keypoints, includeAngle, includeOctave);
+    shared_ptr<CountingResults> res = doCluster(dset, step, 3, true, false);
+    res->addToClusterLocatedObjects(this->roi, this->frame);
+
+    /**
+     * Organise points into the best possible structure. This requires
+     * putting the points into the structure that has the best match to
+     * the original. We use histograms to match.
+     */
+    res->extractProminentLocatedObjects();
+
+    // Since we forced over-segmentation of the clusters
+    // we must make it up by extending the box structures
+    if(res->getMinPts() == 2)
+    {
+        res->extendLocatedObjects(this->frame);
+        res->extractProminentLocatedObjects();
+    }
+
+    if(extend)
+    {
+        res->extendLocatedObjects(this->frame);
+        res->extractProminentLocatedObjects();
+        //extendBoxClusters(f.frame, res);
+        //extractProminentStructures(res->clusterMap, res->clusterStructures, res->keypoints, res->boxStructures);
+    }
+
+    printf("boxStructure found %lu objects\n\n", res->getProminentLocatedObjects()->size());
+    this->results[idx] = res;
+
+    return res;
+}
+
+
+/**
+ *
+ */
+void Framed::createResultsImages(ResultIndex idx)
+{
+    shared_ptr<CountingResults> res = this->getResults(idx);
+    res->generateSelectedClusterImages(this->frame);
+    res->createLocatedObjectsImages();
+    res->generateOutputData(this->frame, this->frameId, this->groundTruth, this->roiFeatures);
+}
+
+/**
+ *
+ */
+void Framed::addResults(ResultIndex idx, shared_ptr<CountingResults> res)
+{
+    results[idx] = res;
+}
+
+/**
+ *
+ */
+shared_ptr<CountingResults> Framed::getResults(ResultIndex idx)
+{
+    return results[idx];
+}
+};
