@@ -31,20 +31,20 @@ public:
 	///
 	/// boxImage
 	///
-    UMat getBoxImage();
+    UMat& getBoxImage();
     void setBoxImage(UMat val);
 
 	///
 	/// boxGray
 	///
-    UMat getBoxGray();
+    UMat& getBoxGray();
     void setBoxGray(UMat boxGray);
 
 	///
 	/// histogram
 	///
-    UMat getHistogram();
-    void setHistogram(UMat val);
+    Mat& getHistogram();
+    void setHistogram(Mat val);
 
 	///
 	/// points
@@ -98,7 +98,7 @@ private:
     Rect2d box;
     UMat boxImage;
     UMat boxGray;
-    UMat histogram;
+    Mat histogram;
     set<int32_t> points;
     double histogramCompare;
     double momentsCompare;

@@ -13,8 +13,6 @@ CountingResults::CountingResults()
 
 CountingResults::~CountingResults()
 {
-    //dtor
-
     if(this->clusterMap != NULL)
     {
         hdbscan_destroy_cluster_table(this->clusterMap);
@@ -61,14 +59,15 @@ void CountingResults::setKeypoints(vector<KeyPoint> keypoints)
 ///
 /// dataset
 ///
-UMat CountingResults::getDataset()
+UMat& CountingResults::getDataset()
 {
     return this->dataset;
 }
 
-void CountingResults::setDataset(UMat dataset)
+void CountingResults::setDataset(UMat& dataset)
 {
-    this->dataset = dataset;
+    dataset.copyTo(this->dataset);
+    //this->dataset = dataset;
 }
 
 ///
@@ -173,15 +172,16 @@ map_st* CountingResults::getClusterLocatedObjects()
 void CountingResults::addToClusterLocatedObjects(Rect2d roi, UMat& frame)
 {
     vector<int32_t> validObjFeatures;
-    VOCUtils::findValidROIFeature(this->keypoints, roi, validObjFeatures, this->labels);
+    VOCUtils::findValidROIFeature(&this->keypoints, roi, &validObjFeatures, &this->labels);
 
     // sort the valid features by how close to the center they are
-    VOCUtils::sortByDistanceFromCenter(roi, validObjFeatures, keypoints);
+    VOCUtils::sortByDistanceFromCenter(roi, &validObjFeatures, &keypoints);
 
     LocatedObject mbs; /// Create a box structure based on roi
     mbs.setBox(roi);
     mbs.setBoxImage(frame(mbs.getBox()));
-    mbs.setHistogram(VOCUtils::calculateHistogram(mbs.getBoxImage()));
+    Mat h = VOCUtils::calculateHistogram(mbs.getBoxImage());
+    mbs.setHistogram(h);
     mbs.setHistogramCompare(compareHist(mbs.getHistogram(), mbs.getHistogram(), CV_COMP_CORREL));
     mbs.setMomentsCompare (matchShapes(mbs.getBoxGray(), mbs.getBoxGray(), CONTOURS_MATCH_I3, 0));
 
@@ -262,12 +262,12 @@ void CountingResults::setClusterLocatedObjects(map_st clusterLocatedObjects)
 ///
 /// selectedClustersImages
 ///
-map<String, UMat>* CountingResults::getSelectedClustersImages()
+map<String, Mat>* CountingResults::getSelectedClustersImages()
 {
     return &this->selectedClustersImages;
 }
 
-void CountingResults::setSelectedClustersImages(map<String, UMat> selectedClustersImages)
+void CountingResults::setSelectedClustersImages(map<String, Mat> selectedClustersImages)
 {
     this->selectedClustersImages = selectedClustersImages;
 }
@@ -302,7 +302,7 @@ void CountingResults::setMinPts(int32_t val)
  *   PUBLIC FUNCTIONS
  ************************************************************************************/
 
-void CountingResults::generateSelectedClusterImages(UMat frame)
+void CountingResults::generateSelectedClusterImages(UMat& frame)
 {
     COLOURS colours;
     vector<KeyPoint> kp;
@@ -311,11 +311,12 @@ void CountingResults::generateSelectedClusterImages(UMat frame)
         int32_t key = it->first;
 
         IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(this->clusterMap, &key);
-        VOCUtils::getListKeypoints(this->keypoints, l1, this->selectedClustersPoints[key]);
 
-        vector<KeyPoint>& kps = this->selectedClustersPoints.at(key);
+        vector<KeyPoint>& kps = this->selectedClustersPoints[key];
+        VOCUtils::getListKeypoints(&this->keypoints, l1, &kps);
+
         this->selectedFeatures += kps.size();
-        UMat kimg = VOCUtils::drawKeyPoints(frame, kps, colours.red, -1);
+        Mat kimg = VOCUtils::drawKeyPoints(frame, &kps, colours.red, -1);
         vector<LocatedObject>& rects = this->clusterLocatedObjects[key];
 
         for(uint i = 0; i < rects.size(); i++)
@@ -339,7 +340,7 @@ void CountingResults::generateSelectedClusterImages(UMat frame)
         kp.insert(kp.end(), kps.begin(), kps.end());
     }
 
-    UMat mm = VOCUtils::drawKeyPoints(frame, kp, colours.red, -1);
+    Mat mm = VOCUtils::drawKeyPoints(frame, &kp, colours.red, -1);
 
     String ss = "img_allkps";
     this->selectedClustersImages[ss] = mm;
@@ -351,7 +352,7 @@ void CountingResults::generateSelectedClusterImages(UMat frame)
 void CountingResults::createLocatedObjectsImages()
 {
     String ss = "img_bounds";
-    UMat img_bounds = this->selectedClustersImages["img_allkps"].clone();
+    Mat img_bounds = this->selectedClustersImages["img_allkps"].clone();
 
     for (size_t i = 0; i < this->prominentLocatedObjects.size(); i++)
     {
@@ -364,7 +365,7 @@ void CountingResults::createLocatedObjectsImages()
     this->selectedClustersImages[ss] = img_bounds;
 }
 
-void CountingResults::generateOutputData(UMat frame, int32_t frameId, int32_t groundTruth, vector<int32_t>& roiFeatures)
+void CountingResults::generateOutputData(int32_t frameId, int32_t groundTruth, vector<int32_t>& roiFeatures)
 {
     int selSampleSize = 0;
     if(this->clusterLocatedObjects.size() > 0)
@@ -396,7 +397,7 @@ void CountingResults::generateOutputData(UMat frame, int32_t frameId, int32_t gr
 /**
  *
  */
-void CountingResults::extendLocatedObjects(UMat frame)
+void CountingResults::extendLocatedObjects(UMat& frame)
 {
 
 	for(size_t i = 1; i < this->prominentLocatedObjects.size(); i++)
@@ -487,6 +488,5 @@ void CountingResults::extractProminentLocatedObjects()
 /************************************************************************************
  *   PRIVATE FUNCTIONS
  ************************************************************************************/
-
 
 };

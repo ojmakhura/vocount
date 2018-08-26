@@ -174,7 +174,7 @@ int32_t consolePreviewColours(UMat& frame, vector<KeyPoint>& keypoints, map<int3
 
     if(choiceStr.compare("yes") == 0 || choiceStr.compare("Yes") == 0 || choiceStr.compare("YES") == 0)
     {
-        return -1;
+        return chosen;
     }
 
     bool done = false;
@@ -211,8 +211,8 @@ int32_t consolePreviewColours(UMat& frame, vector<KeyPoint>& keypoints, map<int3
             IntArrayList* list = (IntArrayList*)value;
             int32_t* k = (int32_t *)key;
             vector<KeyPoint> kps;
-            VOCUtils::getListKeypoints(keypoints, list, kps);
-            UMat m = VOCUtils::drawKeyPoints(frame, kps, c.red, -1);
+            VOCUtils::getListKeypoints(&keypoints, list, &kps);
+            Mat m = VOCUtils::drawKeyPoints(frame, &kps, c.red, -1);
             // print the choice images
             String imName = "choice_cluster_";
             imName += std::to_string(*k).c_str();
@@ -264,7 +264,7 @@ int32_t consolePreviewColours(UMat& frame, vector<KeyPoint>& keypoints, map<int3
 
 int main(int argc, char** argv)
 {
-    //ocl::setUseOpenCL(true);
+    ocl::setUseOpenCL(true);
     UMat frame;
     VOCounter vcount;
     VideoCapture cap;

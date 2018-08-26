@@ -32,12 +32,12 @@ public:
 	/**
 	 *
 	 */
-	static void printImages(String& folder, map<String, UMat>* images, int count);
+	static void printImages(String& folder, map<String, Mat>* images, int count);
 
 	/**
 	 *
 	 */
-	static void printImage(String folder, int idx, String name, UMat img);
+	static void printImage(String folder, int idx, String name, Mat img);
 
 	/**
 	 *

@@ -39,6 +39,16 @@ VOCounter::~VOCounter()
     {
         trackingFile.close();
     }
+
+    for(size_t t = 0; t < framedHistory.size(); t++)
+    {
+        Framed* fr = framedHistory[t];
+        framedHistory[t] = NULL;
+        if(fr != NULL)
+        {
+            delete fr;
+        }
+    }
 }
 
 
@@ -150,7 +160,7 @@ void VOCounter::processSettings()
 /**
  *
  */
-void VOCounter::trackInitialObject(UMat frame, UMat descriptors, vector<KeyPoint>& keypoints, vector<int32_t>& roiFeatures)
+void VOCounter::trackInitialObject(UMat& frame, UMat& descriptors, vector<KeyPoint>& keypoints, vector<int32_t>& roiFeatures)
 {
     bool roiUpdate = true;
 
@@ -178,27 +188,34 @@ void VOCounter::trackInitialObject(UMat frame, UMat descriptors, vector<KeyPoint
     {
         tracker->update(frame, roi);
 
-        VOCUtils::findROIFeatures(keypoints, roi, roiFeatures);
-        VOCUtils::sortByDistanceFromCenter(roi, roiFeatures, keypoints);
+        VOCUtils::findROIFeatures(&keypoints, roi, &roiFeatures);
+        VOCUtils::sortByDistanceFromCenter(roi, &roiFeatures, &keypoints);
         Rect2d r = roi;
         double d1 = r.area();
         VOCUtils::trimRect(r, frame.rows, frame.cols, 10);
         double d2 = r.area();
 
-        //if(d2 < d1)
-        //{
+        if(d2 < d1)
+        {
             vector<int32_t> checkedIdxs;
-            shared_ptr<Framed> p_framed = framedHistory[framedHistory.size()-1];
-            shared_ptr<CountingResults> res = p_framed->getResults()->at(ResultIndex::Descriptors);
-            vector<LocatedObject>* bxs;
+            Framed* p_framed = framedHistory[framedHistory.size()-1];
 
             /// Filtered LocatedObjects are less likely to be off
-            bxs = p_framed->getFilteredLocatedObjects();
+            vector<LocatedObject>* bxs = p_framed->getFilteredLocatedObjects();
+
+            if(bxs->empty() && !(p_framed->getResults()->empty()))
+            {
+                //cout << "f.filteredBoxStructures.empty()" << endl;
+                CountingResults* res = p_framed->getResults()->at(ResultIndex::Descriptors);
+                bxs = res->getProminentLocatedObjects();
+            }
 
             if(bxs->empty())
             {
-                //cout << "f.filteredBoxStructures.empty()" << endl;
-                bxs = res->getProminentLocatedObjects();
+                settings.selectROI = false;
+                roiExtracted = false;
+                roi = Rect2d(0, 0, 0, 0);
+                return;
             }
 
             /**
@@ -227,10 +244,10 @@ void VOCounter::trackInitialObject(UMat frame, UMat descriptors, vector<KeyPoint
                 VOCUtils::trimRect(r, frame.rows, frame.cols, 10);
 
                 d2 = r.area();
-                VOCUtils::findROIFeatures(keypoints, r, roiFeatures);
-                VOCUtils::sortByDistanceFromCenter(r, roiFeatures, keypoints);
+                VOCUtils::findROIFeatures(&keypoints, r, &roiFeatures);
+                VOCUtils::sortByDistanceFromCenter(r, &roiFeatures, &keypoints);
             }
-        //}
+        }
         roi = r;
     }
 }
@@ -239,7 +256,7 @@ void VOCounter::trackInitialObject(UMat frame, UMat descriptors, vector<KeyPoint
  *
  *
  */
-void VOCounter::processFrame(UMat frame, UMat descriptors, vector<KeyPoint>& keypoints)
+void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& keypoints)
 {
     this->frameCount++;
 
@@ -262,11 +279,12 @@ void VOCounter::processFrame(UMat frame, UMat descriptors, vector<KeyPoint>& key
         cout << this->roi << endl;
         VOCUtils::display("frame", fr);
 
-        if(!roiExtracted){
+        if(!roiExtracted)
+        {
             return;
         }
 
-        shared_ptr<Framed> f = make_shared<Framed>(frameCount, frame, descriptors, keypoints, roiFeatures, this->roi, getCurrentFrameGroundTruth(this->frameCount));
+        Framed* f = new Framed(frameCount, frame, descriptors, keypoints, roiFeatures, this->roi, getCurrentFrameGroundTruth(this->frameCount));
 
         /**
          * Clustering in the descriptor space with unfiltered
@@ -275,31 +293,66 @@ void VOCounter::processFrame(UMat frame, UMat descriptors, vector<KeyPoint>& key
         if(settings.dClustering)
         {
             cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Original Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-            shared_ptr<CountingResults> res = f->detectDescriptorsClusters(ResultIndex::Descriptors,
-                                              settings.step, settings.extend,
-                                              settings.rotationalInvariance,
-                                              settings.includeOctave);
+            UMat dset;
+            VOCUtils::getDescriptorDataset(descriptors, &keypoints, settings.rotationalInvariance, settings.includeOctave).copyTo(dset);
+
+            CountingResults* res = f->detectDescriptorsClusters(ResultIndex::Descriptors, dset,
+                                   settings.step, settings.extend);
 
             if(settings.print)
             {
                 String descriptorFrameDir = VOPrinter::createDirectory(settings.descriptorDir, to_string(frameCount));
                 f->createResultsImages(ResultIndex::Descriptors);
-                UMat frm = VOCUtils::drawKeyPoints(fr, keypoints, colours.red, -1);
+                Mat frm = VOCUtils::drawKeyPoints(fr, &keypoints, colours.red, -1);
                 VOPrinter::printImage(settings.descriptorDir, frameCount, "frame_kp", frm);
                 VOPrinter::printImages(descriptorFrameDir, res->getSelectedClustersImages(), frameCount);
                 VOPrinter::printEstimates(descriptorsEstimatesFile, res->getOutputData());
-                //VOPrinter::printClusterEstimates(vcount.getDescriptorsClusterFile(), res->getOutputData(), res->cest);
             }
 
         }
 
         if(colourModel.getMinPts() >= 3 && !colourModel.getSelectedKeypoints()->empty())
         {
-            if(framedHistory.size() > 0){
+            if(framedHistory.size() > 0)
+            {
                 cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Track Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-                trackFrameColourModel(frame, keypoints);
+                trackFrameColourModel(frame, descriptors, keypoints);
+            }
+
+            VOCUtils::findROIFeatures(&keypoints, roi, colourModel.getRoiFeatures());
+
+            /****************************************************************************************************/
+            /// Selected Colour Model Descriptor Clustering
+            /// -------------------------
+            /// Create a dataset of descriptors based on the selected colour model
+            ///
+            /****************************************************************************************************/
+            if(settings.fdClustering || settings.dfClustering )
+            {
+                cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Selected Colour Model Descriptor Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+                printf("Clustering selected keypoints in descriptor space\n\n");
+                //Mat dset = getDescriptorDataset(vcount.frameHistory, settings.step, colourSel.selectedDesc, colourSel.selectedKeypoints, settings.rotationalInvariance, false);
+                UMat dset;
+                VOCUtils::getDescriptorDataset(colourModel.getSelectedDesc(),
+                                               colourModel.getSelectedKeypoints(),
+                                               settings.rotationalInvariance,
+                                               settings.includeOctave).getUMat(ACCESS_READ).copyTo(dset);
+
+                CountingResults* res = f->detectDescriptorsClusters(ResultIndex::SelectedKeypoints, dset,
+                                       settings.step, settings.extend);
+
+                if(settings.print)
+                {
+                    String descriptorFrameDir = VOPrinter::createDirectory(settings.filteredDescDir, to_string(frameCount));
+                    f->createResultsImages(ResultIndex::SelectedKeypoints);
+                    Mat frm = VOCUtils::drawKeyPoints(fr, colourModel.getSelectedKeypoints(), colours.red, -1);
+                    VOPrinter::printImage(settings.filteredDescDir, frameCount, "frame_kp", frm);
+                    VOPrinter::printImages(selectedDescFrameDir, res->getSelectedClustersImages(), frameCount);
+                    VOPrinter::printEstimates(selDescClusterFile, res->getOutputData());
+                }
             }
         }
+
         this->maintainHistory(f);
     }
 }
@@ -307,121 +360,133 @@ void VOCounter::processFrame(UMat frame, UMat descriptors, vector<KeyPoint>& key
 /**
  *
  */
-void VOCounter::trackFrameColourModel(UMat& frame, vector<KeyPoint>& keypoints){
-	vector<KeyPoint> keyp;
-	size_t p_size = 0;
+void VOCounter::trackFrameColourModel(UMat& frame, UMat& descriptors, vector<KeyPoint>& keypoints)
+{
+    vector<KeyPoint> keyp;
+    size_t p_size = 0;
 
-	shared_ptr<Framed> ff;
-	UMat dataset;
-	if(!framedHistory.empty()){
-		ff = framedHistory[framedHistory.size()-1];
-		keyp.insert(keyp.end(), ff->getKeypoints()->begin(), ff->getKeypoints()->end());
-		dataset = VOCUtils::getColourDataset(ff->getFrame(), keyp);
-		p_size = ff->getKeypoints()->size();
-	}
+    //Framed* ff;
+    Mat dataset;
+    if(!framedHistory.empty())
+    {
+        Framed* ff = framedHistory[framedHistory.size()-1];
+        keyp.insert(keyp.end(), ff->getKeypoints()->begin(), ff->getKeypoints()->end());
+        dataset = VOCUtils::getColourDataset(ff->getFrame(), &keyp);
+        p_size = ff->getKeypoints()->size();
+    }
 
-	keyp.insert(keyp.end(), keypoints.begin(), keypoints.end());
-	dataset.push_back(VOCUtils::getColourDataset(frame, keypoints));
-	dataset = dataset.clone();
-	//CV_ASSERT(dataset.isContinuous());
-	hdbscan scanis(2*colourModel.getMinPts(), DATATYPE_FLOAT);
-	scanis.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
+    keyp.insert(keyp.end(), keypoints.begin(), keypoints.end());
+    dataset.push_back(VOCUtils::getColourDataset(frame, &keypoints));
+    dataset = dataset.clone();
+    //CV_ASSERT(dataset.isContinuous());
+    hdbscan scanis(2*colourModel.getMinPts(), DATATYPE_FLOAT);
+    scanis.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
 
-	/****************************************************************************************************/
-	/// Get the hash table for the current dataset and find the mapping to clusters in prev frame
-	/// and map them to selected colour map
-	/****************************************************************************************************/
-	IntIntListMap* prevHashTable = colourModel.getColourModelClusters();
-	int32_t prevNumClusters = colourModel.getNumClusters();
-	IntIntListMap* t_map = hdbscan_create_cluster_table(scanis.clusterLabels + p_size, 0, keypoints.size());
-	colourModel.setColourModelClusters(t_map);
-	colourModel.setNumClusters(g_hash_table_size(colourModel.getColourModelClusters()));
-	IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scanis, colourModel.getColourModelClusters());
-	clustering_stats stats;
-	hdbscan_calculate_stats(distancesMap, &stats);
-	int val = hdbscan_analyse_stats(&stats);
+    /****************************************************************************************************/
+    /// Get the hash table for the current dataset and find the mapping to clusters in prev frame
+    /// and map them to selected colour map
+    /****************************************************************************************************/
+    IntIntListMap* prevHashTable = colourModel.getColourModelClusters();
+    int32_t prevNumClusters = colourModel.getNumClusters();
+    IntIntListMap* t_map = hdbscan_create_cluster_table(scanis.clusterLabels + p_size, 0, keypoints.size());
+    colourModel.setColourModelClusters(t_map);
+    colourModel.setNumClusters(g_hash_table_size(colourModel.getColourModelClusters()));
+    IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scanis, colourModel.getColourModelClusters());
+    clustering_stats stats;
+    hdbscan_calculate_stats(distancesMap, &stats);
+    int val = hdbscan_analyse_stats(&stats);
 
-	if(val < 0){
-		cout << "Validity is less than 0. Re clustering ..." << endl;
-		hdbscan_destroy_distance_map_table(distancesMap);
-		hdbscan_destroy_cluster_table(colourModel.getColourModelClusters());
+    if(val < 0)
+    {
+        cout << "Validity is less than 0. Re clustering ..." << endl;
+        hdbscan_destroy_distance_map_table(distancesMap);
+        hdbscan_destroy_cluster_table(colourModel.getColourModelClusters());
 
-		scanis.reRun(2 * colourModel.getMinPts() - 1);
-		prevNumClusters = colourModel.getNumClusters();
-		t_map = hdbscan_create_cluster_table(scanis.clusterLabels + p_size, 0, keypoints.size());
-		colourModel.setColourModelClusters(t_map);
-		colourModel.setNumClusters(g_hash_table_size(colourModel.getColourModelClusters()));
-		distancesMap = hdbscan_get_min_max_distances(&scanis, colourModel.getColourModelClusters());
-		clustering_stats stats;
-		hdbscan_calculate_stats(distancesMap, &stats);
-		val = hdbscan_analyse_stats(&stats);
-	}
+        scanis.reRun(2 * colourModel.getMinPts() - 1);
+        prevNumClusters = colourModel.getNumClusters();
+        t_map = hdbscan_create_cluster_table(scanis.clusterLabels + p_size, 0, keypoints.size());
+        colourModel.setColourModelClusters(t_map);
+        colourModel.setNumClusters(g_hash_table_size(colourModel.getColourModelClusters()));
+        distancesMap = hdbscan_get_min_max_distances(&scanis, colourModel.getColourModelClusters());
+        clustering_stats stats;
+        hdbscan_calculate_stats(distancesMap, &stats);
+        val = hdbscan_analyse_stats(&stats);
+    }
 
-	printf("------- MinPts = %d - new validity = %d (%d) and old validity = %d (%d)\n", colourModel.getMinPts(), val, colourModel.getNumClusters(), colourModel.getValidity(), prevNumClusters);
+    printf("------- MinPts = %d - new validity = %d (%d) and old validity = %d (%d)\n", colourModel.getMinPts(), val, colourModel.getNumClusters(), colourModel.getValidity(), prevNumClusters);
 
-	colourModel.setValidity(val);
-	set<int32_t> currSelClusters;
+    colourModel.setValidity(val);
+    set<int32_t> currSelClusters;
 
-	for (set<int32_t>::iterator itt = colourModel.getSelectedClusters()->begin(); itt != colourModel.getSelectedClusters()->end(); ++itt) {
-		int32_t cluster = *itt;
-		IntArrayList* list = (IntArrayList*)g_hash_table_lookup(prevHashTable, &cluster);
-		int32_t* ldata = (int32_t*)list->data;
+    for (set<int32_t>::iterator itt = colourModel.getSelectedClusters()->begin(); itt != colourModel.getSelectedClusters()->end(); ++itt)
+    {
+        int32_t cluster = *itt;
+        IntArrayList* list = (IntArrayList*)g_hash_table_lookup(prevHashTable, &cluster);
+        int32_t* ldata = (int32_t*)list->data;
 
-		/**
-		 * Since I have no idea whether the clusters from the previous frames will be clustered in the same manner
-		 * I have to get the cluster with the largest number of points from selected clusters
-		 **/
-		map<int32_t, vector<int32_t>> temp;
-		for(int32_t x = 0; x < list->size; x++){
-			int32_t idx = ldata[x];
-			int32_t newCluster = (scanis.clusterLabels)[idx];
-			temp[newCluster].push_back(idx);
-		}
+        /**
+         * Since I have no idea whether the clusters from the previous frames will be clustered in the same manner
+         * I have to get the cluster with the largest number of points from selected clusters
+         **/
+        map<int32_t, vector<int32_t>> temp;
+        for(int32_t x = 0; x < list->size; x++)
+        {
+            int32_t idx = ldata[x];
+            int32_t newCluster = (scanis.clusterLabels)[idx];
+            temp[newCluster].push_back(idx);
+        }
 
-		int32_t selC = -1;
-		size_t mSize = 0;
-		for(map<int32_t, vector<int32_t>>::iterator it = temp.begin(); it != temp.end(); ++it){
-			if(mSize < it->second.size()){
-				selC = it->first;
-				mSize = it->second.size();
-			}
+        int32_t selC = -1;
+        size_t mSize = 0;
+        for(map<int32_t, vector<int32_t>>::iterator it = temp.begin(); it != temp.end(); ++it)
+        {
+            if(mSize < it->second.size())
+            {
+                selC = it->first;
+                mSize = it->second.size();
+            }
 
-		}
-		currSelClusters.insert(selC);
-	}
+        }
+        currSelClusters.insert(selC);
+    }
 
-	// Need to clear the previous table map
-	hdbscan_destroy_cluster_table(prevHashTable);
-	hdbscan_destroy_distance_map_table(distancesMap);
-	colourModel.setSelectedClusters(currSelClusters);
-	colourModel.getSelectedKeypoints()->clear();
-	colourModel.getRoiFeatures()->clear();
-	colourModel.getOldIndices()->clear();
+    // Need to clear the previous table map
+    hdbscan_destroy_cluster_table(prevHashTable);
+    hdbscan_destroy_distance_map_table(distancesMap);
+    colourModel.setSelectedClusters(currSelClusters);
+    colourModel.getSelectedKeypoints()->clear();
+    colourModel.getRoiFeatures()->clear();
+    colourModel.getOldIndices()->clear();
 
-	/****************************************************************************************************/
-	/// Image space clustering
-	/// -------------------------
-	/// Create a dataset from the keypoints by extracting the colours and using them as the dataset
-	/// hence clustering in image space
-	/****************************************************************************************************/
+    /****************************************************************************************************/
+    /// Image space clustering
+    /// -------------------------
+    /// Create a dataset from the keypoints by extracting the colours and using them as the dataset
+    /// hence clustering in image space
+    /****************************************************************************************************/
 
-	//Mat selDesc;
-	for (set<int32_t>::iterator itt = colourModel.getSelectedClusters()->begin(); itt != colourModel.getSelectedClusters()->end(); ++itt) {
+    Mat selDesc;
+    for (set<int32_t>::iterator itt = colourModel.getSelectedClusters()->begin(); itt != colourModel.getSelectedClusters()->end(); ++itt)
+    {
 
-		int cluster = *itt;
-		IntArrayList* list = (IntArrayList*)g_hash_table_lookup(colourModel.getColourModelClusters(), &cluster);
-		int32_t* ldata = (int32_t*)list->data;
-		colourModel.getOldIndices()->insert(colourModel.getOldIndices()->end(), ldata, ldata + list->size);
-		VOCUtils::getListKeypoints(keypoints, list, *(colourModel.getSelectedClusters()));
-		//getSelectedKeypointsDescriptors(f.descriptors, list, selDesc);
+        int cluster = *itt;
+        IntArrayList* list = (IntArrayList*)g_hash_table_lookup(colourModel.getColourModelClusters(), &cluster);
+        int32_t* ldata = (int32_t*)list->data;
+        colourModel.getOldIndices()->insert(colourModel.getOldIndices()->end(), ldata, ldata + list->size);
+        vector<KeyPoint> kk;
+        VOCUtils::getListKeypoints(&keypoints, list, &kk);
+        colourModel.addToSelectedKeypoints(kk.begin(), kk.end());
+        VOCUtils::getSelectedKeypointsDescriptors(descriptors, list, selDesc);
 
-	}
-	cout << "Selected " << colourModel.getSelectedClusters()->size() << " points" << endl;
+    }
+    cout << "Selected " << colourModel.getSelectedClusters()->size() << " points" << endl;
 
-	if(vcount.trackingFile.is_open()){
-		vcount.trackingFile << frameCount << "," << keypoints.size() <<  << "," << colourModel.getMinPts() << "," << colourModel.getNumClusters() << "," << val << endl;
-	}
-	//colourModel.selectedDesc = selDesc.clone();
+    if(trackingFile.is_open())
+    {
+        trackingFile << frameCount << "," << keypoints.size() << "," << colourModel.getMinPts() << "," << colourModel.getNumClusters() << "," << val << endl;
+    }
+    UMat ss = selDesc.getUMat(ACCESS_READ);
+    colourModel.setSelectedDesc(ss);
 }
 
 /**
@@ -451,10 +516,11 @@ void VOCounter::getLearnedColourModel(int32_t chosen)
 /**
  *
  */
-void VOCounter::chooseColourModel(UMat frame, UMat descriptors, vector<KeyPoint>& keypoints)
+void VOCounter::chooseColourModel(UMat& frame, UMat& descriptors, vector<KeyPoint>& keypoints)
 {
 
     cout << "Use 'a' to select, 'q' to reject and 'x' to exit." << endl;
+
     GHashTableIter iter;
     gpointer key;
     gpointer value;
@@ -465,8 +531,8 @@ void VOCounter::chooseColourModel(UMat frame, UMat descriptors, vector<KeyPoint>
         IntArrayList* list = (IntArrayList*)value;
         int32_t* k = (int32_t *)key;
         vector<KeyPoint> kps;
-        VOCUtils::getListKeypoints(keypoints, list, kps);
-        UMat m = VOCUtils::drawKeyPoints(frame, kps, colours.red, -1);
+        VOCUtils::getListKeypoints(&keypoints, list, &kps);
+        Mat m = VOCUtils::drawKeyPoints(frame, &kps, colours.red, -1);
         // print the choice images
         String imName = "choice_cluster_";
         imName += std::to_string(*k).c_str();
@@ -486,21 +552,8 @@ void VOCounter::chooseColourModel(UMat frame, UMat descriptors, vector<KeyPoint>
                 if (c == 'a')
                 {
                     cout << "Chosen cluster " << *k << endl;
-                    //Mat xx ;
-                    //getSelectedKeypointsDescriptors(descriptors, list, xx);
-                    //colourModel.selectedClusters.insert(*k);
                     colourModel.addToSelectedClusters(*k);
-                    //colourModel.getSelectedKeypoints()->insert(colourModel.getSelectedKeypoints()->end(), kps.begin(), kps.end());
                     colourModel.addToSelectedKeypoints(kps.begin(), kps.end());
-
-                    /*if(colourSelection.selectedDesc.empty())
-                    {
-                        colourSelection.selectedDesc = xx.clone();
-                    }
-                    else
-                    {
-                        colourSelection.selectedDesc.push_back(xx);
-                    }*/
                     break;
                 }
                 else if (c == 'q')
@@ -527,7 +580,7 @@ void VOCounter::chooseColourModel(UMat frame, UMat descriptors, vector<KeyPoint>
 /**
  *
  */
-void VOCounter::trainColourModel(UMat frame, vector<KeyPoint>& keypoints)
+void VOCounter::trainColourModel(UMat& frame, vector<KeyPoint>& keypoints)
 {
 
     map<uint, set<int>> numClusterMap;
@@ -539,8 +592,8 @@ void VOCounter::trainColourModel(UMat frame, vector<KeyPoint>& keypoints)
     {
         if(i == 3)
         {
-            UMat dataset = VOCUtils::getColourDataset(frame, keypoints);
-            scan.run(dataset.getMat(ACCESS_READ).ptr<float>(), dataset.rows, dataset.cols, TRUE);
+            Mat dataset = VOCUtils::getColourDataset(frame, &keypoints);
+            scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);
         }
         else
         {
@@ -768,18 +821,17 @@ int32_t VOCounter::findLargestSet(map<uint, set<int32_t>>& numClusterMap)
  *
  * @param f - Framed object to add to the history
  */
-void VOCounter::maintainHistory(shared_ptr<Framed> f)
+void VOCounter::maintainHistory(Framed* f)
 {
+    if(this->framedHistory.size() == 10)
+    {
+
+        Framed *fr = this->framedHistory.front();
+        delete fr;
+        fr = NULL;
+        this->framedHistory.erase(this->framedHistory.begin());
+    }
     this->framedHistory.push_back(f);
-	if(this->framedHistory.size() > 10){
-		/*framed& f1 = voc.frameHistory.front();
-
-		for(map<ResultIndex, results_t*>::iterator it = f1.results.begin(); it != f1.results.end(); ++it){
-			cleanResult(it->second);
-		}*/
-
-		this->framedHistory.erase(this->framedHistory.begin());
-	}
 }
 
 /************************************************************************************
@@ -822,4 +874,12 @@ int32_t VOCounter::getFrameCount()
     return frameCount;
 }
 
+
+///
+/// frameCount
+///
+vector<Framed*>* VOCounter::getFramedHistory()
+{
+    return &this->framedHistory;
+}
 };

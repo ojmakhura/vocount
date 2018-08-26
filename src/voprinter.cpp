@@ -147,9 +147,9 @@ String dest = mainFolder;
 /**
  *
  */
-void VOPrinter::printImages(String& folder, map<String, UMat>* images, int count)
+void VOPrinter::printImages(String& folder, map<String, Mat>* images, int count)
 {
-	for(map<String, UMat>::iterator it = images->begin(); it != images->end(); ++it){
+	for(map<String, Mat>::iterator it = images->begin(); it != images->end(); ++it){
 		printImage(folder, count, it->first, it->second);
 	}
 }
@@ -157,7 +157,7 @@ void VOPrinter::printImages(String& folder, map<String, UMat>* images, int count
 /**
  *
  */
-void VOPrinter::printImage(String folder, int idx, String name, UMat img)
+void VOPrinter::printImage(String folder, int idx, String name, Mat img)
 {
 	stringstream sstm;
 	sstm << folder.c_str() << "/" << idx << " " << name.c_str() << ".jpg";

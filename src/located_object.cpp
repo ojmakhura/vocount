@@ -44,41 +44,44 @@ void LocatedObject::setBox(Rect2d val)
 ///
 /// boxImage
 ///
-UMat LocatedObject::getBoxImage()
+UMat& LocatedObject::getBoxImage()
 {
     return boxImage;
 }
 
 void LocatedObject::setBoxImage(UMat val)
 {
-    boxImage = val;
+    //boxImage = val;
+    val.copyTo(boxImage);
     cvtColor(boxImage, boxGray, COLOR_RGB2GRAY);
 }
 
 ///
 /// boxGray
 ///
-UMat LocatedObject::getBoxGray()
+UMat& LocatedObject::getBoxGray()
 {
     return boxGray;
 }
 
 void LocatedObject::setBoxGray(UMat boxGray)
 {
-	this->boxGray = boxGray;
+	//this->boxGray = boxGray;
+	boxGray.copyTo(this->boxGray);
 }
 
 ///
 /// histogram
 ///
-UMat LocatedObject::getHistogram()
+Mat& LocatedObject::getHistogram()
 {
     return histogram;
 }
 
-void LocatedObject::setHistogram(UMat val)
+void LocatedObject::setHistogram(Mat val)
 {
-    histogram = val;
+	val.copyTo(histogram);
+    //histogram = val;
 }
 
 ///
@@ -184,11 +187,11 @@ int32_t LocatedObject::rectExist(vector<LocatedObject>& structures, LocatedObjec
 
 bool LocatedObject::createNewBoxStructure(KeyPoint first_p, KeyPoint second_p, LocatedObject& mbs, LocatedObject& n_mbs, UMat& frame)
 {
-
+	Mat _frame = frame.getMat(ACCESS_RW);
 	Rect2d n_rect = VOCUtils::shiftRect(mbs.getBox(), first_p.pt, second_p.pt);
 
 	Rect2d bx = mbs.getBox();
-	VOCUtils::stabiliseRect(frame, bx, n_rect);
+	VOCUtils::stabiliseRect(_frame, bx, n_rect);
 	mbs.setBox(bx);
 	n_mbs.setBox(n_rect);
 	VOCUtils::trimRect(n_rect, frame.rows, frame.cols, 0);
@@ -203,7 +206,8 @@ bool LocatedObject::createNewBoxStructure(KeyPoint first_p, KeyPoint second_p, L
 	}
 
 	n_mbs.setBoxImage(frame(n_rect));
-	n_mbs.setHistogram(VOCUtils::calculateHistogram(n_mbs.getBoxImage()));
+	Mat h = VOCUtils::calculateHistogram(n_mbs.getBoxImage());
+	n_mbs.setHistogram(h);
 	UMat gr;
 	cvtColor(n_mbs.getBoxImage(), gr, COLOR_RGB2GRAY);
 	n_mbs.setBoxGray(gr);

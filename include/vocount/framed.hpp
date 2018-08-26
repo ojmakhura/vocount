@@ -7,7 +7,7 @@
 using namespace std;
 using namespace vocount;
 
-typedef map<ResultIndex, shared_ptr<CountingResults>> map_r;
+typedef map<ResultIndex, CountingResults*> map_r;
 
 namespace vocount
 {
@@ -38,14 +38,14 @@ public:
 	///
 	/// descriptors
 	///
-    UMat getDescriptors();
-    void setDescriptors(UMat descriptor);
+    UMat& getDescriptors();
+    void setDescriptors(UMat& descriptor);
 
 	///
 	/// frame
 	///
-    UMat getFrame();
-    UMat setFrame(UMat frame);
+    UMat& getFrame();
+    void setFrame(UMat& frame);
 
 	///
 	/// keypoints
@@ -85,17 +85,17 @@ public:
 	/**
 	 *
 	 */
-	shared_ptr<CountingResults> detectDescriptorsClusters(ResultIndex idx, int32_t step, bool extend, bool includeAngle, bool includeOctave);
+	CountingResults* detectDescriptorsClusters(ResultIndex idx, UMat& dataset, int32_t step, bool extend);
 
 	/**
 	 *
 	 */
-	void addResults(ResultIndex idx, shared_ptr<CountingResults> res);
+	void addResults(ResultIndex idx, CountingResults* res);
 
 	/**
 	 *
 	 */
-	shared_ptr<CountingResults> getResults(ResultIndex idx);
+	CountingResults* getResults(ResultIndex idx);
 
 	/**
 	 *
@@ -116,7 +116,7 @@ private:
     /**********************************************************************************************************************
      *   PRIVATE FUNCTIONS
      **********************************************************************************************************************/
-	shared_ptr<CountingResults> doCluster(UMat dataset, int32_t step, int32_t f_minPts, bool analyse, bool singleRun);
+	CountingResults* doCluster(UMat& dataset, int32_t step, int32_t f_minPts, bool analyse, bool singleRun);
 	void generateSelectedClusterImages();
 };
 };

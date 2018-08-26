@@ -30,8 +30,8 @@ public:
 	///
 	/// dataset
 	///
-	UMat getDataset();
-	void setDataset(UMat dataset);
+	UMat& getDataset();
+	void setDataset(UMat& dataset);
 
 	///
 	/// distancesMap
@@ -84,8 +84,8 @@ public:
 	///
 	/// selectedClustersImages
 	///
-	map<String, UMat>* getSelectedClustersImages();
-	void setSelectedClustersImages(map<String, UMat> selectedClustersImages);
+	map<String, Mat>* getSelectedClustersImages();
+	void setSelectedClustersImages(map<String, Mat> selectedClustersImages);
 
 	///
 	/// validity
@@ -106,7 +106,7 @@ public:
 	/**
 	 *
 	 */
-	void extendLocatedObjects(UMat frame);
+	void extendLocatedObjects(UMat& frame);
 
 	/**
 	 * Extract prominent
@@ -121,12 +121,12 @@ public:
 	/**
 	 * Generate images for each of the selected clusters
 	 */
-	 void generateSelectedClusterImages(UMat frame);
+	 void generateSelectedClusterImages(UMat& frame);
 
 	 /**
 	  * Generate output data
 	  */
-	 void generateOutputData(UMat frame, int32_t frameId, int32_t groundTruth, vector<int32_t>& roiFeatures);
+	 void generateOutputData(int32_t frameId, int32_t groundTruth, vector<int32_t>& roiFeatures);
 
 	 /**
 	  *
@@ -145,7 +145,7 @@ private:
 	vector<int32_t> labels;													/// hdbscan cluster labels
 	vector<LocatedObject> prominentLocatedObjects;							/// Bounding boxes for the individual objects in the frame
 	map_st clusterLocatedObjects;
-	map<String, UMat> selectedClustersImages;								/// images with cluster by cluster keypoints drawn
+	map<String, Mat> selectedClustersImages;								/// images with cluster by cluster keypoints drawn
 	int32_t selectedFeatures = 0;
 	int validity = -1;
 	int minPts = 3;

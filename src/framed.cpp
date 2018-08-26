@@ -21,7 +21,9 @@ Framed::Framed(int32_t frameId, UMat frame, UMat descriptors, vector<KeyPoint> k
 
 Framed::~Framed()
 {
-    //dtor
+    for(map_r::iterator iter = results.begin(); iter != results.end(); iter++){
+        delete iter->second;
+    }
 }
 
 /**********************************************************************************************************************
@@ -45,7 +47,7 @@ void Framed::setFrameId(int32_t frameId)
 ///
 /// descriptors
 ///
-UMat Framed::getDescriptors()
+UMat& Framed::getDescriptors()
 {
     return this->descriptors;
 }
@@ -53,7 +55,7 @@ UMat Framed::getDescriptors()
 ///
 /// frame
 ///
-UMat Framed::getFrame()
+UMat& Framed::getFrame()
 {
     return this->frame;
 }
@@ -123,17 +125,19 @@ void Framed::setGroundTruth(int32_t groundTruth)
 /**
  *
  */
-shared_ptr<CountingResults> Framed::doCluster(UMat dataset, int step, int f_minPts, bool analyse, bool singleRun)
+CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool analyse, bool singleRun)
 {
     //CV_ASSERT(dataset.isContinuous());
 
-    shared_ptr<CountingResults> res = make_shared<CountingResults>();
+    CountingResults* res = new CountingResults();
+    Mat mt = dataset.getMat(ACCESS_READ);
+    //dataset.copyTo(mt);
     res->setDataset(dataset);
     res->setKeypoints(keypoints);
 
     int m_pts = step * f_minPts;
     hdbscan scan(m_pts, DATATYPE_FLOAT);
-    scan.run(dataset.getMat(ACCESS_RW).ptr<float>(), dataset.rows, dataset.cols, TRUE);
+    scan.run(mt.ptr<float>(), dataset.rows, dataset.cols, TRUE);
 
     IntIntListMap* c_map = NULL;
     IntDistancesMap* d_map = NULL;
@@ -219,10 +223,10 @@ shared_ptr<CountingResults> Framed::doCluster(UMat dataset, int step, int f_minP
  * Prominent structures are extracted by comapring the structure in each
  * cluster.
  */
-shared_ptr<CountingResults> Framed::detectDescriptorsClusters(ResultIndex idx, int32_t step, bool extend, bool includeAngle, bool includeOctave)
+CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, UMat& dataset,int32_t step, bool extend)
 {
-    UMat dset = VOCUtils::getDescriptorDataset(descriptors, keypoints, includeAngle, includeOctave);
-    shared_ptr<CountingResults> res = doCluster(dset, step, 3, true, false);
+    //Mat dset = dataset.getMat(ACCESS_READ);
+    CountingResults* res = doCluster(dataset, step, 3, true, false);
     res->addToClusterLocatedObjects(this->roi, this->frame);
 
     /**
@@ -260,16 +264,16 @@ shared_ptr<CountingResults> Framed::detectDescriptorsClusters(ResultIndex idx, i
  */
 void Framed::createResultsImages(ResultIndex idx)
 {
-    shared_ptr<CountingResults> res = this->getResults(idx);
+    CountingResults* res = this->getResults(idx);
     res->generateSelectedClusterImages(this->frame);
     res->createLocatedObjectsImages();
-    res->generateOutputData(this->frame, this->frameId, this->groundTruth, this->roiFeatures);
+    res->generateOutputData(this->frameId, this->groundTruth, this->roiFeatures);
 }
 
 /**
  *
  */
-void Framed::addResults(ResultIndex idx, shared_ptr<CountingResults> res)
+void Framed::addResults(ResultIndex idx, CountingResults* res)
 {
     results[idx] = res;
 }
@@ -277,7 +281,7 @@ void Framed::addResults(ResultIndex idx, shared_ptr<CountingResults> res)
 /**
  *
  */
-shared_ptr<CountingResults> Framed::getResults(ResultIndex idx)
+CountingResults* Framed::getResults(ResultIndex idx)
 {
     return results[idx];
 }

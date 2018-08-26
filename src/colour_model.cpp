@@ -92,6 +92,19 @@ void ColourModel::setSelectedKeypoints(vector<KeyPoint> SelectedKeypoints)
 }
 
 ///
+/// selectedDesc
+///
+UMat& ColourModel::getSelectedDesc()
+{
+    return selectedDesc;
+}
+
+void ColourModel::setSelectedDesc(UMat& selectedDesc)
+{
+    selectedDesc.copyTo(this->selectedDesc);
+}
+
+///
 /// selectedClusters
 ///
 set<int32_t>* ColourModel::getSelectedClusters()
@@ -117,8 +130,21 @@ void ColourModel::setColourModelClusters(IntIntListMap* colourModelClusters)
     this->colourModelClusters = colourModelClusters;
 }
 
+///
+/// colourModelClusters
+///
+vector<int32_t>* ColourModel::getOldIndices()
+{
+    return &this->oldIndices;
+}
+
+void ColourModel::setOldIndices(vector<int32_t> oldIndices)
+{
+    this->oldIndices = oldIndices;
+}
+
 /************************************************************************************
- *   GETTERS AND SETTERS
+ *   PUBLIC FUNCTIONS
  ************************************************************************************/
 
 /**
