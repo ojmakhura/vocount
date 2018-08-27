@@ -105,10 +105,10 @@ void VOCounter::processSettings()
 
     /// Check if the ROI was given in the settings
     this->roi = Rect2d(settings.x, settings.y, settings.w, settings.h);
-    if(this->roi.area() > 0)
-    {
-        this->roiExtracted = true;
-    }
+    //if(this->roi.area() > 0)
+   // {
+        //this->roiExtracted = true;
+    //}
 
     /// If we have print setting, we create the necessary folders and files
     if(settings.print)
@@ -168,7 +168,6 @@ void VOCounter::trackInitialObject(UMat& frame, UMat& descriptors, vector<KeyPoi
     {
         if(settings.selectROI)  // if c has been pressed or program started with -s option
         {
-            //UMat f2 = frame.clone();
             roi = selectROI("Select ROI", frame);
             destroyWindow("Select ROI");
         }
@@ -359,12 +358,11 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
             {
                 cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Selected Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
                 printf("Filtering detected objects with colour model\n\n");
-                //combineSelDescriptorsRawStructures(f, settings.dfComboDir, settings.print);
-                f->getFilteredLocatedObjects();
+                f->filterLocatedObjets(colourModel.getSelectedKeypoints());
 
                 if(settings.print)
                 {
-                    Mat kimg = VOCUtils::drawKeyPoints(frame, keyPoints, colours.red, -1);
+                    Mat kimg = VOCUtils::drawKeyPoints(frame, colourModel.getSelectedKeypoints(), colours.red, -1);
 
                     for(size_t i = 0; i < f->getFilteredLocatedObjects()->size(); i++)
                     {
@@ -374,9 +372,10 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
                         value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 
                         LocatedObject& b = f->getFilteredLocatedObjects()->at(i);
+                        //cout << "Printing box " << b.getBox() << endl;
                         rectangle(kimg, b.getBox(), value, 2, 8, 0);
                     }
-                    VOCUtils::printImage(dfComboDir, f->getFrameId(), "selected_structures", kimg) ;
+                    VOPrinter::printImage(settings.dfComboDir, f->getFrameId(), "selected_structures", kimg) ;
                     double accuracy = 0;
                     int32_t gTruth = this->truth[f->getFrameId()];
                     if(gTruth > 0)
@@ -523,7 +522,8 @@ void VOCounter::trackFrameColourModel(UMat& frame, UMat& descriptors, vector<Key
         trackingFile << frameCount << "," << keypoints.size() << "," << colourModel.getMinPts() << "," << colourModel.getNumClusters() << "," << val << endl;
     }
 
-    UMat ss = selDesc.getUMat(ACCESS_READ);
+    UMat ss;
+    selDesc.copyTo(ss);
     colourModel.setSelectedDesc(ss);
 }
 
@@ -629,7 +629,8 @@ void VOCounter::chooseColourModel(UMat& frame, UMat& descriptors, vector<KeyPoin
         }
     }
     selDesc = selDesc.clone();
-    UMat ss = selDesc.getUMat(ACCESS_READ);
+    UMat ss;
+    selDesc.copyTo(ss);
     colourModel.setSelectedDesc(ss);
 }
 

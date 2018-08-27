@@ -87,12 +87,17 @@ public:
      /**
       *
       */
-     static int32_t rectExist(vector<LocatedObject>& structures, LocatedObject& bst);
+     static int32_t rectExist(vector<LocatedObject>* locatedObjects, LocatedObject* newObject);
 
      /**
       *
       */
-     static bool createNewBoxStructure(KeyPoint first_p, KeyPoint second_p, LocatedObject& mbs, LocatedObject& n_mbs, UMat& frame);
+     static bool createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* mbs, LocatedObject* n_mbs, UMat& frame);
+
+     /**
+      *
+      */
+     static void addLocatedObject(vector<LocatedObject>* locatedObjects, LocatedObject* newObject);
 
 private:
     Rect2d box;

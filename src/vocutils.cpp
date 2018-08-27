@@ -10,7 +10,7 @@ namespace vocount
  * @param  -
  * @param  -
  */
-set<int32_t> VOCUtils::findValidROIFeature(vector<KeyPoint>* keypoints, Rect2d& roi, vector<int32_t>* roiFeatures, vector<int32_t>* labels)
+set<int32_t> VOCUtils::findValidROIFeatures(vector<KeyPoint>* keypoints, Rect2d& roi, vector<int32_t>* roiFeatures, vector<int32_t>* labels)
 {
     Rect2d& r = roi;
     Point2f p;

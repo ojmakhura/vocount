@@ -11,37 +11,61 @@ class VOCUtils
 {
 public:
 	/**
-	 *
+	 * Find the valid feature. This function uses the labels to validate that the
+	 * selected features are not part of the noise clusters.
+	 * @param keypoints		- local feature keypoints
+	 * @param roi			- region of interest
+	 * @param roiFeatures	- valid roiFeatures output
+	 * @param labels		- Clusters labels
 	 */
-    static set<int32_t> findValidROIFeature(vector<KeyPoint>* keypoints, Rect2d& roi, vector<int32_t>* roiFeatures, vector<int32_t>* labels);
+    static set<int32_t> findValidROIFeatures(vector<KeyPoint>* keypoints, Rect2d& roi, vector<int32_t>* roiFeatures, vector<int32_t>* labels);
 
 	/**
+	 * Find all keypoints inside the roi
 	 *
+	 * @param keypoints		- local feature keypoints
+	 * @param roi			- region of interest
+	 * @param roiFeatures	- valid roiFeatures output
 	 */
     static void findROIFeatures(vector<KeyPoint>* keypoints, Rect2d& roi, vector<int32_t>* roiFeatures);
 
 	/**
+	 * Sort the roi features by their distance from the center of the region of interest
 	 *
+	 * @param roi			- region of interest
+	 * @param roiFeatures	- valid roiFeatures output
+	 * @param keypoints		- local feature keypoints
 	 */
     static void sortByDistanceFromCenter(Rect2d& roi, vector<int32_t>* roiFeatures, vector<KeyPoint>* keypoints);
 
 	/**
+	 * Calculate the histogram
 	 *
+	 * @param img_		- the image
+	 * @return The histogram
 	 */
     static Mat calculateHistogram(UMat& img_);
 
 	/**
+	 * Utility function for creating single object trackers given the name.
 	 *
+	 * @param name - the name of the tracker to create
+	 * @return pointer to the tracker object
 	 */
     static cv::Ptr<cv::Tracker> createTrackerByName(cv::String name);
 
 	/**
+	 * Trim the rectangle to the margin denoted by the padding
 	 *
+	 * @param r			-
+	 * @param rows		-
+	 * @param cols		-
+	 * @param padding	-
 	 */
     static bool trimRect(Rect2d& r, int32_t rows, int32_t cols, int32_t padding);
 
 	/**
-	 *
+	 * Use localised template matching to stabilise the detection.
 	 */
     static bool stabiliseRect(Mat& frame, Rect2d templ_r, Rect2d& proposed);
 

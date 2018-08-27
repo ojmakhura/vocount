@@ -103,9 +103,11 @@ public:
 	void createResultsImages(ResultIndex idx);
 
 	/**
-	 * Use the colour model to filter out false positives
+	 * Use the colour model to filter out false positives.
+	 *
+	 * @param keyPoints	- the points to be used for filtering
 	 */
-	void filterLocatedObjets();
+	void filterLocatedObjets(vector<KeyPoint>* keyPoints);
 
 private:
     int32_t frameId = 0;

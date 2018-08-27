@@ -10,7 +10,7 @@ Framed::Framed()
 
 Framed::Framed(int32_t frameId, UMat frame, UMat descriptors, vector<KeyPoint> keypoints, vector<int32_t> roiFeatures, Rect2d roi, int32_t groundTruth)
 {
-	this->roiFeatures = roiFeatures;
+    this->roiFeatures = roiFeatures;
     this->keypoints = keypoints;
     this->descriptors = descriptors.clone();
     this->frame = frame.clone();
@@ -21,7 +21,8 @@ Framed::Framed(int32_t frameId, UMat frame, UMat descriptors, vector<KeyPoint> k
 
 Framed::~Framed()
 {
-    for(map_r::iterator iter = results.begin(); iter != results.end(); iter++){
+    for(map_r::iterator iter = results.begin(); iter != results.end(); iter++)
+    {
         delete iter->second;
     }
 }
@@ -127,15 +128,13 @@ void Framed::setGroundTruth(int32_t groundTruth)
  */
 CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool analyse, bool singleRun)
 {
-    //CV_ASSERT(dataset.isContinuous());
-
     CountingResults* res = new CountingResults();
     Mat mt = dataset.getMat(ACCESS_READ);
     //dataset.copyTo(mt);
 
     int m_pts = step * f_minPts;
     hdbscan scan(m_pts, DATATYPE_FLOAT);
-    scan.run(mt.ptr<float>(), dataset.rows, dataset.cols, TRUE);
+    //scan.run(mt.ptr<float>(), dataset.rows, dataset.cols, TRUE);
 
     IntIntListMap* c_map = NULL;
     IntDistancesMap* d_map = NULL;
@@ -146,8 +145,11 @@ CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool a
 
     while(val <= 2 && i < 5)
     {
-
-        if(m_pts > (step * f_minPts))
+        if(m_pts == (step * f_minPts))
+        {
+            scan.run(mt.ptr<float>(), dataset.rows, dataset.cols, TRUE);
+        }
+        else
         {
             scan.reRun(m_pts);
         }
@@ -178,8 +180,9 @@ CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool a
                     res->setDistancesMap(NULL);
                 }
 
-                if(!(res->getLabels()->empty())){
-                	res->getLabels()->clear();
+                if(!(res->getLabels()->empty()))
+                {
+                    res->getLabels()->clear();
                 }
 
                 res->setClusterMap(c_map);
@@ -196,6 +199,7 @@ CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool a
             }
         }
 
+
         if(singleRun)
         {
             break;
@@ -204,6 +208,48 @@ CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool a
         i++;
         m_pts = (f_minPts + i) * step;
     }
+
+    /// The validity less than 2 so we force oversegmentation
+    if(res->getValidity() <= 2)
+    {
+        cout << "Could not detect optimum clusters. Will force over-segmentation of the clusters." << endl;
+        if(res->getClusterMap() != NULL)
+        {
+            hdbscan_destroy_cluster_table(res->getClusterMap());
+            res->setClusterMap(NULL);
+        }
+
+        if(res->getDistancesMap() != NULL)
+        {
+            hdbscan_destroy_distance_map_table(res->getDistancesMap());
+            res->setDistancesMap(NULL);
+        }
+
+        if(!(res->getLabels()->empty()))
+        {
+            res->getLabels()->clear();
+        }
+
+        m_pts = step * 2;
+        scan.reRun(m_pts);
+        res->getLabels()->insert(res->getLabels()->begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
+        c_map = hdbscan_create_cluster_table(scan.clusterLabels, 0, dataset.rows);
+
+        d_map = hdbscan_get_min_max_distances(&scan, c_map);
+        hdbscan_calculate_stats(d_map, &stats);
+        val = hdbscan_analyse_stats(&stats);
+
+        res->setClusterMap(c_map);
+        res->setDistancesMap(d_map);
+        res->getLabels()->insert(res->getLabels()->begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
+        res->setMinPts(m_pts);
+        res->setValidity(val);
+        res->setStats(stats);
+    }
+    //if(this->frameId == 14)
+    //{
+    //	hdbscan_print_cluster_table(res->getClusterMap());
+    //}
 
     printf("Selected minPts = %d and cluster table has %d\n", res->getMinPts(), g_hash_table_size(res->getClusterMap()));
 
@@ -285,68 +331,86 @@ CountingResults* Framed::getResults(ResultIndex idx)
     return results[idx];
 }
 
-void Framed::filterLocatedObjets()
+void Framed::filterLocatedObjets(vector<KeyPoint>* selectedKeypoints)
 {
     CountingResults* descriptorResults = results[ResultIndex::Descriptors];
-	CountingResults* filteredResults = results[ResultIndex::SelectedKeypoints];
+    CountingResults* filteredResults = results[ResultIndex::SelectedKeypoints];
 
-	//create a new vector from the ResultIndex::SelectedKeypoints structures
-	// Combine the raw descriptor results and filtered descriptor results
-	vector<LocatedObject> combinedObjects(descriptorResults->getProminentLocatedObjects()->begin(), descriptorResults->getProminentLocatedObjects()->end());
-	combinedObjects.insert(combinedObjects.end(), filteredResults->getProminentLocatedObjects()->begin(), filteredResults->getProminentLocatedObjects()->end());
+    //create a new vector from the ResultIndex::SelectedKeypoints structures
+    // Combine the raw descriptor results and filtered descriptor results
+    vector<LocatedObject> combinedObjects(descriptorResults->getProminentLocatedObjects()->begin(), descriptorResults->getProminentLocatedObjects()->end());
+
+    /**
+     * For each keypoint in the selected set, we find all box_structures that
+     * contain the point.
+     * Also a vector of vectors is not the most elegant container. A map<> would
+     * be more suitable but it does not work well with OpenMP parallelisation.
+     */
+    vector<vector<size_t>> filteredObjects(selectedKeypoints->size(), vector<size_t>());
+    #pragma omp parallel for
+    for(size_t i = 0; i < filteredObjects.size(); i++)
+    {
+        vector<size_t>& structures = filteredObjects[i];
+        KeyPoint kp = selectedKeypoints->at(i);
+        for(size_t j = 0; j < combinedObjects.size(); j++)
+        {
+            LocatedObject& bx = combinedObjects.at(j);
+
+            if(bx.getBox().contains(kp.pt))
+            {
+                #pragma omp critical
+                structures.push_back(j);
+            }
+        }
+    }
 
 
-	/**
-	 * For each keypoint in the selected set, we find all box_structures that
-	 * contain the point.
-	 */
-	vector<KeyPoint>* keyPoints = filteredResults->getKeypoints();
-	vector<vector<uint>> filteredObjects(keyPoints->size(), vector<uint>());
-#pragma omp parallel for
-	for(uint i = 0; i < filteredObjects.size(); i++){
-		vector<uint>& structures = filteredObjects[i];
-		KeyPoint kp = keypoints.at(i);
-		for(uint j = 0; j < combinedObjects.size(); j++){
-			LocatedObject& bx = combinedObjects.at(j);
 
-			if(bx.getBox().contains(kp.pt)){
-			#pragma omp critical
-				structures.push_back(j);
-			}
-		}
+    /**
+     * For those selectedKeypoints that are inside multiple structures,
+     * we find out which structure has the smallest moment comparison
+     */
+    set<size_t> selectedObjects;
+    #pragma omp parallel for
+    for(size_t i = 0; i < filteredObjects.size(); i++)
+    {
+        vector<size_t>& strs = filteredObjects[i];
 
-	}
-//#pragma omp critical
-	/**
-	 * For those keypoints that are inside multiple structures,
-	 * we find out which structure has the smallest moment comparison
-	 */
-	set<uint> selectedObjects;
-#pragma omp parallel for
-	for(uint i = 0; i < filteredObjects.size(); i++){
-		vector<uint>& strs = filteredObjects[i];
+        if(strs.size() > 0)
+        {
+            size_t minIdx = strs[0];
+            double minMoment = combinedObjects.at(minIdx).getMomentsCompare();
+            for(size_t j = 1; j < strs.size(); j++)
+            {
+                size_t idx = strs[j];
+                double moment = combinedObjects.at(idx).getMomentsCompare();
 
-		if(strs.size() > 0){
-			uint minIdx = strs[0];
-			double minMoment = combinedObjects.at(minIdx).getMomentsCompare();
-			for(uint j = 1; j < strs.size(); j++){
-				uint idx = strs[j];
-				double moment = combinedObjects.at(idx).getMomentsCompare();
+                if(moment < minMoment)
+                {
+                    minIdx = idx;
+                    minMoment = moment;
+                }
+            }
+            #pragma omp critical
+            selectedObjects.insert(minIdx);
+        }
+    }
 
-				if(moment < minMoment){
-					minIdx = idx;
-					minMoment = moment;
-				}
-			}
-#pragma omp critical
-			selectedObjects.insert(minIdx);
-		}
-	}
-
-	printf("selStructures.size() = %ld\n", selectedObjects.size());
-
-	for(set<uint>::iterator it = selectedObjects.begin(); it != selectedObjects.end(); it++){
+    for(set<size_t>::iterator it = selectedObjects.begin(); it != selectedObjects.end(); it++)
+    {
         filteredLocatedObjects.push_back(combinedObjects.at(*it));
-	}
+    }
+
+    /// We add the filtered results located objects after filtering because
+    /// we can be sure they do not contain false positives
+    vector<LocatedObject>* p_objects = filteredResults->getProminentLocatedObjects();
+
+    for(size_t i = 0; i < p_objects->size(); i++)
+    {
+        LocatedObject& newObject = p_objects->at(i);
+        LocatedObject::addLocatedObject(&filteredLocatedObjects, &newObject);
+    }
+
+    printf("filteredLocatedObjects.size() = %ld\n", filteredLocatedObjects.size());
 }
 };

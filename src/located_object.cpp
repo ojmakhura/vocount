@@ -66,8 +66,8 @@ UMat& LocatedObject::getBoxGray()
 
 void LocatedObject::setBoxGray(UMat boxGray)
 {
-	//this->boxGray = boxGray;
-	boxGray.copyTo(this->boxGray);
+    //this->boxGray = boxGray;
+    boxGray.copyTo(this->boxGray);
 }
 
 ///
@@ -80,7 +80,7 @@ Mat& LocatedObject::getHistogram()
 
 void LocatedObject::setHistogram(Mat val)
 {
-	val.copyTo(histogram);
+    val.copyTo(histogram);
     //histogram = val;
 }
 
@@ -145,7 +145,7 @@ void LocatedObject::setMatchPoint(Point matchPoint)
  */
 void LocatedObject::addToPoints(int32_t p)
 {
-	this->points.insert(p);
+    this->points.insert(p);
 }
 
 
@@ -154,22 +154,55 @@ void LocatedObject::addToPoints(int32_t p)
  */
 void LocatedObject::removeFromPoints(int32_t p)
 {
-	this->points.erase(p);
+    this->points.erase(p);
+}
+
+/**
+ *
+ */
+void LocatedObject::addLocatedObject(vector<LocatedObject>* locatedObjects, LocatedObject* newObject)
+{
+
+    int32_t idx = LocatedObject::rectExist(locatedObjects, newObject);
+
+    if(idx == -1)  // the structure does not exist
+    {
+        locatedObjects->push_back(*newObject);
+    }
+    else
+    {
+        LocatedObject& strct = locatedObjects->at(idx);
+
+        // Find out which structure is more similar to the original
+        // by comparing the histograms
+        if(newObject->getHistogramCompare() > strct.getHistogramCompare())
+        {
+            strct.setBox(newObject->getBox());
+            strct.setMatchPoint(newObject->getMatchPoint());
+            strct.setBoxImage(newObject->getBoxImage());
+            strct.setBoxGray(newObject->getBoxGray());
+            strct.setHistogram(newObject->getHistogram());
+            strct.setHistogramCompare(newObject->getHistogramCompare());
+            strct.setMomentsCompare(newObject->getMomentsCompare());
+        }
+
+        strct.getPoints()->insert(newObject->getPoints()->begin(), newObject->getPoints()->end());
+    }
 }
 
 /**
  * Check the rectangle already exists
  */
-int32_t LocatedObject::rectExist(vector<LocatedObject>& structures, LocatedObject& bst)
+int32_t LocatedObject::rectExist(vector<LocatedObject>* locatedObjects, LocatedObject* newObject)
 {
 
     double maxIntersect = 0.0;
     int32_t maxIndex = -1;
 
-    for(uint i = 0; i < structures.size(); i++)
+    for(uint i = 0; i < locatedObjects->size(); i++)
     {
-        Rect r2 = bst.getBox() & structures[i].getBox();
-        double sect = ((double)r2.area()/bst.box.area()) * 100;
+        Rect r2 = newObject->getBox() & locatedObjects->at(i).getBox();
+        double sect = ((double)r2.area()/locatedObjects->at(i).getBox().area());
         if(sect > maxIntersect)
         {
             maxIndex = i;
@@ -177,7 +210,7 @@ int32_t LocatedObject::rectExist(vector<LocatedObject>& structures, LocatedObjec
         }
     }
 
-    if(maxIntersect > 50.0)
+    if(maxIntersect > 0.5)
     {
         return maxIndex;
     }
@@ -185,36 +218,38 @@ int32_t LocatedObject::rectExist(vector<LocatedObject>& structures, LocatedObjec
     return -1;
 }
 
-bool LocatedObject::createNewBoxStructure(KeyPoint first_p, KeyPoint second_p, LocatedObject& mbs, LocatedObject& n_mbs, UMat& frame)
+bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* mbs, LocatedObject* n_mbs, UMat& frame)
 {
-	Mat _frame = frame.getMat(ACCESS_RW);
-	Rect2d n_rect = VOCUtils::shiftRect(mbs.getBox(), first_p.pt, second_p.pt);
+    Mat _frame = frame.getMat(ACCESS_RW);
+    Rect2d n_rect = VOCUtils::shiftRect(mbs->getBox(), first_p.pt, second_p.pt);
 
-	Rect2d bx = mbs.getBox();
-	VOCUtils::stabiliseRect(_frame, bx, n_rect);
-	mbs.setBox(bx);
-	n_mbs.setBox(n_rect);
-	VOCUtils::trimRect(n_rect, frame.rows, frame.cols, 0);
+    Rect2d bx = mbs->getBox();
+    VOCUtils::stabiliseRect(_frame, bx, n_rect);
+    mbs->setBox(bx);
+    n_mbs->setBox(n_rect);
+    VOCUtils::trimRect(n_rect, frame.rows, frame.cols, 0);
 
-	if(n_rect.height < 1 || n_rect.width < 1){
-		return false;
-	}
+    if(n_rect.height < 1 || n_rect.width < 1)
+    {
+        return false;
+    }
 
-	double ratio = n_mbs.box.area()/n_rect.area();
-	if(ratio < 0.2){
-		return false;
-	}
+    double ratio = n_mbs->getBox().area()/n_rect.area();
+    if(ratio < 0.2)
+    {
+        return false;
+    }
 
-	n_mbs.setBoxImage(frame(n_rect));
-	Mat h = VOCUtils::calculateHistogram(n_mbs.getBoxImage());
-	n_mbs.setHistogram(h);
-	UMat gr;
-	cvtColor(n_mbs.getBoxImage(), gr, COLOR_RGB2GRAY);
-	n_mbs.setBoxGray(gr);
-	n_mbs.setHistogramCompare(compareHist(mbs.getHistogram(), n_mbs.getHistogram(), CV_COMP_CORREL));
-	n_mbs.setMomentsCompare(matchShapes(mbs.getBoxGray(), n_mbs.getBoxGray(), CONTOURS_MATCH_I3, 0));
+    n_mbs->setBoxImage(frame(n_rect));
+    Mat h = VOCUtils::calculateHistogram(n_mbs->getBoxImage());
+    n_mbs->setHistogram(h);
+    UMat gr;
+    cvtColor(n_mbs->getBoxImage(), gr, COLOR_RGB2GRAY);
+    n_mbs->setBoxGray(gr);
+    n_mbs->setHistogramCompare(compareHist(mbs->getHistogram(), n_mbs->getHistogram(), CV_COMP_CORREL));
+    n_mbs->setMomentsCompare(matchShapes(mbs->getBoxGray(), n_mbs->getBoxGray(), CONTOURS_MATCH_I3, 0));
 
-	return true;
+    return true;
 }
 
 /************************************************************************************
