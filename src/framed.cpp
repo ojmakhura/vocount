@@ -132,8 +132,6 @@ CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool a
     CountingResults* res = new CountingResults();
     Mat mt = dataset.getMat(ACCESS_READ);
     //dataset.copyTo(mt);
-    res->setDataset(dataset);
-    res->setKeypoints(keypoints);
 
     int m_pts = step * f_minPts;
     hdbscan scan(m_pts, DATATYPE_FLOAT);
@@ -154,7 +152,7 @@ CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool a
             scan.reRun(m_pts);
         }
 
-        c_map = hdbscan_create_cluster_table(scan.clusterLabels, 0, keypoints.size());
+        c_map = hdbscan_create_cluster_table(scan.clusterLabels, 0, dataset.rows);
 
         if(analyse)
         {
@@ -223,10 +221,11 @@ CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool a
  * Prominent structures are extracted by comapring the structure in each
  * cluster.
  */
-CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, UMat& dataset,int32_t step, bool extend)
+CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, UMat& dataset, vector<KeyPoint>* keypoints, int32_t step, bool extend)
 {
-    //Mat dset = dataset.getMat(ACCESS_READ);
     CountingResults* res = doCluster(dataset, step, 3, true, false);
+    res->setDataset(dataset);
+    res->setKeypoints(*keypoints);
     res->addToClusterLocatedObjects(this->roi, this->frame);
 
     /**
@@ -284,5 +283,70 @@ void Framed::addResults(ResultIndex idx, CountingResults* res)
 CountingResults* Framed::getResults(ResultIndex idx)
 {
     return results[idx];
+}
+
+void Framed::filterLocatedObjets()
+{
+    CountingResults* descriptorResults = results[ResultIndex::Descriptors];
+	CountingResults* filteredResults = results[ResultIndex::SelectedKeypoints];
+
+	//create a new vector from the ResultIndex::SelectedKeypoints structures
+	// Combine the raw descriptor results and filtered descriptor results
+	vector<LocatedObject> combinedObjects(descriptorResults->getProminentLocatedObjects()->begin(), descriptorResults->getProminentLocatedObjects()->end());
+	combinedObjects.insert(combinedObjects.end(), filteredResults->getProminentLocatedObjects()->begin(), filteredResults->getProminentLocatedObjects()->end());
+
+
+	/**
+	 * For each keypoint in the selected set, we find all box_structures that
+	 * contain the point.
+	 */
+	vector<KeyPoint>* keyPoints = filteredResults->getKeypoints();
+	vector<vector<uint>> filteredObjects(keyPoints->size(), vector<uint>());
+#pragma omp parallel for
+	for(uint i = 0; i < filteredObjects.size(); i++){
+		vector<uint>& structures = filteredObjects[i];
+		KeyPoint kp = keypoints.at(i);
+		for(uint j = 0; j < combinedObjects.size(); j++){
+			LocatedObject& bx = combinedObjects.at(j);
+
+			if(bx.getBox().contains(kp.pt)){
+			#pragma omp critical
+				structures.push_back(j);
+			}
+		}
+
+	}
+//#pragma omp critical
+	/**
+	 * For those keypoints that are inside multiple structures,
+	 * we find out which structure has the smallest moment comparison
+	 */
+	set<uint> selectedObjects;
+#pragma omp parallel for
+	for(uint i = 0; i < filteredObjects.size(); i++){
+		vector<uint>& strs = filteredObjects[i];
+
+		if(strs.size() > 0){
+			uint minIdx = strs[0];
+			double minMoment = combinedObjects.at(minIdx).getMomentsCompare();
+			for(uint j = 1; j < strs.size(); j++){
+				uint idx = strs[j];
+				double moment = combinedObjects.at(idx).getMomentsCompare();
+
+				if(moment < minMoment){
+					minIdx = idx;
+					minMoment = moment;
+				}
+			}
+#pragma omp critical
+			selectedObjects.insert(minIdx);
+		}
+	}
+
+	printf("selStructures.size() = %ld\n", selectedObjects.size());
+
+	for(set<uint>::iterator it = selectedObjects.begin(); it != selectedObjects.end(); it++){
+        filteredLocatedObjects.push_back(combinedObjects.at(*it));
+	}
 }
 };

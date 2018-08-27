@@ -297,7 +297,7 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
             VOCUtils::getDescriptorDataset(descriptors, &keypoints, settings.rotationalInvariance, settings.includeOctave).copyTo(dset);
 
             CountingResults* res = f->detectDescriptorsClusters(ResultIndex::Descriptors, dset,
-                                   settings.step, settings.extend);
+                                   &keypoints, settings.step, settings.extend);
 
             if(settings.print)
             {
@@ -331,15 +331,15 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
             {
                 cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Selected Colour Model Descriptor Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
                 printf("Clustering selected keypoints in descriptor space\n\n");
-                //Mat dset = getDescriptorDataset(vcount.frameHistory, settings.step, colourSel.selectedDesc, colourSel.selectedKeypoints, settings.rotationalInvariance, false);
+
                 UMat dset;
                 VOCUtils::getDescriptorDataset(colourModel.getSelectedDesc(),
                                                colourModel.getSelectedKeypoints(),
                                                settings.rotationalInvariance,
-                                               settings.includeOctave).getUMat(ACCESS_READ).copyTo(dset);
+                                               settings.includeOctave).copyTo(dset);
 
                 CountingResults* res = f->detectDescriptorsClusters(ResultIndex::SelectedKeypoints, dset,
-                                       settings.step, settings.extend);
+                                       colourModel.getSelectedKeypoints(), settings.step, settings.extend);
 
                 if(settings.print)
                 {
@@ -347,9 +347,46 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
                     f->createResultsImages(ResultIndex::SelectedKeypoints);
                     Mat frm = VOCUtils::drawKeyPoints(fr, colourModel.getSelectedKeypoints(), colours.red, -1);
                     VOPrinter::printImage(settings.filteredDescDir, frameCount, "frame_kp", frm);
-                    VOPrinter::printImages(selectedDescFrameDir, res->getSelectedClustersImages(), frameCount);
-                    VOPrinter::printEstimates(selDescClusterFile, res->getOutputData());
+                    VOPrinter::printImages(descriptorFrameDir, res->getSelectedClustersImages(), frameCount);
+                    VOPrinter::printEstimates(selDescEstimatesFile, res->getOutputData());
                 }
+            }
+
+            /****************************************************************************************************/
+            /// Filter original descriptor clustering results with the frame colour model
+            /****************************************************************************************************/
+            if(settings.dfClustering)
+            {
+                cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Selected Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+                printf("Filtering detected objects with colour model\n\n");
+                //combineSelDescriptorsRawStructures(f, settings.dfComboDir, settings.print);
+                f->getFilteredLocatedObjects();
+
+                if(settings.print)
+                {
+                    Mat kimg = VOCUtils::drawKeyPoints(frame, keyPoints, colours.red, -1);
+
+                    for(size_t i = 0; i < f->getFilteredLocatedObjects()->size(); i++)
+                    {
+                        Scalar value;
+
+                        RNG rng(12345);
+                        value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+
+                        LocatedObject& b = f->getFilteredLocatedObjects()->at(i);
+                        rectangle(kimg, b.getBox(), value, 2, 8, 0);
+                    }
+                    VOCUtils::printImage(dfComboDir, f->getFrameId(), "selected_structures", kimg) ;
+                    double accuracy = 0;
+                    int32_t gTruth = this->truth[f->getFrameId()];
+                    if(gTruth > 0)
+                    {
+                        accuracy = ((double)f->getFilteredLocatedObjects()->size() / gTruth) * 100;
+                    }
+                    dfEstimatesFile << f->getFrameId() << "," <<  f->getFilteredLocatedObjects()->size() << "," << gTruth << "," << accuracy << "\n";
+                }
+
+
             }
         }
 
@@ -485,6 +522,7 @@ void VOCounter::trackFrameColourModel(UMat& frame, UMat& descriptors, vector<Key
     {
         trackingFile << frameCount << "," << keypoints.size() << "," << colourModel.getMinPts() << "," << colourModel.getNumClusters() << "," << val << endl;
     }
+
     UMat ss = selDesc.getUMat(ACCESS_READ);
     colourModel.setSelectedDesc(ss);
 }
@@ -521,6 +559,8 @@ void VOCounter::chooseColourModel(UMat& frame, UMat& descriptors, vector<KeyPoin
 
     cout << "Use 'a' to select, 'q' to reject and 'x' to exit." << endl;
 
+    Mat selDesc;
+
     GHashTableIter iter;
     gpointer key;
     gpointer value;
@@ -554,6 +594,19 @@ void VOCounter::chooseColourModel(UMat& frame, UMat& descriptors, vector<KeyPoin
                     cout << "Chosen cluster " << *k << endl;
                     colourModel.addToSelectedClusters(*k);
                     colourModel.addToSelectedKeypoints(kps.begin(), kps.end());
+
+                    Mat xx;
+                    VOCUtils::getSelectedKeypointsDescriptors(descriptors, list, xx);
+
+                    if(selDesc.empty())
+                    {
+                        selDesc = xx.clone();
+                    }
+                    else
+                    {
+                        selDesc.push_back(xx);
+                    }
+
                     break;
                 }
                 else if (c == 'q')
@@ -575,6 +628,9 @@ void VOCounter::chooseColourModel(UMat& frame, UMat& descriptors, vector<KeyPoin
             break;
         }
     }
+    selDesc = selDesc.clone();
+    UMat ss = selDesc.getUMat(ACCESS_READ);
+    colourModel.setSelectedDesc(ss);
 }
 
 /**

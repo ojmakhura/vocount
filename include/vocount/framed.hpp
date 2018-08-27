@@ -85,7 +85,7 @@ public:
 	/**
 	 *
 	 */
-	CountingResults* detectDescriptorsClusters(ResultIndex idx, UMat& dataset, int32_t step, bool extend);
+	CountingResults* detectDescriptorsClusters(ResultIndex idx, UMat& dataset, vector<KeyPoint>* keypoints, int32_t step, bool extend);
 
 	/**
 	 *
@@ -101,6 +101,11 @@ public:
 	 *
 	 */
 	void createResultsImages(ResultIndex idx);
+
+	/**
+	 * Use the colour model to filter out false positives
+	 */
+	void filterLocatedObjets();
 
 private:
     int32_t frameId = 0;
