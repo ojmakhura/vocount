@@ -174,8 +174,8 @@ void LocatedObject::addLocatedObject(vector<LocatedObject>* locatedObjects, Loca
         LocatedObject& strct = locatedObjects->at(idx);
 
         // Find out which structure is more similar to the original
-        // by comparing the histograms
-        if(newObject->getHistogramCompare() > strct.getHistogramCompare())
+        // by comparing the moments
+        if(newObject->getMomentsCompare() < strct.getMomentsCompare())
         {
             strct.setBox(newObject->getBox());
             strct.setMatchPoint(newObject->getMatchPoint());
