@@ -117,6 +117,8 @@ private:
     Rect2d roi;
     map_t clusterEstimates;
     vector<Framed*> framedHistory;
+    vector<vector<KeyPoint>> keypointHistory;
+    vector<UMat> descriptorHistory;
     map<int32_t, int32_t> truth;
     ofstream descriptorsClusterFile, descriptorsEstimatesFile;
     ofstream selDescClusterFile, selDescEstimatesFile;
@@ -170,7 +172,12 @@ private:
      *
      * @param f - Framed object to add to the history
      */
-    void maintainHistory(Framed* f);
+    void maintainHistory(Framed* f, UMat& descriptors, vector<KeyPoint>* keypoints);
+
+    /**
+     * Compile a descriptor dataset
+     */
+    Mat getDescriptorDataset(UMat& descriptors, vector<KeyPoint>& inKeypoints, vector<KeyPoint>& outKeypoints);
 };
 };
 

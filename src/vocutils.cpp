@@ -387,8 +387,6 @@ Rect2d VOCUtils::shiftRect(Rect2d box, Point2f first, Point2f second)
     Point2d pshift;
     pshift.x = second.x - first.x;
     pshift.y = second.y - first.y;
-    //printf("pshift = (%f, %f)\n", pshift.x, pshift.y);
-    //Point pp = pshift;
     n_rect = n_rect + pshift;
 
     return n_rect;

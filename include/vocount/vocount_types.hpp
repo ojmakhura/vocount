@@ -60,6 +60,7 @@ typedef struct VSETTINGS
 	String colourDir, imageSpaceDir, descriptorDir, filteredDescDir,
 	       dfComboDir;
 	int32_t step, rsize;											/// How many frames to use in the dataset
+	int32_t iterations = 0;
 	int32_t x = 0,
 			y = 0,
 			w = 0,
@@ -73,7 +74,8 @@ typedef struct VSETTINGS
 	     dfClustering = false,											/// Combine descriptor and filtered desctiptor clustering
 	     extend = false,
 	     rotationalInvariance = false,
-	     includeOctave = false;
+	     includeOctave = false,
+	     overSegment = false;
 } vsettings;
 
 typedef struct

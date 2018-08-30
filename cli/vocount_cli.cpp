@@ -35,23 +35,20 @@ static void help()
             "     [-f]       						# filtered keypoints\n"
             "     [-c]       						# cluster analysis method \n"
             "     [-df]       						# Combine descriptor clustering and filtered descriptors clustering\n"
-            "     [-rx]       					# roi x coordiate\n"
-            "     [-ry]       					# roi y coordinate\n"
-            "     [-rh]       					# roi height\n"
-            "     [-rw]       					# roi width\n"
-            "     [-e]       					# extend the box structures to include clusters not in the initial list\n"
-            "     [-r]       					# rotate the rectangles\n"
-            "     [-D]       					# Enable debug messages\n"
+            "     [-rx]       					    # roi x coordiate\n"
+            "     [-ry]       					    # roi y coordinate\n"
+            "     [-rh]       					    # roi height\n"
+            "     [-rw]       					    # roi width\n"
+            "     [-e]       					    # extend the box structures to include clusters not in the initial list\n"
+            "     [-r]       					    # rotate the rectangles\n"
+            "     [-D]       					    # Enable debug messages\n"
+            "     [-O]       					    # Enable using minPts = 2 if no valid clustering results are detected\n"
+            "     [-I]       					    # The number of iterations for extending cluster daisy chaining\n"
             "\n" );
 }
 
 bool processOptions(vsettings& settings, CommandLineParser& parser)
 {
-
-    /*if (parser.has("help")) {
-    	help();
-    	return 0;
-    }*/
 
     if (parser.has("o"))
     {
@@ -75,7 +72,6 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
 
     if (parser.has("w"))
     {
-
         String s = parser.get<String>("w");
         settings.step = atoi(s.c_str());
     }
@@ -127,12 +123,26 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
     {
         printf("*** Will extend the box structures\n");
         settings.extend = true;
+        settings.iterations = 1;
     }
 
     if(parser.has("r"))
     {
         printf("*** Will rotate the rectangles for rotational invariance\n");
         settings.rotationalInvariance = true;
+    }
+
+    if(parser.has("O"))
+    {
+        printf("*** Will use minPts = 2 if validity is less than 4\n");
+        settings.overSegment = true;
+    }
+
+    if(parser.has("I"))
+    {
+        printf("*** Daisy-chaining iteration set to \n");
+        String s = parser.get<String>("I");
+        settings.iterations = atoi(s.c_str());
     }
 
     if(parser.has("D"))
@@ -276,8 +286,9 @@ int main(int argc, char** argv)
                                  "{help ||}{o||}{n|1|}"
                                  "{v||}{video||}{w|1|}{s||}"
                                  "{c||}{t||}{l||}{ta|BOOSTING|}"
-                                 "{d||}{f||}{df||}"
-                                 "{rx||}{ry||}{rw||}{rh||}{e||}{r||}{D||}");
+                                 "{d||}{f||}{df||}{I||}"
+                                 "{rx||}{ry||}{rw||}{rh||}"
+                                 "{e||}{r||}{D||}{O||}");
 
     if(!processOptions(settings, parser))
     {

@@ -126,22 +126,20 @@ void Framed::setGroundTruth(int32_t groundTruth)
 /**
  *
  */
-CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool analyse, bool singleRun)
+CountingResults* Framed::doCluster(UMat& dataset, int32_t kSize, int32_t step, int32_t f_minPts, bool useTwo)
 {
     CountingResults* res = new CountingResults();
     Mat mt = dataset.getMat(ACCESS_READ);
-    //dataset.copyTo(mt);
 
-    int m_pts = step * f_minPts;
+    int32_t m_pts = step * f_minPts;
     hdbscan scan(m_pts, DATATYPE_FLOAT);
-    //scan.run(mt.ptr<float>(), dataset.rows, dataset.cols, TRUE);
 
     IntIntListMap* c_map = NULL;
     IntDistancesMap* d_map = NULL;
     clustering_stats stats;
-    int val = -1;
+    int32_t val = -1;
 
-    int i = 0;
+    int32_t i = 0;
 
     while(val <= 2 && i < 5)
     {
@@ -154,14 +152,13 @@ CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool a
             scan.reRun(m_pts);
         }
 
-        c_map = hdbscan_create_cluster_table(scan.clusterLabels, 0, dataset.rows);
+        /// Only create the cluster map for the first kSize points which
+        /// belong to the current frame
+        c_map = hdbscan_create_cluster_table(scan.clusterLabels, 0, kSize);
 
-        if(analyse)
-        {
-            d_map = hdbscan_get_min_max_distances(&scan, c_map);
-            hdbscan_calculate_stats(d_map, &stats);
-            val = hdbscan_analyse_stats(&stats);
-        }
+        d_map = hdbscan_get_min_max_distances(&scan, c_map);
+        hdbscan_calculate_stats(d_map, &stats);
+        val = hdbscan_analyse_stats(&stats);
 
         if(c_map != NULL)
         {
@@ -199,18 +196,13 @@ CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool a
             }
         }
 
-
-        if(singleRun)
-        {
-            break;
-        }
         printf("Testing minPts = %d with validity = %d and cluster map size = %d\n", m_pts, val, g_hash_table_size(c_map));
         i++;
         m_pts = (f_minPts + i) * step;
     }
 
     /// The validity less than 2 so we force oversegmentation
-    if(res->getValidity() <= 2)
+    if(res->getValidity() <= 2 && useTwo)
     {
         cout << "Could not detect optimum clusters. Will force over-segmentation of the clusters." << endl;
         if(res->getClusterMap() != NULL)
@@ -232,8 +224,7 @@ CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool a
 
         m_pts = step * 2;
         scan.reRun(m_pts);
-        res->getLabels()->insert(res->getLabels()->begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
-        c_map = hdbscan_create_cluster_table(scan.clusterLabels, 0, dataset.rows);
+        c_map = hdbscan_create_cluster_table(scan.clusterLabels, 0, kSize);
 
         d_map = hdbscan_get_min_max_distances(&scan, c_map);
         hdbscan_calculate_stats(d_map, &stats);
@@ -246,10 +237,6 @@ CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool a
         res->setValidity(val);
         res->setStats(stats);
     }
-    //if(this->frameId == 14)
-    //{
-    //	hdbscan_print_cluster_table(res->getClusterMap());
-    //}
 
     printf("Selected minPts = %d and cluster table has %d\n", res->getMinPts(), g_hash_table_size(res->getClusterMap()));
 
@@ -267,9 +254,9 @@ CountingResults* Framed::doCluster(UMat& dataset, int step, int f_minPts, bool a
  * Prominent structures are extracted by comapring the structure in each
  * cluster.
  */
-CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, UMat& dataset, vector<KeyPoint>* keypoints, int32_t step, bool extend)
+CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, UMat& dataset, vector<KeyPoint>* keypoints, int32_t kSize, int32_t step, int32_t iterations, bool useTwo)
 {
-    CountingResults* res = doCluster(dataset, step, 3, true, false);
+    CountingResults* res = doCluster(dataset, step, 3, kSize, useTwo);
     res->setDataset(dataset);
     res->setKeypoints(*keypoints);
     res->addToClusterLocatedObjects(this->roi, this->frame);
@@ -285,16 +272,13 @@ CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, UMat& datase
     // we must make it up by extending the box structures
     if(res->getMinPts() == 2)
     {
-        res->extendLocatedObjects(this->frame);
-        res->extractProminentLocatedObjects();
+        iterations += 1;
     }
 
-    if(extend)
+    for(int32_t i = 0; i < iterations; i++)
     {
-        res->extendLocatedObjects(this->frame);
-        res->extractProminentLocatedObjects();
-        //extendBoxClusters(f.frame, res);
-        //extractProminentStructures(res->clusterMap, res->clusterStructures, res->keypoints, res->boxStructures);
+            res->extendLocatedObjects(this->frame);
+            res->extractProminentLocatedObjects();
     }
 
     printf("boxStructure found %lu objects\n\n", res->getProminentLocatedObjects()->size());

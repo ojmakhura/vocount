@@ -105,10 +105,6 @@ void VOCounter::processSettings()
 
     /// Check if the ROI was given in the settings
     this->roi = Rect2d(settings.x, settings.y, settings.w, settings.h);
-    //if(this->roi.area() > 0)
-   // {
-        //this->roiExtracted = true;
-    //}
 
     /// If we have print setting, we create the necessary folders and files
     if(settings.print)
@@ -204,7 +200,6 @@ void VOCounter::trackInitialObject(UMat& frame, UMat& descriptors, vector<KeyPoi
 
             if(bxs->empty() && !(p_framed->getResults()->empty()))
             {
-                //cout << "f.filteredBoxStructures.empty()" << endl;
                 CountingResults* res = p_framed->getResults()->at(ResultIndex::Descriptors);
                 bxs = res->getProminentLocatedObjects();
             }
@@ -222,7 +217,7 @@ void VOCounter::trackInitialObject(UMat& frame, UMat& descriptors, vector<KeyPoi
              * no roi features were found
              */
             size_t in = 1;
-            while(d2 < d1 || roiFeatures.empty())
+            while((d2 < d1 || roiFeatures.empty()) && in < bxs->size())
             {
                 roiFeatures.clear();
 
@@ -245,10 +240,53 @@ void VOCounter::trackInitialObject(UMat& frame, UMat& descriptors, vector<KeyPoi
                 d2 = r.area();
                 VOCUtils::findROIFeatures(&keypoints, r, &roiFeatures);
                 VOCUtils::sortByDistanceFromCenter(r, &roiFeatures, &keypoints);
+                cout << "d1 = " << d2 << " d1 = " << d1 << " ROI feature size " << roiFeatures.size() << endl;
+            }
+
+            /// We could not find a proper replacement so we pick the second object in bxs
+            if(d2 < d1 || roiFeatures.empty())
+            {
+                Rect2d nRect = bxs->at(1).getBox();
+                VOCUtils::trimRect(nRect, frame.rows, frame.cols, 10);
+
+                tracker = VOCUtils::createTrackerByName(settings.trackerAlgorithm);
+                tracker->init(p_framed->getFrame(), nRect); /// initialise tracker on the previous frame
+                tracker->update(frame, nRect); /// Update the tracker for the current frame
+                r = nRect;
+                d1 = r.area();
+                VOCUtils::trimRect(r, frame.rows, frame.cols, 10);
+
+                d2 = r.area();
+                VOCUtils::findROIFeatures(&keypoints, r, &roiFeatures);
+                VOCUtils::sortByDistanceFromCenter(r, &roiFeatures, &keypoints);
             }
         }
+
         roi = r;
     }
+}
+
+Mat VOCounter::getDescriptorDataset(UMat& descriptors, vector<KeyPoint>& inKeypoints, vector<KeyPoint>& outKeypoints)
+{
+    outKeypoints.clear();
+    outKeypoints.insert(outKeypoints.end(), inKeypoints.begin(), inKeypoints.end());
+    Mat dset = VOCUtils::getDescriptorDataset(descriptors, &inKeypoints, settings.rotationalInvariance, settings.includeOctave);
+    /// Account for multiple frames by using settings.step
+    for(int32_t i = 1; i < settings.step; i++)
+    {
+        size_t idx = descriptorHistory.size() - i;
+
+        if(idx >= 0)
+        {
+            vector<KeyPoint>& kps = keypointHistory[idx];
+            outKeypoints.insert(outKeypoints.end(), kps.begin(), kps.end());
+
+            UMat& desc = this->descriptorHistory[idx];
+            Mat ds = VOCUtils::getDescriptorDataset(desc, &kps, settings.rotationalInvariance, settings.includeOctave);
+            dset.push_back(dset);
+        }
+    }
+    return dset;
 }
 
 /**
@@ -274,7 +312,6 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
 
         UMat fr = frame.clone();
         rectangle(fr, this->roi, value, 2, 8, 0);
-        //rectangle(fr, f->getROI(), value, 2, 8, 0);
         cout << this->roi << endl;
         VOCUtils::display("frame", fr);
 
@@ -293,16 +330,20 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
         {
             cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Original Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
             UMat dset;
-            VOCUtils::getDescriptorDataset(descriptors, &keypoints, settings.rotationalInvariance, settings.includeOctave).copyTo(dset);
+            vector<KeyPoint> _keypoints;
+            ///getDescriptorDataset(UMat& descriptors, vector<KeyPoint>& inKeypoints, vector<KeyPoint>& outKeypoints)
+            //VOCUtils::getDescriptorDataset(descriptors, &keypoints, settings.rotationalInvariance, settings.includeOctave).copyTo(dset);
+            this->getDescriptorDataset(descriptors, keypoints, _keypoints).copyTo(dset);
 
             CountingResults* res = f->detectDescriptorsClusters(ResultIndex::Descriptors, dset,
-                                   &keypoints, settings.step, settings.extend);
+                                   &_keypoints, (int32_t)keypoints.size(), settings.step,
+                                   settings.iterations, settings.overSegment);
 
             if(settings.print)
             {
                 String descriptorFrameDir = VOPrinter::createDirectory(settings.descriptorDir, to_string(frameCount));
                 f->createResultsImages(ResultIndex::Descriptors);
-                Mat frm = VOCUtils::drawKeyPoints(fr, &keypoints, colours.red, -1);
+                Mat frm = VOCUtils::drawKeyPoints(fr, &_keypoints, colours.red, -1);
                 VOPrinter::printImage(settings.descriptorDir, frameCount, "frame_kp", frm);
                 VOPrinter::printImages(descriptorFrameDir, res->getSelectedClustersImages(), frameCount);
                 VOPrinter::printEstimates(descriptorsEstimatesFile, res->getOutputData());
@@ -337,8 +378,10 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
                                                settings.rotationalInvariance,
                                                settings.includeOctave).copyTo(dset);
 
+                int32_t ksize = (int32_t)colourModel.getSelectedKeypoints()->size();
                 CountingResults* res = f->detectDescriptorsClusters(ResultIndex::SelectedKeypoints, dset,
-                                       colourModel.getSelectedKeypoints(), settings.step, settings.extend);
+                                       colourModel.getSelectedKeypoints(), ksize, settings.step,
+                                       settings.iterations, settings.overSegment);
 
                 if(settings.print)
                 {
@@ -389,7 +432,7 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
             }
         }
 
-        this->maintainHistory(f);
+        this->maintainHistory(f, descriptors, &keypoints);
     }
 }
 
@@ -515,7 +558,7 @@ void VOCounter::trackFrameColourModel(UMat& frame, UMat& descriptors, vector<Key
         VOCUtils::getSelectedKeypointsDescriptors(descriptors, list, selDesc);
 
     }
-    cout << "Selected " << colourModel.getSelectedClusters()->size() << " points" << endl;
+    cout << "Selected " << colourModel.getSelectedKeypoints()->size() << " points" << endl;
 
     if(trackingFile.is_open())
     {
@@ -878,17 +921,28 @@ int32_t VOCounter::findLargestSet(map<uint, set<int32_t>>& numClusterMap)
  *
  * @param f - Framed object to add to the history
  */
-void VOCounter::maintainHistory(Framed* f)
+void VOCounter::maintainHistory(Framed* f, UMat& descriptors, vector<KeyPoint>* keypoints)
 {
     if(this->framedHistory.size() == 10)
     {
-
-        Framed *fr = this->framedHistory.front();
-        delete fr;
-        fr = NULL;
+        /// Framed history
+        Framed *f_tmp = this->framedHistory.front();
+        delete f_tmp;
+        f_tmp = NULL;
         this->framedHistory.erase(this->framedHistory.begin());
+        this->framedHistory.push_back(f);
+
+        /// Keypoints history
+        vector<KeyPoint> k_tmp = this->keypointHistory.front();
+        this->keypointHistory.erase(this->keypointHistory.begin());
+        this->keypointHistory.push_back(*keypoints);
+
+        /// Descritors history
+        this->descriptorHistory.erase(this->descriptorHistory.begin());
+        this->descriptorHistory.push_back(descriptors);
+
     }
-    this->framedHistory.push_back(f);
+
 }
 
 /************************************************************************************

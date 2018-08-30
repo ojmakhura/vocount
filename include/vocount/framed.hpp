@@ -85,7 +85,7 @@ public:
 	/**
 	 *
 	 */
-	CountingResults* detectDescriptorsClusters(ResultIndex idx, UMat& dataset, vector<KeyPoint>* keypoints, int32_t step, bool extend);
+	CountingResults* detectDescriptorsClusters(ResultIndex idx, UMat& dataset, vector<KeyPoint>* keypoints, int32_t kSize, int32_t step, int32_t iterations, bool useTwo);
 
 	/**
 	 *
@@ -119,11 +119,12 @@ private:
     map_r results;
     vector<LocatedObject> filteredLocatedObjects;					/// Bounding boxes for the individual objects in the frame
 	int32_t groundTruth;
+	int32_t kSize;
 
     /**********************************************************************************************************************
      *   PRIVATE FUNCTIONS
      **********************************************************************************************************************/
-	CountingResults* doCluster(UMat& dataset, int32_t step, int32_t f_minPts, bool analyse, bool singleRun);
+	CountingResults* doCluster(UMat& dataset, int32_t kSize, int32_t step, int32_t f_minPts, bool useTwo);
 	void generateSelectedClusterImages();
 };
 };
