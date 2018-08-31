@@ -31,26 +31,26 @@ public:
 	///
 	/// boxImage
 	///
-    UMat& getBoxImage();
-    void setBoxImage(UMat val);
+    Mat& getBoxImage();
+    void setBoxImage(Mat& val);
 
 	///
 	/// boxGray
 	///
-    UMat& getBoxGray();
-    void setBoxGray(UMat boxGray);
+    Mat& getBoxGray();
+    void setBoxGray(Mat& boxGray);
 
 	///
 	/// histogram
 	///
     Mat& getHistogram();
-    void setHistogram(Mat val);
+    void setHistogram(Mat& val);
 
 	///
 	/// points
 	///
     set<int32_t>* getPoints();
-    void setPoints(set<int32_t> val);
+    void setPoints(set<int32_t>& val);
 
 	///
 	/// histogramCompare
@@ -92,7 +92,7 @@ public:
      /**
       *
       */
-     static bool createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* mbs, LocatedObject* n_mbs, UMat& frame);
+     static bool createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* mbs, LocatedObject* n_mbs, Mat& frame);
 
      /**
       *
@@ -101,8 +101,8 @@ public:
 
 private:
     Rect2d box;
-    UMat boxImage;
-    UMat boxGray;
+    Mat boxImage;
+    Mat boxGray;
     Mat histogram;
     set<int32_t> points;
     double histogramCompare;
@@ -113,7 +113,6 @@ private:
      *   PRIVATE FUNCTIONS
      ************************************************************************************/									/// Template match location
 };
-//typedef LocatedObject LocatedObject;
 
 typedef map<int32_t, vector<LocatedObject>> map_st;
 };

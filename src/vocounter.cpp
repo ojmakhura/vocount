@@ -42,12 +42,8 @@ VOCounter::~VOCounter()
 
     for(size_t t = 0; t < framedHistory.size(); t++)
     {
-        Framed* fr = framedHistory[t];
+        delete framedHistory[t];
         framedHistory[t] = NULL;
-        if(fr != NULL)
-        {
-            delete fr;
-        }
     }
 }
 
@@ -156,7 +152,7 @@ void VOCounter::processSettings()
 /**
  *
  */
-void VOCounter::trackInitialObject(UMat& frame, UMat& descriptors, vector<KeyPoint>& keypoints, vector<int32_t>& roiFeatures)
+void VOCounter::trackInitialObject(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints, vector<int32_t>& roiFeatures)
 {
     bool roiUpdate = true;
 
@@ -266,7 +262,7 @@ void VOCounter::trackInitialObject(UMat& frame, UMat& descriptors, vector<KeyPoi
     }
 }
 
-Mat VOCounter::getDescriptorDataset(UMat& descriptors, vector<KeyPoint>& inKeypoints, vector<KeyPoint>& outKeypoints)
+Mat VOCounter::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>& inKeypoints, vector<KeyPoint>& outKeypoints)
 {
     outKeypoints.clear();
     outKeypoints.insert(outKeypoints.end(), inKeypoints.begin(), inKeypoints.end());
@@ -281,19 +277,19 @@ Mat VOCounter::getDescriptorDataset(UMat& descriptors, vector<KeyPoint>& inKeypo
             vector<KeyPoint>& kps = keypointHistory[idx];
             outKeypoints.insert(outKeypoints.end(), kps.begin(), kps.end());
 
-            UMat& desc = this->descriptorHistory[idx];
+            Mat& desc = this->descriptorHistory[idx];
             Mat ds = VOCUtils::getDescriptorDataset(desc, &kps, settings.rotationalInvariance, settings.includeOctave);
             dset.push_back(dset);
         }
     }
-    return dset;
+    return dset.clone();
 }
 
 /**
  *
  *
  */
-void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& keypoints)
+void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints)
 {
     this->frameCount++;
 
@@ -301,7 +297,7 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
     if(!keypoints.empty())
     {
         cout << "################################################################################" << endl;
-        cout << "                              " << this->frameCount << endl;
+        cout << "                                        " << this->frameCount << endl;
         cout << "################################################################################" << endl;
         printf("Frame %d truth is %d\n", this->frameCount, this->truth[this->frameCount]);
         vector<int32_t> roiFeatures;
@@ -310,7 +306,7 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
         RNG rng(12345);
         Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));
 
-        UMat fr = frame.clone();
+        Mat fr = frame.clone();
         rectangle(fr, this->roi, value, 2, 8, 0);
         cout << this->roi << endl;
         VOCUtils::display("frame", fr);
@@ -328,24 +324,24 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
          */
         if(settings.dClustering)
         {
-            cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Original Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-            UMat dset;
-            vector<KeyPoint> _keypoints;
-            ///getDescriptorDataset(UMat& descriptors, vector<KeyPoint>& inKeypoints, vector<KeyPoint>& outKeypoints)
-            //VOCUtils::getDescriptorDataset(descriptors, &keypoints, settings.rotationalInvariance, settings.includeOctave).copyTo(dset);
-            this->getDescriptorDataset(descriptors, keypoints, _keypoints).copyTo(dset);
+            cout << "~~~~~~~~~~~~~~~~~~~~~ Original Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~" << endl;
+
+            vector<KeyPoint> _keypoints = keypoints;
+            //VOCUtils::getDescriptorDataset(descriptors, &_keypoints, settings.rotationalInvariance, settings.includeOctave).copyTo(dset);
+            Mat dset = this->getDescriptorDataset(descriptors, keypoints, _keypoints);
 
             CountingResults* res = f->detectDescriptorsClusters(ResultIndex::Descriptors, dset,
-                                   &_keypoints, (int32_t)keypoints.size(), settings.step,
+                                   &_keypoints, (int32_t)keypoints.size(), settings.minPts, settings.step,
                                    settings.iterations, settings.overSegment);
 
             if(settings.print)
             {
                 String descriptorFrameDir = VOPrinter::createDirectory(settings.descriptorDir, to_string(frameCount));
-                f->createResultsImages(ResultIndex::Descriptors);
+                map<String, Mat> selectedClustersImages;
+                f->createResultsImages(ResultIndex::Descriptors, selectedClustersImages);
                 Mat frm = VOCUtils::drawKeyPoints(fr, &_keypoints, colours.red, -1);
                 VOPrinter::printImage(settings.descriptorDir, frameCount, "frame_kp", frm);
-                VOPrinter::printImages(descriptorFrameDir, res->getSelectedClustersImages(), frameCount);
+                VOPrinter::printImages(descriptorFrameDir, &selectedClustersImages, frameCount);
                 VOPrinter::printEstimates(descriptorsEstimatesFile, res->getOutputData());
             }
 
@@ -355,7 +351,7 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
         {
             if(framedHistory.size() > 0)
             {
-                cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Track Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+                cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Track Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
                 trackFrameColourModel(frame, descriptors, keypoints);
             }
 
@@ -369,27 +365,28 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
             /****************************************************************************************************/
             if(settings.fdClustering || settings.dfClustering )
             {
-                cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Selected Colour Model Descriptor Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+                cout << "~~~~~~~~~~~~~~~~~~ Selected Colour Model Descriptor Clustering ~~~~~~~~~~~~~~~~" << endl;
                 printf("Clustering selected keypoints in descriptor space\n\n");
 
-                UMat dset;
-                VOCUtils::getDescriptorDataset(colourModel.getSelectedDesc(),
+                Mat dset = VOCUtils::getDescriptorDataset(colourModel.getSelectedDesc(),
                                                colourModel.getSelectedKeypoints(),
                                                settings.rotationalInvariance,
-                                               settings.includeOctave).copyTo(dset);
+                                               settings.includeOctave);
 
                 int32_t ksize = (int32_t)colourModel.getSelectedKeypoints()->size();
+
                 CountingResults* res = f->detectDescriptorsClusters(ResultIndex::SelectedKeypoints, dset,
-                                       colourModel.getSelectedKeypoints(), ksize, settings.step,
+                                       colourModel.getSelectedKeypoints(), ksize, settings.minPts, settings.step,
                                        settings.iterations, settings.overSegment);
 
                 if(settings.print)
                 {
                     String descriptorFrameDir = VOPrinter::createDirectory(settings.filteredDescDir, to_string(frameCount));
-                    f->createResultsImages(ResultIndex::SelectedKeypoints);
+                    map<String, Mat> selectedClustersImages;
+                    f->createResultsImages(ResultIndex::SelectedKeypoints, selectedClustersImages);
                     Mat frm = VOCUtils::drawKeyPoints(fr, colourModel.getSelectedKeypoints(), colours.red, -1);
                     VOPrinter::printImage(settings.filteredDescDir, frameCount, "frame_kp", frm);
-                    VOPrinter::printImages(descriptorFrameDir, res->getSelectedClustersImages(), frameCount);
+                    VOPrinter::printImages(descriptorFrameDir, &selectedClustersImages, frameCount);
                     VOPrinter::printEstimates(selDescEstimatesFile, res->getOutputData());
                 }
             }
@@ -427,8 +424,6 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
                     }
                     dfEstimatesFile << f->getFrameId() << "," <<  f->getFilteredLocatedObjects()->size() << "," << gTruth << "," << accuracy << "\n";
                 }
-
-
             }
         }
 
@@ -439,7 +434,7 @@ void VOCounter::processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& k
 /**
  *
  */
-void VOCounter::trackFrameColourModel(UMat& frame, UMat& descriptors, vector<KeyPoint>& keypoints)
+void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints)
 {
     vector<KeyPoint> keyp;
     size_t p_size = 0;
@@ -565,9 +560,7 @@ void VOCounter::trackFrameColourModel(UMat& frame, UMat& descriptors, vector<Key
         trackingFile << frameCount << "," << keypoints.size() << "," << colourModel.getMinPts() << "," << colourModel.getNumClusters() << "," << val << endl;
     }
 
-    UMat ss;
-    selDesc.copyTo(ss);
-    colourModel.setSelectedDesc(ss);
+    colourModel.setSelectedDesc(selDesc);
 }
 
 /**
@@ -597,7 +590,7 @@ void VOCounter::getLearnedColourModel(int32_t chosen)
 /**
  *
  */
-void VOCounter::chooseColourModel(UMat& frame, UMat& descriptors, vector<KeyPoint>& keypoints)
+void VOCounter::chooseColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints)
 {
 
     cout << "Use 'a' to select, 'q' to reject and 'x' to exit." << endl;
@@ -672,15 +665,13 @@ void VOCounter::chooseColourModel(UMat& frame, UMat& descriptors, vector<KeyPoin
         }
     }
     selDesc = selDesc.clone();
-    UMat ss;
-    selDesc.copyTo(ss);
-    colourModel.setSelectedDesc(ss);
+    colourModel.setSelectedDesc(selDesc);
 }
 
 /**
  *
  */
-void VOCounter::trainColourModel(UMat& frame, vector<KeyPoint>& keypoints)
+void VOCounter::trainColourModel(Mat& frame, vector<KeyPoint>& keypoints)
 {
 
     map<uint, set<int>> numClusterMap;
@@ -921,27 +912,25 @@ int32_t VOCounter::findLargestSet(map<uint, set<int32_t>>& numClusterMap)
  *
  * @param f - Framed object to add to the history
  */
-void VOCounter::maintainHistory(Framed* f, UMat& descriptors, vector<KeyPoint>* keypoints)
+void VOCounter::maintainHistory(Framed* f, Mat& descriptors, vector<KeyPoint>* keypoints)
 {
     if(this->framedHistory.size() == 10)
     {
         /// Framed history
         Framed *f_tmp = this->framedHistory.front();
         delete f_tmp;
-        f_tmp = NULL;
         this->framedHistory.erase(this->framedHistory.begin());
-        this->framedHistory.push_back(f);
 
         /// Keypoints history
-        vector<KeyPoint> k_tmp = this->keypointHistory.front();
         this->keypointHistory.erase(this->keypointHistory.begin());
-        this->keypointHistory.push_back(*keypoints);
 
         /// Descritors history
         this->descriptorHistory.erase(this->descriptorHistory.begin());
-        this->descriptorHistory.push_back(descriptors);
-
     }
+
+    this->framedHistory.push_back(f);
+    this->keypointHistory.push_back(*keypoints);
+    this->descriptorHistory.push_back(descriptors);
 
 }
 

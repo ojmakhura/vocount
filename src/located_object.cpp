@@ -44,30 +44,28 @@ void LocatedObject::setBox(Rect2d val)
 ///
 /// boxImage
 ///
-UMat& LocatedObject::getBoxImage()
+Mat& LocatedObject::getBoxImage()
 {
     return boxImage;
 }
 
-void LocatedObject::setBoxImage(UMat val)
+void LocatedObject::setBoxImage(Mat& val)
 {
-    //boxImage = val;
-    val.copyTo(boxImage);
+    boxImage = val.clone();
     cvtColor(boxImage, boxGray, COLOR_RGB2GRAY);
 }
 
 ///
 /// boxGray
 ///
-UMat& LocatedObject::getBoxGray()
+Mat& LocatedObject::getBoxGray()
 {
     return boxGray;
 }
 
-void LocatedObject::setBoxGray(UMat boxGray)
+void LocatedObject::setBoxGray(Mat& boxGray)
 {
-    //this->boxGray = boxGray;
-    boxGray.copyTo(this->boxGray);
+    this->boxGray = boxGray.clone();
 }
 
 ///
@@ -78,10 +76,9 @@ Mat& LocatedObject::getHistogram()
     return histogram;
 }
 
-void LocatedObject::setHistogram(Mat val)
+void LocatedObject::setHistogram(Mat& val)
 {
-    val.copyTo(histogram);
-    //histogram = val;
+    histogram = val.clone();
 }
 
 ///
@@ -92,7 +89,7 @@ set<int32_t>* LocatedObject::getPoints()
     return &points;
 }
 
-void LocatedObject::setPoints(set<int32_t> val)
+void LocatedObject::setPoints(set<int32_t>& val)
 {
     points = val;
 }
@@ -218,13 +215,12 @@ int32_t LocatedObject::rectExist(vector<LocatedObject>* locatedObjects, LocatedO
     return -1;
 }
 
-bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* mbs, LocatedObject* n_mbs, UMat& frame)
+bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* mbs, LocatedObject* n_mbs, Mat& frame)
 {
-    Mat _frame = frame.getMat(ACCESS_RW);
     Rect2d n_rect = VOCUtils::shiftRect(mbs->getBox(), first_p.pt, second_p.pt);
 
     Rect2d bx = mbs->getBox();
-    VOCUtils::stabiliseRect(_frame, bx, n_rect);
+    VOCUtils::stabiliseRect(frame, bx, n_rect);
     mbs->setBox(bx);
     n_mbs->setBox(n_rect);
     VOCUtils::trimRect(n_rect, frame.rows, frame.cols, 0);
@@ -240,10 +236,11 @@ bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, 
         return false;
     }
 
-    n_mbs->setBoxImage(frame(n_rect));
+    Mat t_frame = frame(n_rect);
+    n_mbs->setBoxImage(t_frame);
     Mat h = VOCUtils::calculateHistogram(n_mbs->getBoxImage());
     n_mbs->setHistogram(h);
-    UMat gr;
+    Mat gr;
     cvtColor(n_mbs->getBoxImage(), gr, COLOR_RGB2GRAY);
     n_mbs->setBoxGray(gr);
     n_mbs->setHistogramCompare(compareHist(mbs->getHistogram(), n_mbs->getHistogram(), CV_COMP_CORREL));

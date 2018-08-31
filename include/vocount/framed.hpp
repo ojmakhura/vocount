@@ -21,7 +21,7 @@ class Framed
 public:
     /** Default constructor */
     Framed();
-    Framed(int32_t frameId, UMat frame, UMat descriptors, vector<KeyPoint> keypoints, vector<int32_t> roiFeatures, Rect2d roi, int32_t groundTruth);
+    Framed(int32_t frameId, Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints, vector<int32_t> roiFeatures, Rect2d roi, int32_t groundTruth);
     /** Default destructor */
     virtual ~Framed();
 
@@ -38,14 +38,14 @@ public:
 	///
 	/// descriptors
 	///
-    UMat& getDescriptors();
-    void setDescriptors(UMat& descriptor);
+    Mat& getDescriptors();
+    void setDescriptors(Mat& descriptor);
 
 	///
 	/// frame
 	///
-    UMat& getFrame();
-    void setFrame(UMat& frame);
+    Mat& getFrame();
+    void setFrame(Mat& frame);
 
 	///
 	/// keypoints
@@ -85,7 +85,8 @@ public:
 	/**
 	 *
 	 */
-	CountingResults* detectDescriptorsClusters(ResultIndex idx, UMat& dataset, vector<KeyPoint>* keypoints, int32_t kSize, int32_t step, int32_t iterations, bool useTwo);
+	CountingResults* detectDescriptorsClusters(ResultIndex idx, Mat& dataset, vector<KeyPoint>* keypoints, int32_t minPts,
+												int32_t kSize, int32_t step, int32_t iterations, bool useTwo);
 
 	/**
 	 *
@@ -100,7 +101,7 @@ public:
 	/**
 	 *
 	 */
-	void createResultsImages(ResultIndex idx);
+	void createResultsImages(ResultIndex idx, map<String, Mat>& selectedClustersImages);
 
 	/**
 	 * Use the colour model to filter out false positives.
@@ -111,7 +112,7 @@ public:
 
 private:
     int32_t frameId = 0;
-    UMat descriptors,  												/// Frame descriptors
+    Mat descriptors,  												/// Frame descriptors
          frame;														/// The frame
     vector<KeyPoint> keypoints; 									/// Frame keypoints
     Rect2d roi;														/// region of interest rectangle
@@ -124,7 +125,7 @@ private:
     /**********************************************************************************************************************
      *   PRIVATE FUNCTIONS
      **********************************************************************************************************************/
-	CountingResults* doCluster(UMat& dataset, int32_t kSize, int32_t step, int32_t f_minPts, bool useTwo);
+	CountingResults* doCluster(Mat& dataset, int32_t kSize, int32_t step, int32_t f_minPts, bool useTwo);
 	void generateSelectedClusterImages();
 };
 };

@@ -31,7 +31,7 @@ public:
     /**
      * Train the object's colour model
      */
-    void trainColourModel(UMat& frame, vector<KeyPoint>& keypoints);
+    void trainColourModel(Mat& frame, vector<KeyPoint>& keypoints);
 
     /**
      *
@@ -41,12 +41,12 @@ public:
     /**
      *
      */
-    void chooseColourModel(UMat& frame, UMat& descriptors, vector<KeyPoint>& keypoints);
+    void chooseColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints);
 
     /**
      *
      */
-    void trackFrameColourModel(UMat& frame, UMat& descriptors, vector<KeyPoint>& keypoints);
+    void trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints);
 
     /**
      * Extracting the count estimation
@@ -54,7 +54,7 @@ public:
      * @param keypoints - locations of the points
      * @param descriptors - feature descriptors
      */
-    void processFrame(UMat& frame, UMat& descriptors, vector<KeyPoint>& keypoints);
+    void processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints);
 
     /**
      * Extract the frame truth from the LMDB database
@@ -64,7 +64,7 @@ public:
     /**
      * Track the initial object's ROI
      */
-    void trackInitialObject(UMat& frame, UMat& descriptors, vector<KeyPoint>& keypoints, vector<int32_t>& roiFeatures);
+    void trackInitialObject(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints, vector<int32_t>& roiFeatures);
 
     /**
      * Get the ground truth for the frame given by frameId
@@ -118,7 +118,7 @@ private:
     map_t clusterEstimates;
     vector<Framed*> framedHistory;
     vector<vector<KeyPoint>> keypointHistory;
-    vector<UMat> descriptorHistory;
+    vector<Mat> descriptorHistory;
     map<int32_t, int32_t> truth;
     ofstream descriptorsClusterFile, descriptorsEstimatesFile;
     ofstream selDescClusterFile, selDescEstimatesFile;
@@ -172,12 +172,12 @@ private:
      *
      * @param f - Framed object to add to the history
      */
-    void maintainHistory(Framed* f, UMat& descriptors, vector<KeyPoint>* keypoints);
+    void maintainHistory(Framed* f, Mat& descriptors, vector<KeyPoint>* keypoints);
 
     /**
      * Compile a descriptor dataset
      */
-    Mat getDescriptorDataset(UMat& descriptors, vector<KeyPoint>& inKeypoints, vector<KeyPoint>& outKeypoints);
+    Mat getDescriptorDataset(Mat& descriptors, vector<KeyPoint>& inKeypoints, vector<KeyPoint>& outKeypoints);
 };
 };
 

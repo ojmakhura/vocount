@@ -55,8 +55,8 @@ public:
     ///
     /// selectedDesc
     ///
-    UMat& getSelectedDesc();
-    void setSelectedDesc(UMat& selectedDesc);
+    Mat& getSelectedDesc();
+    void setSelectedDesc(Mat& selectedDesc);
 
     ///
     /// selectedClusters
@@ -110,7 +110,7 @@ private:
     IntIntListMap* colourModelClusters;
     vector<int32_t> roiFeatures;
     vector<KeyPoint> selectedKeypoints;
-    UMat selectedDesc;
+    Mat selectedDesc;
     set<int32_t> selectedClusters;
     vector<int32_t> oldIndices;
 

@@ -167,9 +167,9 @@ void VOPrinter::printImage(String folder, int idx, String name, Mat img)
 /**
  *
  */
-void VOPrinter::printMatToFile(const UMat& mtx, String folder, String filename, int fmt)
+void VOPrinter::printMatToFile(const Mat& mtx, String folder, String filename, int fmt)
 {
-String fname = folder;
+	String fname = folder;
 	fname += "/";
 	fname += filename;
 
@@ -197,7 +197,6 @@ String fname = folder;
 void VOPrinter::printLabelsToFile(int32_t* labels, int32_t length, String folder, int fmt)
 {
 	Mat lbs(length, 1, CV_32S, labels);
-	UMat um = lbs.getUMat(ACCESS_READ);
-	printMatToFile(um, folder, "labels", fmt);
+	printMatToFile(lbs, folder, "labels", fmt);
 }
 };

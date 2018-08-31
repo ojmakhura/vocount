@@ -42,7 +42,7 @@ public:
 	/**
 	 *
 	 */
-	static void printMatToFile(const UMat& mtx, String folder, String filename, int fmt);
+	static void printMatToFile(const Mat& mtx, String folder, String filename, int fmt);
 
 	/**
 	 *

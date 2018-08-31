@@ -30,8 +30,8 @@ public:
 	///
 	/// dataset
 	///
-	UMat& getDataset();
-	void setDataset(UMat& dataset);
+	Mat& getDataset();
+	void setDataset(Mat& dataset);
 
 	///
 	/// distancesMap
@@ -82,12 +82,6 @@ public:
 	void setClusterLocatedObjects(map_st clusterLocatedObjects);
 
 	///
-	/// selectedClustersImages
-	///
-	map<String, Mat>* getSelectedClustersImages();
-	void setSelectedClustersImages(map<String, Mat> selectedClustersImages);
-
-	///
 	/// validity
 	///
 	int32_t getValidity();
@@ -106,7 +100,7 @@ public:
 	/**
 	 *
 	 */
-	void extendLocatedObjects(UMat& frame);
+	void extendLocatedObjects(Mat& frame);
 
 	/**
 	 * Extract prominent
@@ -116,12 +110,12 @@ public:
 	/**
 	 * Create images for the prominent located objects
 	 */
-	 void createLocatedObjectsImages();
+	 void createLocatedObjectsImages(map<String, Mat>& selectedClustersImages);
 
 	/**
 	 * Generate images for each of the selected clusters
 	 */
-	 void generateSelectedClusterImages(UMat& frame);
+	 void generateSelectedClusterImages(Mat& frame, map<String, Mat>& selectedClustersImages);
 
 	 /**
 	  * Generate output data
@@ -131,13 +125,12 @@ public:
 	 /**
 	  *
 	  */
-	 void addToClusterLocatedObjects(Rect2d roi, UMat& frame);
+	 void addToClusterLocatedObjects(Rect2d roi, Mat& frame);
 
 private:
 	vector<KeyPoint> keypoints;
-	UMat dataset;
+	Mat dataset;
 	IntIntListMap* clusterMap;		 										/// maps labels to the keypoint indices
-	//map_t roiClusterPoints;													/// cluster labels for the region of interest mapped to the roi points in the cluster
 	clustering_stats stats;													/// Statistical values for the clusters
 	IntDistancesMap* distancesMap;											/// Min and Max distance table for each cluster
 	map_kp selectedClustersPoints;
@@ -145,11 +138,10 @@ private:
 	vector<int32_t> labels;													/// hdbscan cluster labels
 	vector<LocatedObject> prominentLocatedObjects;							/// Bounding boxes for the individual objects in the frame
 	map_st clusterLocatedObjects;
-	map<String, Mat> selectedClustersImages;								/// images with cluster by cluster keypoints drawn
 	int32_t selectedFeatures = 0;
-	int validity = -1;
-	int minPts = 3;
-
+	int32_t validity = -1;
+	int32_t minPts = 3;
+	int32_t selectedNumClusters = 0;
 
 /************************************************************************************
  *   PRIVATE FUNCTIONS

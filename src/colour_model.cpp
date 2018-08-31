@@ -94,14 +94,14 @@ void ColourModel::setSelectedKeypoints(vector<KeyPoint> SelectedKeypoints)
 ///
 /// selectedDesc
 ///
-UMat& ColourModel::getSelectedDesc()
+Mat& ColourModel::getSelectedDesc()
 {
     return selectedDesc;
 }
 
-void ColourModel::setSelectedDesc(UMat& selectedDesc)
+void ColourModel::setSelectedDesc(Mat& selectedDesc)
 {
-    selectedDesc.copyTo(this->selectedDesc);
+    this->selectedDesc = selectedDesc;
 }
 
 ///

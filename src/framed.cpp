@@ -8,7 +8,7 @@ Framed::Framed()
     //ctor
 }
 
-Framed::Framed(int32_t frameId, UMat frame, UMat descriptors, vector<KeyPoint> keypoints, vector<int32_t> roiFeatures, Rect2d roi, int32_t groundTruth)
+Framed::Framed(int32_t frameId, Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints, vector<int32_t> roiFeatures, Rect2d roi, int32_t groundTruth)
 {
     this->roiFeatures = roiFeatures;
     this->keypoints = keypoints;
@@ -48,7 +48,7 @@ void Framed::setFrameId(int32_t frameId)
 ///
 /// descriptors
 ///
-UMat& Framed::getDescriptors()
+Mat& Framed::getDescriptors()
 {
     return this->descriptors;
 }
@@ -56,7 +56,7 @@ UMat& Framed::getDescriptors()
 ///
 /// frame
 ///
-UMat& Framed::getFrame()
+Mat& Framed::getFrame()
 {
     return this->frame;
 }
@@ -126,10 +126,9 @@ void Framed::setGroundTruth(int32_t groundTruth)
 /**
  *
  */
-CountingResults* Framed::doCluster(UMat& dataset, int32_t kSize, int32_t step, int32_t f_minPts, bool useTwo)
+CountingResults* Framed::doCluster(Mat& dataset, int32_t kSize, int32_t step, int32_t f_minPts, bool useTwo)
 {
     CountingResults* res = new CountingResults();
-    Mat mt = dataset.getMat(ACCESS_READ);
 
     int32_t m_pts = step * f_minPts;
     hdbscan scan(m_pts, DATATYPE_FLOAT);
@@ -145,7 +144,7 @@ CountingResults* Framed::doCluster(UMat& dataset, int32_t kSize, int32_t step, i
     {
         if(m_pts == (step * f_minPts))
         {
-            scan.run(mt.ptr<float>(), dataset.rows, dataset.cols, TRUE);
+            scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);
         }
         else
         {
@@ -254,9 +253,9 @@ CountingResults* Framed::doCluster(UMat& dataset, int32_t kSize, int32_t step, i
  * Prominent structures are extracted by comapring the structure in each
  * cluster.
  */
-CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, UMat& dataset, vector<KeyPoint>* keypoints, int32_t kSize, int32_t step, int32_t iterations, bool useTwo)
+CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, Mat& dataset, vector<KeyPoint>* keypoints, int32_t kSize, int32_t minPts, int32_t step, int32_t iterations, bool useTwo)
 {
-    CountingResults* res = doCluster(dataset, step, 3, kSize, useTwo);
+    CountingResults* res = doCluster(dataset, kSize, step, minPts, useTwo);
     res->setDataset(dataset);
     res->setKeypoints(*keypoints);
     res->addToClusterLocatedObjects(this->roi, this->frame);
@@ -272,13 +271,14 @@ CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, UMat& datase
     // we must make it up by extending the box structures
     if(res->getMinPts() == 2)
     {
-        iterations += 1;
+        iterations += 2;
     }
 
     for(int32_t i = 0; i < iterations; i++)
     {
-            res->extendLocatedObjects(this->frame);
-            res->extractProminentLocatedObjects();
+        //cout << "+++++++++++++++++++++++++++++++ " << i << endl;
+        res->extendLocatedObjects(this->frame);
+        res->extractProminentLocatedObjects();
     }
 
     printf("boxStructure found %lu objects\n\n", res->getProminentLocatedObjects()->size());
@@ -291,11 +291,11 @@ CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, UMat& datase
 /**
  *
  */
-void Framed::createResultsImages(ResultIndex idx)
+void Framed::createResultsImages(ResultIndex idx, map<String, Mat>& selectedClustersImages)
 {
     CountingResults* res = this->getResults(idx);
-    res->generateSelectedClusterImages(this->frame);
-    res->createLocatedObjectsImages();
+    res->generateSelectedClusterImages(this->frame, selectedClustersImages);
+    res->createLocatedObjectsImages(selectedClustersImages);
     res->generateOutputData(this->frameId, this->groundTruth, this->roiFeatures);
 }
 
@@ -347,8 +347,6 @@ void Framed::filterLocatedObjets(vector<KeyPoint>* selectedKeypoints)
             }
         }
     }
-
-
 
     /**
      * For those selectedKeypoints that are inside multiple structures,

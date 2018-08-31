@@ -162,11 +162,10 @@ void VOCUtils::sortByDistanceFromCenter(Rect2d& roi, vector<int32_t>* roiFeature
  * @param  -
  * @param  -
  */
-Mat VOCUtils::calculateHistogram(UMat& img_)
+Mat VOCUtils::calculateHistogram(Mat& img_)
 {
-    Mat hsv, hist, _img;
-    _img = img_.getMat(ACCESS_RW).clone();
-    cvtColor(_img, hsv, COLOR_BGR2HSV );
+    Mat hsv, hist;
+    cvtColor(img_, hsv, COLOR_BGR2HSV );
 
     /// Using 50 bins for hue and 60 for saturation
     int h_bins = 50;
@@ -427,9 +426,9 @@ void VOCUtils::getVectorKeypoints(vector<KeyPoint>* keypoints, vector<int32_t>* 
 }
 
 
-Mat VOCUtils::drawKeyPoints(UMat& in, vector<KeyPoint>* points, Scalar colour, int32_t type)
+Mat VOCUtils::drawKeyPoints(Mat& in, vector<KeyPoint>* points, Scalar colour, int32_t type)
 {
-    Mat x = in.getMat(ACCESS_RW).clone();
+    Mat x = in.clone();
     if(type == -1)
     {
         for(vector<KeyPoint>::iterator it = points->begin(); it != points->end(); ++it)
@@ -448,12 +447,11 @@ Mat VOCUtils::drawKeyPoints(UMat& in, vector<KeyPoint>* points, Scalar colour, i
 /**
  *
  */
-void VOCUtils::getSelectedKeypointsDescriptors(UMat& desc, IntArrayList* indices, Mat& out)
+void VOCUtils::getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices, Mat& out)
 {
-	Mat dst = desc.getMat(ACCESS_READ);
 	int32_t *dt = (int32_t *)indices->data;
 	for(int i = 0; i < indices->size; i++){
-		out.push_back(dst.row(dt[i]));
+		out.push_back(desc.row(dt[i]));
 	}
 }
 
@@ -463,11 +461,9 @@ void VOCUtils::getSelectedKeypointsDescriptors(UMat& desc, IntArrayList* indices
  * @param includeAngle -
  * @param includeOctave -
  */
-Mat VOCUtils::getDescriptorDataset(UMat& descriptors, vector<KeyPoint>* keypoints, bool includeAngle, bool includeOctave)
+Mat VOCUtils::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>* keypoints, bool includeAngle, bool includeOctave)
 {
-    //CV_ASSERT(descriptors.isContinuous());
-    Mat dataset;// = descriptors.clone();
-    descriptors.copyTo(dataset);
+    Mat dataset = descriptors.clone();
 
     if(includeAngle)
     {
@@ -514,11 +510,11 @@ Mat VOCUtils::getDescriptorDataset(UMat& descriptors, vector<KeyPoint>* keypoint
  * @param f - frame
  * @param pts - local features keypoints
  */
-Mat VOCUtils::getColourDataset(UMat& f, vector<KeyPoint>* pts)
+Mat VOCUtils::getColourDataset(Mat& f, vector<KeyPoint>* pts)
 {
     Mat m(pts->size(), 3, CV_32FC1);
     Mat tmpf;
-    GaussianBlur(f.getMat(ACCESS_READ), tmpf, Size(3, 3), 0, 0 );
+    GaussianBlur(f, tmpf, Size(3, 3), 0, 0 );
     //tmpf = f;
     float* data = m.ptr<float>(0);
     #pragma omp parallel for

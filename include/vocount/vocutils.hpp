@@ -44,7 +44,7 @@ public:
 	 * @param img_		- the image
 	 * @return The histogram
 	 */
-    static Mat calculateHistogram(UMat& img_);
+    static Mat calculateHistogram(Mat& img_);
 
 	/**
 	 * Utility function for creating single object trackers given the name.
@@ -92,12 +92,12 @@ public:
 	/**
 	 *
 	 */
-	static Mat drawKeyPoints(UMat& in, vector<KeyPoint>* points, Scalar colour, int32_t type);
+	static Mat drawKeyPoints(Mat& in, vector<KeyPoint>* points, Scalar colour, int32_t type);
 
 	/**
 	 *
 	 */
-	static Mat getDescriptorDataset(UMat& descriptors, vector<KeyPoint>* keypoints, bool includeAngle, bool includeOctave);
+	static Mat getDescriptorDataset(Mat& descriptors, vector<KeyPoint>* keypoints, bool includeAngle, bool includeOctave);
 
 	/**
 	 *
@@ -107,7 +107,7 @@ public:
 	/**
 	 *
 	 */
-	static Mat getColourDataset(UMat& f, vector<KeyPoint>* pts);
+	static Mat getColourDataset(Mat& f, vector<KeyPoint>* pts);
 
 	/**
 	 *
@@ -122,7 +122,7 @@ public:
 	/**
 	 *
 	 */
-	static void getSelectedKeypointsDescriptors(UMat& desc, IntArrayList* indices, Mat& out);
+	static void getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices, Mat& out);
 };
 }
 #endif // VOCUTILS_H

@@ -43,7 +43,7 @@ static void help()
             "     [-r]       					    # rotate the rectangles\n"
             "     [-D]       					    # Enable debug messages\n"
             "     [-O]       					    # Enable using minPts = 2 if no valid clustering results are detected\n"
-            "     [-I]       					    # The number of iterations for extending cluster daisy chaining\n"
+            "     [-I=<number of iterations>] 	    # The number of iterations for extending cluster daisy chaining\n"
             "\n" );
 }
 
@@ -125,6 +125,10 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
         settings.extend = true;
         settings.iterations = 1;
     }
+    else
+    {
+        settings.iterations = 0;
+    }
 
     if(parser.has("r"))
     {
@@ -140,15 +144,22 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
 
     if(parser.has("I"))
     {
-        printf("*** Daisy-chaining iteration set to \n");
         String s = parser.get<String>("I");
         settings.iterations = atoi(s.c_str());
+        printf("*** Daisy-chaining iteration set to %d\n", settings.iterations);
     }
 
     if(parser.has("D"))
     {
         printf("*** Debug enabled.\n");
         VO_DEBUG = true;
+    }
+
+    if(parser.has("minPts"))
+    {
+        String s = parser.get<String>("minPts");
+        settings.minPts = atoi(s.c_str());
+        printf("*** minPts = %d\n", settings.minPts);
     }
 
     if(parser.has("rx") && parser.has("ry") && parser.has("rw") && parser.has("rh"))
@@ -174,7 +185,7 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
  * they want.
  *
  */
-int32_t consolePreviewColours(UMat& frame, vector<KeyPoint>& keypoints, map<int32_t, IntIntListMap* >* clusterMaps, vector<int32_t>* validities, int32_t autoChoice)
+int32_t consolePreviewColours(Mat& frame, vector<KeyPoint>& keypoints, map<int32_t, IntIntListMap* >* clusterMaps, vector<int32_t>* validities, int32_t autoChoice)
 {
     int32_t chosen = autoChoice;
     COLOURS c;
@@ -275,12 +286,11 @@ int32_t consolePreviewColours(UMat& frame, vector<KeyPoint>& keypoints, map<int3
 int main(int argc, char** argv)
 {
     ocl::setUseOpenCL(true);
-    UMat frame;
+    Mat frame;
     VOCounter vcount;
     VideoCapture cap;
     Ptr<Feature2D> detector = SURF::create(MIN_HESSIAN);
     vsettings& settings = vcount.getSettings();
-    //settings.isConsole = true;
 
     cv::CommandLineParser parser(argc, argv,
                                  "{help ||}{o||}{n|1|}"
@@ -288,7 +298,7 @@ int main(int argc, char** argv)
                                  "{c||}{t||}{l||}{ta|BOOSTING|}"
                                  "{d||}{f||}{df||}{I||}"
                                  "{rx||}{ry||}{rw||}{rh||}"
-                                 "{e||}{r||}{D||}{O||}");
+                                 "{e||}{r||}{D||}{O||}{minPts|3|}");
 
     if(!processOptions(settings, parser))
     {
@@ -313,7 +323,7 @@ int main(int argc, char** argv)
     while(cap.read(frame))
     {
         vector<KeyPoint> keypoints;
-        UMat descriptors;
+        Mat descriptors;
         detector->detectAndCompute(frame, UMat(), keypoints, descriptors);
 
         /**
@@ -341,6 +351,11 @@ int main(int argc, char** argv)
             settings.selectROI = true;
         }
         vcount.processFrame(frame, descriptors, keypoints);
+
+        //if(vcount.getFrameCount() > 10)
+        //{
+        //    break;
+        //}
 
     }
 
