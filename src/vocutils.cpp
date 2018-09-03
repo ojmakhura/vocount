@@ -96,11 +96,13 @@ int partition (vector<int32_t>* roiFeatures, vector<double>* distances, int low,
     return (i + 1);
 }
 
-/* The main function that implements QuickSort
- roiFeatures --> vector to be sorted
- distances --> vector to sort by,
-  low  --> Starting index,
-  high  --> Ending index */
+/**
+ * The main function that implements QuickSort
+ * @param roiFeatures --> vector to be sorted
+ * @param distances --> vector to sort by,
+ * @param low  --> Starting index,
+ * @param high  --> Ending index
+ */
 void VOCUtils::quickSortByDistance(vector<int32_t>* roiFeatures, vector<double>* distances, int low, int high)
 {
     if (low < high)

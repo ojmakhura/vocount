@@ -6,9 +6,10 @@
 #include <QImage>
 #include <QWaitCondition>
 #include <opencv/cv.hpp>
-#include "vocount/process_frame.hpp"
+#include "vocount/vocounter.hpp"
 
 using namespace cv;
+using namespace vocount;
 
 class VUIPlayer : public QThread
 {
@@ -37,7 +38,9 @@ public:
 
 private:
 	Mat frame;
+    VOCounter vcount;
     VideoCapture cap;
+    Ptr<Feature2D> detector;
     bool _paused = false;
     bool _stop = false;
     QMutex mutex;

@@ -7,7 +7,7 @@
 #include <opencv2/xfeatures2d.hpp>
 #include <ctime>
 #include <string>
-#include "vocount/print_utils.hpp"
+#include "vocount/voprinter.hpp"
 
 using namespace std;
 using namespace cv;
@@ -16,9 +16,7 @@ using namespace cv::xfeatures2d;
 VUIPlayer::VUIPlayer(QObject *parent)
     : QThread(parent){
     //ocl::setUseOpenCL(true);
-    this->settings.isConsole = true;
-    this->vcount.colourSel.minPts = -1;
-	this->vcount.detector = SURF::create(MIN_HESSIAN);
+    this->detector = SURF::create(MIN_HESSIAN);
 }
 
 VUIPlayer::~VUIPlayer(){    
@@ -57,26 +55,35 @@ void VUIPlayer::run(){
                 _stop = true;
                 continue;
             }
-
-            framed f;
-            vcount.detector->detectAndCompute(frame, Mat(), f.keypoints, f.descriptors);
+            vector<KeyPoint> keypoints;
+            Mat descriptors;
+            detector->detectAndCompute(frame, Mat(), keypoints, descriptors);
 
             /**
              * Finding the colour model for the current frame
-             *
              */
-            if(vcount.frameCount == 0 && (settings.isClustering || settings.fdClustering)){
+            if(vcount.getFrameCount() == 0 && settings.fdClustering)
+            {
                 cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Detecting Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
                 printf("Finding proper value of minPts\n");
-                map<int, IntIntListMap* > clusterMaps;
-                vector<int32_t> validities = trainColourModel(this->vcount.colourSel, frame, f.keypoints, clusterMaps, vcount.trainingFile, settings.isConsole);
-                getLearnedColourModel(vcount.colourSel, clusterMaps, validities);
-                chooseColourModel(frame, f.descriptors, f.keypoints, vcount.colourSel);
-                if(vcount.trackingFile.is_open()){
-                    vcount.trackingFile << 1 << "," << f.keypoints.size() << "," << vcount.colourSel.selectedDesc.rows << "," << vcount.colourSel.minPts << "," << vcount.colourSel.numClusters << "," << vcount.colourSel.validity << endl;
-                }
+                vcount.trainColourModel(frame, keypoints);
+                //int32_t chosen = consolePreviewColours(frame, keypoints, vcount.getColourModelMaps(), vcount.getValidities(), vcount.getColourModel()->getMinPts());
+                vcount.getLearnedColourModel(vcount.getColourModel()->getMinPts());
+                cout << " Selected ............ " << vcount.getColourModel()->getMinPts() << endl;
+                vcount.chooseColourModel(frame, descriptors, keypoints);
             }
-            processFrame(vcount, settings, f, frame);
+
+            // Listen for a key pressed
+            char c = (char) waitKey(20);
+            if (c == 'q')
+            {
+                break;
+            }
+            else if (c == 's')     // select a roi if c has een pressed or if the program was run with -s option
+            {
+                settings.selectROI = true;
+            }
+            vcount.processFrame(frame, descriptors, keypoints);
         }
         this->msleep(0);
     }
@@ -110,7 +117,7 @@ bool VUIPlayer::isPaused(){
 void VUIPlayer::stop(){
     this->initialised = false;
     this->cap.release();
-    finalise(vcount);
+    //finalise(vcount);
     _stop = true;
 }
 

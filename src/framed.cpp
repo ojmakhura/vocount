@@ -276,12 +276,11 @@ CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, Mat& dataset
 
     for(int32_t i = 0; i < iterations; i++)
     {
-        //cout << "+++++++++++++++++++++++++++++++ " << i << endl;
         res->extendLocatedObjects(this->frame);
         res->extractProminentLocatedObjects();
     }
 
-    printf("boxStructure found %lu objects\n\n", res->getProminentLocatedObjects()->size());
+    printf("Detected %lu objects\n\n", res->getProminentLocatedObjects()->size());
     this->results[idx] = res;
 
     return res;
@@ -393,6 +392,6 @@ void Framed::filterLocatedObjets(vector<KeyPoint>* selectedKeypoints)
         LocatedObject::addLocatedObject(&filteredLocatedObjects, &newObject);
     }
 
-    printf("filteredLocatedObjects.size() = %ld\n", filteredLocatedObjects.size());
+    printf("Colour model filtering detected %ld objects.\n\n", filteredLocatedObjects.size());
 }
 };

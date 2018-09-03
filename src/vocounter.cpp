@@ -53,7 +53,7 @@ VOCounter::~VOCounter()
  ************************************************************************************/
 
 /**
- *
+ * Read the video ground truth from the lmdb database.
  */
 void VOCounter::readFrameTruth()
 {
@@ -73,7 +73,6 @@ void VOCounter::readFrameTruth()
 
     while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0)
     {
-
         String k((char *)key.mv_data);
         k = k.substr(0, key.mv_size);
 
@@ -89,7 +88,8 @@ void VOCounter::readFrameTruth()
 }
 
 /**
- *
+ * Process the settings to read the ground truth, get the
+ * roi from the
  */
 void VOCounter::processSettings()
 {
@@ -262,6 +262,10 @@ void VOCounter::trackInitialObject(Mat& frame, Mat& descriptors, vector<KeyPoint
     }
 }
 
+/**
+ *
+ *
+ */
 Mat VOCounter::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>& inKeypoints, vector<KeyPoint>& outKeypoints)
 {
     outKeypoints.clear();
@@ -327,7 +331,6 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
             cout << "~~~~~~~~~~~~~~~~~~~~~ Original Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~" << endl;
 
             vector<KeyPoint> _keypoints = keypoints;
-            //VOCUtils::getDescriptorDataset(descriptors, &_keypoints, settings.rotationalInvariance, settings.includeOctave).copyTo(dset);
             Mat dset = this->getDescriptorDataset(descriptors, keypoints, _keypoints);
 
             CountingResults* res = f->detectDescriptorsClusters(ResultIndex::Descriptors, dset,
@@ -396,7 +399,7 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
             /****************************************************************************************************/
             if(settings.dfClustering)
             {
-                cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Selected Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+                cout << "~~~~~~~~~~~~~~~~~~~~ Selected Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~~~" << endl;
                 printf("Filtering detected objects with colour model\n\n");
                 f->filterLocatedObjets(colourModel.getSelectedKeypoints());
 
@@ -412,7 +415,6 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                         value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 
                         LocatedObject& b = f->getFilteredLocatedObjects()->at(i);
-                        //cout << "Printing box " << b.getBox() << endl;
                         rectangle(kimg, b.getBox(), value, 2, 8, 0);
                     }
                     VOPrinter::printImage(settings.dfComboDir, f->getFrameId(), "selected_structures", kimg) ;
@@ -439,7 +441,6 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     vector<KeyPoint> keyp;
     size_t p_size = 0;
 
-    //Framed* ff;
     Mat dataset;
     if(!framedHistory.empty())
     {
@@ -452,7 +453,6 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     keyp.insert(keyp.end(), keypoints.begin(), keypoints.end());
     dataset.push_back(VOCUtils::getColourDataset(frame, &keypoints));
     dataset = dataset.clone();
-    //CV_ASSERT(dataset.isContinuous());
     hdbscan scanis(2*colourModel.getMinPts(), DATATYPE_FLOAT);
     scanis.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
 
@@ -592,9 +592,7 @@ void VOCounter::getLearnedColourModel(int32_t chosen)
  */
 void VOCounter::chooseColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints)
 {
-
     cout << "Use 'a' to select, 'q' to reject and 'x' to exit." << endl;
-
     Mat selDesc;
 
     GHashTableIter iter;
@@ -669,7 +667,11 @@ void VOCounter::chooseColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>
 }
 
 /**
+ * Detect clusters at minPts = [3, ..., 30] and find the optimum value of minPts
+ * that detects the best colour model of the frame.
  *
+ * @param frame - the frame to use for colour model training
+ * @param keypoints - the points on the frame to use
  */
 void VOCounter::trainColourModel(Mat& frame, vector<KeyPoint>& keypoints)
 {
@@ -729,7 +731,7 @@ void VOCounter::trainColourModel(Mat& frame, vector<KeyPoint>& keypoints)
 
     colourModel.setMinPts(chooseMinPts(numClusterMap, validities));
 
-    printf(">>>>>>>> VALID CHOICE OF minPts IS %d <<<<<<<<<\n", colourModel.getMinPts());
+    printf(">>>>>>>> OPTIMUM CHOICE OF minPts DETECTED AS %d <<<<<<<<<\n", colourModel.getMinPts());
     if(trainingFile.is_open())
     {
         trainingFile << "Selected minPts," << colourModel.getMinPts() << "\n";
@@ -739,6 +741,8 @@ void VOCounter::trainColourModel(Mat& frame, vector<KeyPoint>& keypoints)
 
 /**
  * Get the ground truth for the current frame
+ *
+ * @param frameId - The current frame index
  */
 int32_t VOCounter::getCurrentFrameGroundTruth(int32_t frameId)
 {

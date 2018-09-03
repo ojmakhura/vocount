@@ -44,6 +44,7 @@ static void help()
             "     [-D]       					    # Enable debug messages\n"
             "     [-O]       					    # Enable using minPts = 2 if no valid clustering results are detected\n"
             "     [-I=<number of iterations>] 	    # The number of iterations for extending cluster daisy chaining\n"
+            "     [-minPts=<first minPts value>] 	# The first minPts value to try\n"
             "\n" );
 }
 
