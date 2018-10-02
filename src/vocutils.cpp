@@ -549,4 +549,29 @@ void VOCUtils::display(char const* screen, const InputArray& m)
     }
 }
 
+
+/**
+ * Given a Rectangle and a reference feature size, use a target feature size to
+ * scale the rectagle.
+ *
+ * @param in_r input rectangle
+ * @param size_1 original feature size
+ * @param size_2 Size of the target
+ */
+Rect2d VOCUtils::scaleRectangle(Rect2d in_r, double size_1, double size_2)
+{
+    Rect2d r_out;
+
+    double scale = size_1/size_2;
+    r_out.height = h * scale;
+    r_out.width = w * scale;
+    double h_diff = (h - r_out.height) / 2;
+    double w_diff = (w - r_out.width) / 2;
+
+    r_out.x = in_r.x + w_diff;
+    r_out.y = int_r.y + h_diff;
+
+    return r_out;
+}
+
 };

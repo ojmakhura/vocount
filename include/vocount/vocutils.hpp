@@ -123,6 +123,12 @@ public:
 	 *
 	 */
 	static void getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices, Mat& out);
+
+	/**
+	 * Given a Rectangle and a reference feature size, use a target feature size to
+	 * scale the rectagle.
+	 */
+	static Rect2d scaleRectangle(Rect2d in_r, double size_1, double size_2);
 };
 }
 #endif // VOCUTILS_H
