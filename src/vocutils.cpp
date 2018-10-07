@@ -301,13 +301,13 @@ bool VOCUtils::stabiliseRect(Mat& frame, Rect2d templ_r, Rect2d& proposed)
 
     result.create( result_rows, result_cols, CV_32FC1 );
     matchTemplate( img, templ, result, TM_SQDIFF);
-    normalize( result, result, 0, 1, NORM_MINMAX, -1, UMat() );
+    normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
     double minVal;
     double maxVal;
     Point minLoc;
     Point maxLoc;
     Point matchLoc;
-    minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, UMat());
+    minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
     matchLoc = minLoc;
 
     proposed.x = matchLoc.x + new_r.x;
@@ -360,7 +360,7 @@ bool VOCUtils::_stabiliseRect(Mat& frame, Rect2d templ_r, Rect2d& proposed)
     double maxVal;
     Point minLoc;
     Point maxLoc;
-    minMaxLoc( p_img, &minVal, &maxVal, &minLoc, &maxLoc, UMat() );
+    minMaxLoc( p_img, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
 
     int half_h = p_img.rows/2;
     int half_w = p_img.cols/2;
@@ -563,13 +563,13 @@ Rect2d VOCUtils::scaleRectangle(Rect2d in_r, double size_1, double size_2)
     Rect2d r_out;
 
     double scale = size_1/size_2;
-    r_out.height = h * scale;
-    r_out.width = w * scale;
-    double h_diff = (h - r_out.height) / 2;
-    double w_diff = (w - r_out.width) / 2;
+    r_out.height = in_r.height * scale;
+    r_out.width = in_r.width * scale;
+    double h_diff = (in_r.height - r_out.height) / 2;
+    double w_diff = (in_r.width - r_out.width) / 2;
 
     r_out.x = in_r.x + w_diff;
-    r_out.y = int_r.y + h_diff;
+    r_out.y = in_r.y + h_diff;
 
     return r_out;
 }

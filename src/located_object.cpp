@@ -198,8 +198,10 @@ int32_t LocatedObject::rectExist(vector<LocatedObject>* locatedObjects, LocatedO
 
     for(uint i = 0; i < locatedObjects->size(); i++)
     {
-        Rect r2 = newObject->getBox() & locatedObjects->at(i).getBox();
-        double sect = ((double)r2.area()/locatedObjects->at(i).getBox().area());
+        Rect2d intersection = newObject->getBox() & locatedObjects->at(i).getBox();
+        //Rect2d _union = newObject->getBox() | locatedObjects->at(i).getBox();
+
+        double sect = ((double)intersection.area() / locatedObjects->at(i).getBox().area());
         if(sect > maxIntersect)
         {
             maxIndex = i;
@@ -218,6 +220,7 @@ int32_t LocatedObject::rectExist(vector<LocatedObject>* locatedObjects, LocatedO
 bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* mbs, LocatedObject* n_mbs, Mat& frame)
 {
     Rect2d n_rect = VOCUtils::shiftRect(mbs->getBox(), first_p.pt, second_p.pt);
+    //n_rect = VOCUtils::scaleRectangle(n_rect, first_p.size, second_p.size);
 
     Rect2d bx = mbs->getBox();
     VOCUtils::stabiliseRect(frame, bx, n_rect);
