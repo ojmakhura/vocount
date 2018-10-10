@@ -70,6 +70,12 @@ public:
     Point getMatchPoint();
     void setMatchPoint(Point matchPoint);
 
+	///
+	/// matchTo
+	///
+    Rect2d getMatchTo();
+    void setMatchTo(Rect2d matchTo);
+
     /************************************************************************************
      *   PUBLIC FUNCTIONS
      ************************************************************************************/
@@ -92,7 +98,7 @@ public:
      /**
       *
       */
-     static bool createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* mbs, LocatedObject* n_mbs, Mat& frame);
+     static bool createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* existingObject, LocatedObject* newObject, Mat& frame);
 
      /**
       *
@@ -108,6 +114,7 @@ private:
     double histogramCompare;
     double momentsCompare;
     Point matchPoint;
+    Rect2d matchTo;
 
     /************************************************************************************
      *   PRIVATE FUNCTIONS

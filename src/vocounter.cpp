@@ -332,7 +332,6 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 
             vector<KeyPoint> _keypoints = keypoints;
             Mat dset = this->getDescriptorDataset(descriptors, keypoints, _keypoints);
-
             CountingResults* res = f->detectDescriptorsClusters(ResultIndex::Descriptors, dset,
                                    &_keypoints, (int32_t)keypoints.size(), settings.minPts, settings.step,
                                    settings.iterations, settings.overSegment);

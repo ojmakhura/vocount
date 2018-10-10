@@ -149,6 +149,10 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
         settings.iterations = atoi(s.c_str());
         printf("*** Daisy-chaining iteration set to %d\n", settings.iterations);
     }
+    else
+    {
+        settings.iterations = 0;
+    }
 
     if(parser.has("D"))
     {

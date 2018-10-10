@@ -24,23 +24,6 @@ CountingResults::~CountingResults()
         hdbscan_destroy_distance_map_table(this->distancesMap);
         this->distancesMap = NULL;
     }
-
-    /*for(size_t i = 0; i < prominentLocatedObjects.size(); i++)
-    {
-        delete prominentLocatedObjects[i];
-    }*/
-
-    /*for(map_st::iterator it = clusterLocatedObjects.begin(); it != clusterLocatedObjects.end(); ++it)
-    {
-        vector<LocatedObject*>* objs = it->second;
-
-        for(size_t j = 0; j < objs->size(); j++)
-        {
-            delete objs->at(j);
-        }
-
-        delete objs;
-    }*/
 }
 
 CountingResults::CountingResults(const CountingResults& other)
@@ -189,7 +172,6 @@ void CountingResults::addToClusterLocatedObjects(Rect2d roi, Mat& frame)
 {
     vector<int32_t> validObjFeatures;
     VOCUtils::findValidROIFeatures(&this->keypoints, roi, &validObjFeatures, &this->labels);
-    //cout << "$$$$$$$$$$$$$$$$ valid roiFeatures size " << validObjFeatures.size() << endl;
 
     /// There were no valid ROI features so we have to work with noise cluster
     // if(validObjFeatures.empty())
@@ -202,6 +184,7 @@ void CountingResults::addToClusterLocatedObjects(Rect2d roi, Mat& frame)
 
     LocatedObject mbs; /// Create a box structure based on roi
     mbs.setBox(roi);
+    mbs.setMatchTo(roi);
     Mat f_image = frame(mbs.getBox());
     mbs.setBoxImage(f_image);
     Mat h = VOCUtils::calculateHistogram(mbs.getBoxImage());
@@ -221,9 +204,6 @@ void CountingResults::addToClusterLocatedObjects(Rect2d roi, Mat& frame)
         }
 
         vector<LocatedObject>& availableOjects= clusterLocatedObjects[key];
-
-
-        //LocatedObject t_mbs = new LocatedObject(mbs);
         IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(clusterMap, &key);
         KeyPoint f_point = keypoints.at(validObjFeatures[i]);
 
@@ -247,11 +227,12 @@ void CountingResults::addToClusterLocatedObjects(Rect2d roi, Mat& frame)
                 if(LocatedObject::createNewLocatedObject(f_point, t_point, &mbs, &newObject, frame))
                 {
                     newObject.getPoints()->insert(data[j]);
+                    newObject.setMatchTo(mbs.getBox());
                     LocatedObject::addLocatedObject(&availableOjects, &newObject);
                 }
             }
         }
-        availableOjects.push_back(mbs);
+        availableOjects.push_back(mbs); // TODO: some cluster match objects might not be getting updated
     }
 }
 
@@ -305,7 +286,7 @@ void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>
 
         this->selectedFeatures += kps.size();
         Mat kimg = VOCUtils::drawKeyPoints(frame, &kps, colours.red, -1);
-        vector<LocatedObject>& rects = this->clusterLocatedObjects[key];
+        vector<LocatedObject>& rects = it->second;
 
         for(uint i = 0; i < rects.size(); i++)
         {
@@ -314,7 +295,9 @@ void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>
                                   rng.uniform(0, 255));
             rectangle(kimg, rects.at(i).getBox(), value, 2, 8, 0);
         }
-        rectangle(kimg, rects.at(0).getBox(), colours.red, 2, 8, 0);
+
+        rectangle(kimg, rects.at(0).getMatchTo(), colours.red, 2, 8, 0);
+
         String ss = "img_keypoints-";
         string s = to_string(key);
         ss += s.c_str();

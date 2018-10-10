@@ -133,6 +133,19 @@ void LocatedObject::setMatchPoint(Point matchPoint)
     this->matchPoint = matchPoint;
 }
 
+///
+/// matchTo
+///
+Rect2d LocatedObject::getMatchTo()
+{
+    return this->matchTo;
+}
+
+void LocatedObject::setMatchTo(Rect2d matchTo)
+{
+    this->matchTo = matchTo;
+}
+
 /************************************************************************************
  *   PUBLIC FUNCTIONS
  ************************************************************************************/
@@ -217,15 +230,14 @@ int32_t LocatedObject::rectExist(vector<LocatedObject>* locatedObjects, LocatedO
     return -1;
 }
 
-bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* mbs, LocatedObject* n_mbs, Mat& frame)
+bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* existingObject, LocatedObject* newObject, Mat& frame)
 {
-    Rect2d n_rect = VOCUtils::shiftRect(mbs->getBox(), first_p.pt, second_p.pt);
-    //n_rect = VOCUtils::scaleRectangle(n_rect, first_p.size, second_p.size);
+    Rect2d n_rect = VOCUtils::shiftRect(existingObject->getBox(), first_p.pt, second_p.pt);
 
-    Rect2d bx = mbs->getBox();
+    Rect2d bx = existingObject->getBox();
     VOCUtils::stabiliseRect(frame, bx, n_rect);
-    mbs->setBox(bx);
-    n_mbs->setBox(n_rect);
+    existingObject->setBox(bx);
+    newObject->setBox(n_rect);
     VOCUtils::trimRect(n_rect, frame.rows, frame.cols, 0);
 
     if(n_rect.height < 1 || n_rect.width < 1)
@@ -233,21 +245,23 @@ bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, 
         return false;
     }
 
-    double ratio = n_mbs->getBox().area()/n_rect.area();
+    double ratio = newObject->getBox().area()/n_rect.area();
     if(ratio < 0.2)
     {
         return false;
     }
 
     Mat t_frame = frame(n_rect);
-    n_mbs->setBoxImage(t_frame);
-    Mat h = VOCUtils::calculateHistogram(n_mbs->getBoxImage());
-    n_mbs->setHistogram(h);
+    newObject->setBoxImage(t_frame);
+    Mat h = VOCUtils::calculateHistogram(newObject->getBoxImage());
+    newObject->setHistogram(h);
     Mat gr;
-    cvtColor(n_mbs->getBoxImage(), gr, COLOR_RGB2GRAY);
-    n_mbs->setBoxGray(gr);
-    n_mbs->setHistogramCompare(compareHist(mbs->getHistogram(), n_mbs->getHistogram(), CV_COMP_CORREL));
-    n_mbs->setMomentsCompare(matchShapes(mbs->getBoxGray(), n_mbs->getBoxGray(), CONTOURS_MATCH_I3, 0));
+    cvtColor(newObject->getBoxImage(), gr, COLOR_RGB2GRAY);
+    newObject->setBoxGray(gr);
+    newObject->setHistogramCompare(compareHist(existingObject->getHistogram(), newObject->getHistogram(), CV_COMP_CORREL));
+    newObject->setMomentsCompare(matchShapes(existingObject->getBoxGray(), newObject->getBoxGray(), CONTOURS_MATCH_I3, 0));
+    //cout << "newObject " << newObject->getBox() << " matched to " << existingObject->getBox() << endl;
+    //newObject->setMatchTo(existingObject);
 
     return true;
 }
