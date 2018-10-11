@@ -272,6 +272,9 @@ void CountingResults::setMinPts(int32_t val)
  *   PUBLIC FUNCTIONS
  ************************************************************************************/
 
+/**
+ *
+ */
 void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>& selectedClustersImages)
 {
     COLOURS colours;
@@ -288,7 +291,7 @@ void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>
         Mat kimg = VOCUtils::drawKeyPoints(frame, &kps, colours.red, -1);
         vector<LocatedObject>& rects = it->second;
 
-        for(uint i = 0; i < rects.size(); i++)
+        for(uint i = 0; i < rects.size() - 1; i++)
         {
             RNG rng(12345);
             Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
@@ -296,7 +299,7 @@ void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>
             rectangle(kimg, rects.at(i).getBox(), value, 2, 8, 0);
         }
 
-        rectangle(kimg, rects.at(0).getMatchTo(), colours.red, 2, 8, 0);
+        rectangle(kimg, rects.at(rects.size() - 1).getBox(), colours.red, 2, 8, 0);
 
         String ss = "img_keypoints-";
         string s = to_string(key);
