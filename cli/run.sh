@@ -15,6 +15,8 @@ cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-2.mkv -t=../voc-18/truth-lmd
 # run voc-18-bd-3.mkv
 cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-3.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-3 -o=out/voc-18-bd-3/3_0 -n=1 -w=1 -d -f -df -rw=38 -rh=35 -rx=635 -ry=224
 cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-3.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-3 -o=out/voc-18-bd-3/3_0_r -n=1 -w=1 -d -f -df -rw=38 -rh=35 -rx=635 -ry=224 -r
+cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-3.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-3 -o=out/voc-18-bd-3/3_1_r -n=1 -w=1 -d -f -df -rw=38 -rh=35 -rx=635 -ry=224 -r -I=1
+cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-3.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-3 -o=out/voc-18-bd-3/3_1_O_r -n=1 -w=1 -d -f -df -rw=38 -rh=35 -rx=635 -ry=224 -r -I=1 -O
 
 # run voc-18-bd-4.mkv
 cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-4.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-4 -o=out/voc-18-bd-4/3_0 -n=1 -w=1 -d -f -df -rw=65 -rh=35 -rx=13 -ry=60
@@ -59,10 +61,10 @@ cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-12.mkv -t=../voc-18/truth-lm
 cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-12.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-12 -o=out/voc-18-bd-12/3_0_O -n=1 -w=1 -d -f -df -rw=21 -rh=24 -rx=439 -ry=304 -O
 
 # run voc-18-bd-13.mkv
-cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-13.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-13 -o=out/voc-18-bd-13/3_0 -n=1 -w=1 -s -d -f -df -rw=23 -rh=19 -rx=471 -ry=339
-cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-13.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-13 -o=out/voc-18-bd-13/3_0_r -n=1 -w=1 -s -d -f -df -rw=23 -rh=19 -rx=471 -ry=339 -r
-cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-13.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-13 -o=out/voc-18-bd-13/3_0_O -n=1 -w=1 -s -d -f -df -rw=23 -rh=19 -rx=471 -ry=339 -O
-cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-13.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-13 -o=out/voc-18-bd-13/3_0_O_r -n=1 -w=1 -s -d -f -df -rw=23 -rh=19 -rx=471 -ry=339 -O -r
+cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-13.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-13 -o=out/voc-18-bd-13/3_0 -n=1 -w=1 -d -f -df -rw=23 -rh=19 -rx=471 -ry=339
+cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-13.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-13 -o=out/voc-18-bd-13/3_0_r -n=1 -w=1 -d -f -df -rw=23 -rh=19 -rx=471 -ry=339 -r
+cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-13.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-13 -o=out/voc-18-bd-13/3_0_O -n=1 -w=1 -d -f -df -rw=23 -rh=19 -rx=471 -ry=339 -O
+cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-13.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-13 -o=out/voc-18-bd-13/3_0_O_r -n=1 -w=1 -d -f -df -rw=23 -rh=19 -rx=471 -ry=339 -O -r
 
 # run voc-18-bd-14.mkv
 cli/vocount_cli -v=../voc-18/videos/birds/voc-18-bd-14.mkv -t=../voc-18/truth-lmdb/birds/voc-18-bd-14 -o=out/voc-18-bd-14/3_0 -n=1 -w=1 -s -d -f -df -rw=84 -rh=60 -rx=557 -ry=337

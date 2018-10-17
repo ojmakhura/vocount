@@ -120,8 +120,8 @@ void VOCounter::processSettings()
 
         if(settings.fdClustering)
         {
-            settings.filteredDescDir = VOPrinter::createDirectory(settings.outputFolder, "filtered_descriptors");
-            printf("Created filtered_descriptors directory at %s.\n", settings.filteredDescDir.c_str());
+            settings.filteredDescDir = VOPrinter::createDirectory(settings.outputFolder, "colour_model");
+            printf("Created colour_model directory at %s.\n", settings.filteredDescDir.c_str());
 
             String name = settings.filteredDescDir + "/estimates.csv";
             this->selDescEstimatesFile.open(name.c_str());
@@ -139,8 +139,8 @@ void VOCounter::processSettings()
 
         if(settings.dfClustering)
         {
-            settings.dfComboDir = VOPrinter::createDirectory(settings.outputFolder, "descriptor_filtered_descriptors");
-            printf("Created descriptor_filtered_descriptors directory at %s.\n", settings.dfComboDir.c_str());
+            settings.dfComboDir = VOPrinter::createDirectory(settings.outputFolder, "combined");
+            printf("Created combined directory at %s.\n", settings.dfComboDir.c_str());
 
             String name = settings.dfComboDir + "/estimates.csv";
             this->dfEstimatesFile.open(name.c_str());
