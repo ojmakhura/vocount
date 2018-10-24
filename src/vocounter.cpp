@@ -1,7 +1,6 @@
 #include "vocount/vocounter.hpp"
 #include "vocount/voprinter.hpp"
 #include "vocount/vocount_types.hpp"
-
 #include <lmdb.h>
 
 namespace vocount
@@ -133,7 +132,7 @@ void VOCounter::processSettings()
 
             name = settings.filteredDescDir + "/tracking.csv";
             this->trackingFile.open(name.c_str());
-            this->trackingFile << "Frame #, Num of Points, Selected Points, MinPts, Num of Clusters, Validity\n";
+            this->trackingFile << "Frame #, Num of Points, MinPts, Num of Clusters, Validity\n";
 
         }
 
@@ -321,6 +320,7 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
         }
 
         Framed* f = new Framed(frameCount, frame, descriptors, keypoints, roiFeatures, this->roi, getCurrentFrameGroundTruth(this->frameCount));
+        //VOCUtils::display("template match", f->getTemplateMatch());
 
         /**
          * Clustering in the descriptor space with unfiltered

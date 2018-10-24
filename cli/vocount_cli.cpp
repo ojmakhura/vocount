@@ -341,7 +341,7 @@ int main(int argc, char** argv)
             vcount.trainColourModel(frame, keypoints);
             int32_t chosen = consolePreviewColours(frame, keypoints, vcount.getColourModelMaps(), vcount.getValidities(), vcount.getColourModel()->getMinPts());
             vcount.getLearnedColourModel(chosen);
-            cout << " Selected ............ " << vcount.getColourModel()->getMinPts() << endl;
+            cout << "Selected ............ " << vcount.getColourModel()->getMinPts() << endl;
             vcount.chooseColourModel(frame, descriptors, keypoints);
         }
 
@@ -356,12 +356,6 @@ int main(int argc, char** argv)
             settings.selectROI = true;
         }
         vcount.processFrame(frame, descriptors, keypoints);
-
-        //if(vcount.getFrameCount() > 10)
-        //{
-        //    break;
-        //}
-
     }
 
     return 0;

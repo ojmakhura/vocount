@@ -257,6 +257,38 @@ bool VOCUtils::trimRect(Rect2d& r, int32_t rows, int32_t cols, int32_t padding)
     return trimmed;
 }
 
+bool VOCUtils::stabiliseRect(Mat& templateMatch, Rect2d& proposed)
+{
+    Rect2d new_r = proposed;
+    int half_h = new_r.height/2;
+    int half_w = new_r.width/2;
+    new_r.x -= half_w/2;
+    new_r.y -= half_h/2;
+    new_r.width += half_w; //new_r.width;
+    new_r.height += half_h; //new_r.height;
+
+    trimRect(new_r, templateMatch.rows, templateMatch.cols, 0);
+    if(new_r.height < 1 || new_r.width < 1)
+    {
+        return false;
+    }
+
+    Mat result = templateMatch(new_r);
+
+    double minVal;
+    double maxVal;
+    Point minLoc;
+    Point maxLoc;
+    Point matchLoc;
+    minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
+    matchLoc = minLoc;
+
+    proposed.x = matchLoc.x + new_r.x;
+    proposed.y = matchLoc.y + new_r.y;
+
+    return true;
+}
+
 /**
  *
  *

@@ -17,6 +17,14 @@ Framed::Framed(int32_t frameId, Mat& frame, Mat& descriptors, vector<KeyPoint>& 
     this->roi = roi;
     this->frameId = frameId;
     this->groundTruth = groundTruth;
+
+    Mat templ = frame(roi);
+    int result_cols =  frame.cols;
+    int result_rows = frame.rows;
+
+    templateMatch.create( result_rows, result_cols, CV_32FC1 );
+    matchTemplate(frame, templ, templateMatch, TM_SQDIFF);
+    normalize(templateMatch, templateMatch, 0, 1, NORM_MINMAX, -1, Mat());
 }
 
 Framed::~Framed()
@@ -117,6 +125,13 @@ int32_t Framed::getGroundTruth()
 void Framed::setGroundTruth(int32_t groundTruth)
 {
     this->groundTruth = groundTruth;
+}
+///
+/// templateMatch
+///
+Mat& Framed::getTemplateMatch()
+{
+    return this->templateMatch;
 }
 
 /**********************************************************************************************************************
@@ -269,7 +284,7 @@ CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, Mat& dataset
 
     // Since we forced over-segmentation of the clusters
     // we must make it up by extending the box structures
-    if(res->getMinPts() == 2)
+    if(res->getMinPts() == 2 && minPts > 2)
     {
         iterations += 2;
     }

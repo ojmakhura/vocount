@@ -202,6 +202,7 @@ void LocatedObject::addLocatedObject(vector<LocatedObject>* locatedObjects, Loca
 
 /**
  * Check the rectangle already exists
+ * TODO: accommodate differing rectangle sizes
  */
 int32_t LocatedObject::rectExist(vector<LocatedObject>* locatedObjects, LocatedObject* newObject)
 {

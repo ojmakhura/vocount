@@ -64,6 +64,11 @@ public:
 	 */
     static bool trimRect(Rect2d& r, int32_t rows, int32_t cols, int32_t padding);
 
+    /**
+     *
+     */
+    static bool stabiliseRect(Mat& templateMatch, Rect2d& proposed);
+
 	/**
 	 * Use localised template matching to stabilise the detection.
 	 */

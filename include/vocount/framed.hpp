@@ -48,6 +48,11 @@ public:
     void setFrame(Mat& frame);
 
 	///
+	/// templateMatch
+	///
+    Mat& getTemplateMatch();
+
+	///
 	/// keypoints
 	///
     vector<KeyPoint>* getKeypoints();
@@ -113,7 +118,8 @@ public:
 private:
     int32_t frameId = 0;
     Mat descriptors,  												/// Frame descriptors
-         frame;														/// The frame
+         frame,                                                     /// Template match
+         templateMatch;													/// The frame
     vector<KeyPoint> keypoints; 									/// Frame keypoints
     Rect2d roi;														/// region of interest rectangle
     vector<int32_t> roiFeatures;									/// indices of the features inside the roi

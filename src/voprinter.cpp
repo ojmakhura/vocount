@@ -45,7 +45,7 @@ void VOPrinter::printClusterEstimates(ofstream& myfile, map<OutDataIndex, int32_
  */
 void VOPrinter::printStatistics(map<int32_t, map<String, double>>& stats, String& folder)
 {
-printf("Printing statistics to %s.\n", folder.c_str());
+    printf("Printing statistics to %s.\n", folder.c_str());
 	ofstream coreFile, disFile;
 	String name = "/core_distance_statistics.csv";
 	String f = folder;
