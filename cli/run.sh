@@ -133,16 +133,16 @@ cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -t=../voc-18/truth-lmd
 cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-2 -o=out/voc-18-bl-2/2_4_r -n=1 -w=1 -s -d -f -df -rw=34 -rh=35 -rx=701 -ry=227 -r -I=4 -minPts=2
 
 # run voc-18-bl-3.mkv
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_0 -n=1 -w=1 -s -d -rw=90 -rh=89 -rx=1377 -ry=377
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_0_r -n=1 -w=1 -s -d -rw=90 -rh=89 -rx=1377 -ry=377 -r
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_0_O -n=1 -w=1 -s -d -rw=90 -rh=89 -rx=1377 -ry=377 -O
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_0_O_r -n=1 -w=1 -s -d -rw=90 -rh=89 -rx=1377 -ry=377 -r -O
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_1 -n=1 -w=1 -s -d -rw=90 -rh=89 -rx=1377 -ry=377 -I=1
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_1_r -n=1 -w=1 -s -d -rw=90 -rh=89 -rx=1377 -ry=377 -r -I=1
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_1_O -n=1 -w=1 -s -d -rw=90 -rh=89 -rx=1377 -ry=377 -O -I=1
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_1_O_r -n=1 -w=1 -s -d -rw=90 -rh=89 -rx=1377 -ry=377 -r -O -I=1
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_0 -n=1 -w=1 -d -rw=90 -rh=89 -rx=1377 -ry=377
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_0_r -n=1 -w=1 -d -rw=90 -rh=89 -rx=1377 -ry=377 -r
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_0_O -n=1 -w=1 -d -rw=90 -rh=89 -rx=1377 -ry=377 -O
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_0_O_r -n=1 -w=1 -d -rw=90 -rh=89 -rx=1377 -ry=377 -r -O
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_1 -n=1 -w=1 -d -rw=90 -rh=89 -rx=1377 -ry=377 -I=1
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_1_r -n=1 -w=1 -d -rw=90 -rh=89 -rx=1377 -ry=377 -r -I=1
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_1_O -n=1 -w=1 -d -rw=90 -rh=89 -rx=1377 -ry=377 -O -I=1
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-3 -o=out/voc-18-bl-3/3_1_O_r -n=1 -w=1 -d -rw=90 -rh=89 -rx=1377 -ry=377 -r -O -I=1
 
 # run voc-18-bl-4.mkv
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-4 -o=out/voc-18-bl-4/2_2 -n=1 -w=1 -s -d -rw=107 -rh=111 -rx=1208 -ry=386 -I=2 -minPts=2
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-4 -o=out/voc-18-bl-4/2_2_r -n=1 -w=1 -s -d -rw=107 -rh=111 -rx=1208 -ry=386 -I=2 -r -minPts=2
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-4 -o=out/voc-18-bl-4/2_2 -n=1 -w=1 -d -rw=107 -rh=111 -rx=1208 -ry=386 -I=2 -minPts=2
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -t=../voc-18/truth-lmdb/blood/voc-18-bl-4 -o=out/voc-18-bl-4/2_2_r -n=1 -w=1 -d -rw=107 -rh=111 -rx=1208 -ry=386 -I=2 -r -minPts=2
 
