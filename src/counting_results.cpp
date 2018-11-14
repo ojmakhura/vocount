@@ -362,6 +362,7 @@ void CountingResults::generateOutputData(int32_t frameId, int32_t groundTruth, v
     outputData[OutDataIndex::NumClusters] = this->selectedNumClusters;
     outputData[OutDataIndex::FrameNum] = frameId;
     outputData[OutDataIndex::Validity] = validity;
+    outputData[OutDataIndex::MinPts] = this->minPts;
     outputData[OutDataIndex::TruthCount] = groundTruth;
 }
 

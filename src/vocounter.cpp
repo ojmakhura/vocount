@@ -114,7 +114,7 @@ void VOCounter::processSettings()
 
             String name = settings.descriptorDir + "/estimates.csv";
             this->descriptorsEstimatesFile.open(name.c_str());
-            this->descriptorsEstimatesFile << "Frame #,Feature Size,Selected Features,# Clusters,Count Estimation,Ground Truth, Validity, Accuracy\n";
+            this->descriptorsEstimatesFile << "Frame #,Feature Size,Selected Features,# Clusters,Count Estimation,Ground Truth, minPts, Validity, Accuracy\n";
         }
 
         if(settings.fdClustering)
@@ -124,7 +124,7 @@ void VOCounter::processSettings()
 
             String name = settings.filteredDescDir + "/estimates.csv";
             this->selDescEstimatesFile.open(name.c_str());
-            this->selDescEstimatesFile << "Frame #,Feature Size, Selected Features, # Clusters, Count Estimation,Actual, Validity, Accuracy\n";
+            this->selDescEstimatesFile << "Frame #,Feature Size, Selected Features, # Clusters, Count Estimation,Ground Truth, minPts, Validity, Accuracy\n";
 
             name = settings.filteredDescDir + "/training.csv";
             this->trainingFile.open(name.c_str());

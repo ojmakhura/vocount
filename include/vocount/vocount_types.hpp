@@ -42,7 +42,8 @@ enum class OutDataIndex
 	ClusterAverage,
 	BoxEst,
 	TruthCount,
-	Validity
+	Validity,
+	MinPts
 };
 
 enum class ResultIndex

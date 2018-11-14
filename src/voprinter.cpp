@@ -14,6 +14,7 @@ void VOPrinter::printEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* est
 	myfile << estimates->at(OutDataIndex::NumClusters) << ",";
 	myfile << estimates->at(OutDataIndex::BoxEst) << ",";
 	myfile << estimates->at(OutDataIndex::TruthCount) << ",";
+	myfile << estimates->at(OutDataIndex::MinPts) << ",";
 	myfile << estimates->at(OutDataIndex::Validity) << ",";
 	double accuracy = (estimates->at(OutDataIndex::TruthCount) != 0) ? ((double) estimates->at(OutDataIndex::BoxEst) / estimates->at(OutDataIndex::TruthCount)) * 100 : 0;
 	myfile << accuracy << "\n";

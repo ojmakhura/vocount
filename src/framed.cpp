@@ -286,7 +286,7 @@ CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, Mat& dataset
     // we must make it up by extending the box structures
     if(res->getMinPts() == 2 && minPts > 2)
     {
-        iterations += 2;
+        iterations += 1;
     }
 
     for(int32_t i = 0; i < iterations; i++)
