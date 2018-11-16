@@ -115,6 +115,13 @@ public:
 	 */
 	void filterLocatedObjets(vector<KeyPoint>* keyPoints);
 
+	/**
+	 * Use the colour model indices to detect objects in the original descriptor clusters.
+	 *
+	 * @param indices - indices of the colour model keypoints in the original features
+	 */
+	CountingResults* getColourModelObjects(vector<int32_t> *indices, int32_t iterations);
+
 private:
     int32_t frameId = 0;
     Mat descriptors,  												/// Frame descriptors
@@ -132,7 +139,9 @@ private:
      *   PRIVATE FUNCTIONS
      **********************************************************************************************************************/
 	CountingResults* doCluster(Mat& dataset, int32_t kSize, int32_t step, int32_t f_minPts, bool useTwo);
+	void doDetectDescriptorsClusters(CountingResults* res, Mat& dataset, vector<KeyPoint>* keypoints, int32_t minPts, int32_t iterations);
 	void generateSelectedClusterImages();
+
 };
 };
 #endif // FRAMED_H_

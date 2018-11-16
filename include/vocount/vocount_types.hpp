@@ -50,7 +50,8 @@ enum class ResultIndex
 {
 	Descriptors,
 	SelectedKeypoints,
-	ImageSpace
+	ImageSpace,
+	DescriptorFilter
 };
 
 
@@ -58,7 +59,7 @@ typedef struct VSETTINGS
 {
 	String outputFolder, inputVideo, truthFolder;
 	String trackerAlgorithm;
-	String colourDir, imageSpaceDir, descriptorDir, filteredDescDir,
+	String colourDir, dFilteringDir, descriptorDir, filteredDescDir,
 	       dfComboDir;
 	int32_t step, rsize;											/// How many frames to use in the dataset
 	int32_t iterations = 0;
@@ -74,6 +75,7 @@ typedef struct VSETTINGS
 	bool dClustering = false,											/// Descriptor space clustering
 	     fdClustering = false,											/// Filtered descriptor clustering
 	     dfClustering = false,											/// Combine descriptor and filtered desctiptor clustering
+	     dFiltering = false,                                            /// Filter descriptor clustering results
 	     extend = false,
 	     rotationalInvariance = false,
 	     includeOctave = false,

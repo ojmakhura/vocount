@@ -336,7 +336,9 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                                    &_keypoints, (int32_t)keypoints.size(), settings.minPts, settings.step,
                                    settings.iterations, settings.overSegment);
 
-            if(settings.print)
+            printResults(f, res, ResultIndex::Descriptors, fr, settings.descriptorDir, settings.print);
+
+            /*if(settings.print)
             {
                 String descriptorFrameDir = VOPrinter::createDirectory(settings.descriptorDir, to_string(frameCount));
                 map<String, Mat> selectedClustersImages;
@@ -345,7 +347,7 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                 VOPrinter::printImage(settings.descriptorDir, frameCount, "frame_kp", frm);
                 VOPrinter::printImages(descriptorFrameDir, &selectedClustersImages, frameCount);
                 VOPrinter::printEstimates(descriptorsEstimatesFile, res->getOutputData());
-            }
+            }*/
 
         }
 
@@ -365,7 +367,7 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
             /// Create a dataset of descriptors based on the selected colour model
             ///
             /****************************************************************************************************/
-            if(settings.fdClustering || settings.dfClustering )
+            if(settings.fdClustering || settings.dfClustering)
             {
                 cout << "~~~~~~~~~~~~~~~~~~ Selected Colour Model Descriptor Clustering ~~~~~~~~~~~~~~~~" << endl;
                 printf("Clustering selected keypoints in descriptor space\n\n");
@@ -381,7 +383,8 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                                        colourModel.getSelectedKeypoints(), ksize, settings.minPts, settings.step,
                                        settings.iterations, settings.overSegment);
 
-                if(settings.print)
+                printResults(f, res, ResultIndex::SelectedKeypoints, fr, settings.filteredDescDir, settings.print);
+                /*if(settings.print)
                 {
                     String descriptorFrameDir = VOPrinter::createDirectory(settings.filteredDescDir, to_string(frameCount));
                     map<String, Mat> selectedClustersImages;
@@ -390,7 +393,7 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                     VOPrinter::printImage(settings.filteredDescDir, frameCount, "frame_kp", frm);
                     VOPrinter::printImages(descriptorFrameDir, &selectedClustersImages, frameCount);
                     VOPrinter::printEstimates(selDescEstimatesFile, res->getOutputData());
-                }
+                }*/
             }
 
             /****************************************************************************************************/
@@ -425,6 +428,30 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                     }
                     dfEstimatesFile << f->getFrameId() << "," <<  f->getFilteredLocatedObjects()->size() << "," << gTruth << "," << accuracy << "\n";
                 }
+            }
+
+            /****************************************************************************************************/
+            /// Filter original descriptor clustering results with the frame colour model by using the
+            /// Cluster results from the original full descriptor complement
+            /****************************************************************************************************/
+            if(settings.dFiltering)
+            {
+                cout << "~~~~~~~~~~~~~~~~~~~~ Selected Descriptors in Original Descriptors Clusters ~~~~~~~~~~~~~~~~~~~~~~" << endl;
+                printf("Filtering by detecting clusters in the full descriptor clusters\n\n");
+
+                vector<int32_t> *indices = colourModel.getOldIndices();
+                CountingResults *d_res = f->getColourModelObjects(indices, settings.iterations);
+                printResults(f, d_res, ResultIndex::DescriptorFilter, fr, settings.dFilteringDir, settings.print);
+                /*if(settings.print)
+                {
+                    String descriptorFrameDir = VOPrinter::createDirectory(settings.dFilteringDir, to_string(frameCount));
+                    map<String, Mat> selectedClustersImages;
+                    f->createResultsImages(ResultIndex::SelectedKeypoints, selectedClustersImages);
+                    Mat frm = VOCUtils::drawKeyPoints(fr, colourModel.getSelectedKeypoints(), colours.red, -1);
+                    VOPrinter::printImage(settings.dFilteringDir, frameCount, "frame_kp", frm);
+                    VOPrinter::printImages(descriptorFrameDir, &selectedClustersImages, frameCount);
+                    VOPrinter::printEstimates(selDescEstimatesFile, res->getOutputData());
+                }*/
             }
         }
 
@@ -935,6 +962,23 @@ void VOCounter::maintainHistory(Framed* f, Mat& descriptors, vector<KeyPoint>* k
     this->keypointHistory.push_back(*keypoints);
     this->descriptorHistory.push_back(descriptors);
 
+}
+
+/**
+ *
+ */
+void VOCounter::printResults(Framed* f, CountingResults* res, ResultIndex idx, Mat& fr, String outDir, bool print)
+{
+    if(settings.print)
+    {
+        String frameDir = VOPrinter::createDirectory(outDir, to_string(frameCount));
+        map<String, Mat> selectedClustersImages;
+        f->createResultsImages(idx, selectedClustersImages);
+        Mat frm = VOCUtils::drawKeyPoints(fr, colourModel.getSelectedKeypoints(), colours.red, -1);
+        VOPrinter::printImage(outDir, frameCount, "frame_kp", frm);
+        VOPrinter::printImages(frameDir, &selectedClustersImages, frameCount);
+        VOPrinter::printEstimates(selDescEstimatesFile, res->getOutputData());
+    }
 }
 
 /************************************************************************************

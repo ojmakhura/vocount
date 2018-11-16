@@ -178,6 +178,11 @@ private:
      * Compile a descriptor dataset
      */
     Mat getDescriptorDataset(Mat& descriptors, vector<KeyPoint>& inKeypoints, vector<KeyPoint>& outKeypoints);
+
+    /**
+     *
+     */
+    void printResults(Framed* f, CountingResults* res, ResultIndex idx, Mat& fr, String outDir, bool print);
 };
 };
 

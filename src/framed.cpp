@@ -169,7 +169,6 @@ CountingResults* Framed::doCluster(Mat& dataset, int32_t kSize, int32_t step, in
         /// Only create the cluster map for the first kSize points which
         /// belong to the current frame
         c_map = hdbscan_create_cluster_table(scan.clusterLabels, 0, kSize);
-
         d_map = hdbscan_get_min_max_distances(&scan, c_map);
         hdbscan_calculate_stats(d_map, &stats);
         val = hdbscan_analyse_stats(&stats);
@@ -257,6 +256,27 @@ CountingResults* Framed::doCluster(Mat& dataset, int32_t kSize, int32_t step, in
     return res;
 }
 
+void Framed::doDetectDescriptorsClusters(CountingResults* res, Mat& dataset, vector<KeyPoint>* keypoints, int32_t minPts, int32_t iterations)
+{
+    res->setDataset(dataset);
+    res->setKeypoints(*keypoints);
+    res->addToClusterLocatedObjects(this->roi, this->frame);
+
+    /**
+     * Organise points into the best possible structure. This requires
+     * putting the points into the structure that has the best match to
+     * the original. We use histograms to match.
+     */
+    res->extractProminentLocatedObjects();
+
+
+    for(int32_t i = 0; i < iterations; i++)
+    {
+        res->extendLocatedObjects(this->frame);
+        res->extractProminentLocatedObjects();
+    }
+
+}
 
 /**********************************************************************************************************************
  *   PUBLIC FUNCTIONS
@@ -271,16 +291,6 @@ CountingResults* Framed::doCluster(Mat& dataset, int32_t kSize, int32_t step, in
 CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, Mat& dataset, vector<KeyPoint>* keypoints, int32_t kSize, int32_t minPts, int32_t step, int32_t iterations, bool useTwo)
 {
     CountingResults* res = doCluster(dataset, kSize, step, minPts, useTwo);
-    res->setDataset(dataset);
-    res->setKeypoints(*keypoints);
-    res->addToClusterLocatedObjects(this->roi, this->frame);
-
-    /**
-     * Organise points into the best possible structure. This requires
-     * putting the points into the structure that has the best match to
-     * the original. We use histograms to match.
-     */
-    res->extractProminentLocatedObjects();
 
     // Since we forced over-segmentation of the clusters
     // we must make it up by extending the box structures
@@ -289,11 +299,25 @@ CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, Mat& dataset
         iterations += 1;
     }
 
+    this->doDetectDescriptorsClusters(res, dataset, keypoints, minPts, iterations);
+
+    /*res->setDataset(dataset);
+    res->setKeypoints(*keypoints);
+    res->addToClusterLocatedObjects(this->roi, this->frame);
+    */
+    /**
+     * Organise points into the best possible structure. This requires
+     * putting the points into the structure that has the best match to
+     * the original. We use histograms to match.
+     */
+    /*res->extractProminentLocatedObjects();
+
     for(int32_t i = 0; i < iterations; i++)
     {
         res->extendLocatedObjects(this->frame);
         res->extractProminentLocatedObjects();
     }
+    */
 
     printf("Detected %lu objects\n\n", res->getProminentLocatedObjects()->size());
     this->results[idx] = res;
@@ -301,6 +325,50 @@ CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, Mat& dataset
     return res;
 }
 
+/***
+ *
+ */
+CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t iterations)
+{
+    CountingResults* res = new CountingResults();
+    CountingResults *d_res = this->getResults(ResultIndex::Descriptors);
+    //IntIntListMap* d_map = d_res->getClusterMap();
+    vector<int32_t>* d_labels = d_res->getLabels();
+
+    CountingResults *f_res = this->getResults(ResultIndex::SelectedKeypoints);
+
+    int32_t* labels = new int32_t[indices->size()];
+
+    /// Get non-noise clusters for the colour model.
+    ///#pragma parallel
+    for(size_t i = 0; i < indices->size(); i++)
+    {
+        int32_t idx = indices->at(i);
+        labels[i] = d_labels->at(idx);
+    }
+
+    clustering_stats stats;
+    int32_t val = -1;
+
+    IntIntListMap* c_map = hdbscan_create_cluster_table(labels, 0, kSize);
+    //d_map = hdbscan_get_min_max_distances(&scan, c_map);
+    //hdbscan_calculate_stats(d_map, &stats);
+    //val = hdbscan_analyse_stats(&stats);
+    res->setClusterMap(c_map);
+    //res->setDistancesMap(d_map);
+    res->getLabels()->insert(res->getLabels()->begin(), labels, labels + indices->size());
+    res->setMinPts(d_res->getMinPts());
+    //res->setValidity(val);
+    //res->setStats(stats);
+    //CountingResults* res, Mat& dataset, vector<KeyPoint>* keypoints, int32_t minPts, int32_t iterations
+    this->doDetectDescriptorsClusters(res, f_res->getDataset(), f_res->getKeypoints(), f_res->getMinPts(), iterations);
+
+    printf("Detected %lu objects\n\n", res->getProminentLocatedObjects()->size());
+    this->results[ResultIndex::DescriptorFilter] = res;
+    delete [] labels;
+
+    return res;
+}
 
 /**
  *
