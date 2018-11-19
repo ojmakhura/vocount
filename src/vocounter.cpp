@@ -374,13 +374,8 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
             if(settings.print)
             {
                 printResults(f, res, ResultIndex::Descriptors, settings.descriptorDir, descriptorsEstimatesFile);
-               // String descriptorFrameDir = VOPrinter::createDirectory(settings.descriptorDir, to_string(frameCount));
-                //map<String, Mat> selectedClustersImages;
-                //f->createResultsImages(ResultIndex::Descriptors, selectedClustersImages);
                 Mat frm = VOCUtils::drawKeyPoints(fr, &_keypoints, colours.red, -1);
                 VOPrinter::printImage(settings.descriptorDir, frameCount, "frame_kp", frm);
-                //VOPrinter::printImages(descriptorFrameDir, &selectedClustersImages, frameCount);
-                //VOPrinter::printEstimates(descriptorsEstimatesFile, res->getOutputData());
             }
 
         }
@@ -426,11 +421,6 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                 if(settings.print)
                 {
                     printResults(f, res, ResultIndex::SelectedKeypoints, settings.colourClusteringDir, cModelEstimatesFile);
-                    //String descriptorFrameDir = VOPrinter::createDirectory(settings.colourClusteringDir, to_string(frameCount));
-                    //map<String, Mat> selectedClustersImages;
-                    //f->createResultsImages(ResultIndex::SelectedKeypoints, selectedClustersImages);
-                    //VOPrinter::printImages(descriptorFrameDir, &selectedClustersImages, frameCount);
-                    //VOPrinter::printEstimates(selDescEstimatesFile, res->getOutputData());
                 }
             }
 
@@ -483,13 +473,6 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                 if(settings.print)
                 {
                     printResults(f, d_res, ResultIndex::DescriptorFilter, settings.filteringDir, filteringEstimatesFile);
-                    //String descriptorFrameDir = VOPrinter::createDirectory(settings.filteringDir, to_string(frameCount));
-                    //map<String, Mat> selectedClustersImages;
-                    //f->createResultsImages(ResultIndex::SelectedKeypoints, selectedClustersImages);
-                    //Mat frm = VOCUtils::drawKeyPoints(fr, colourModel.getSelectedKeypoints(), colours.red, -1);
-                    //VOPrinter::printImage(settings.filteringDir, frameCount, "frame_kp", frm);
-                    //VOPrinter::printImages(descriptorFrameDir, &selectedClustersImages, frameCount);
-                    //VOPrinter::printEstimates(selDescEstimatesFile, res->getOutputData());
                 }
             }
         }
