@@ -59,8 +59,8 @@ typedef struct VSETTINGS
 {
 	String outputFolder, inputVideo, truthFolder;
 	String trackerAlgorithm;
-	String colourDir, dFilteringDir, descriptorDir, filteredDescDir,
-	       dfComboDir;
+	String colourClusteringDir, filteringDir, descriptorDir, colourModelDir,
+	       combinationDir;
 	int32_t step, rsize;											/// How many frames to use in the dataset
 	int32_t iterations = 0;
 	int32_t minPts = 3;
@@ -72,11 +72,11 @@ typedef struct VSETTINGS
 	bool interactive = false;
 	bool selectROI = false;
 	bool exit = false;
-	bool dClustering = false,											/// Descriptor space clustering
-	     fdClustering = false,											/// Filtered descriptor clustering
-	     dfClustering = false,											/// Combine descriptor and filtered desctiptor clustering
-	     dFiltering = false,                                            /// Filter descriptor clustering results
-	     extend = false,
+	bool descriptorClustering = false,									/// Descriptor space clustering
+	     colourModelClustering = false,									/// Detect clusters in the colour model
+	     combine = false,											    /// Combine descriptor and colour model clustering
+	     colourModelFiltering = false,                                  /// Filter the descriptor clusters using the colour model
+	     daisyChain = false,
 	     rotationalInvariance = false,
 	     includeOctave = false,
 	     overSegment = false;

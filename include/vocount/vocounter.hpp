@@ -121,8 +121,9 @@ private:
     vector<Mat> descriptorHistory;
     map<int32_t, int32_t> truth;
     ofstream descriptorsClusterFile, descriptorsEstimatesFile;
-    ofstream selDescClusterFile, selDescEstimatesFile;
-    ofstream dfClusterFile, dfEstimatesFile;
+    ofstream cModelClusterFile, cModelEstimatesFile;
+    ofstream combinedClusterFile, combinedEstimatesFile;
+    ofstream filteringClusterFile, filteringEstimatesFile;
     ofstream trainingFile, trackingFile;
     map<int32_t, IntIntListMap*> colourModelMaps;
     vector<int32_t> validities;
@@ -182,7 +183,7 @@ private:
     /**
      *
      */
-    void printResults(Framed* f, CountingResults* res, ResultIndex idx, Mat& fr, String outDir, bool print);
+    void printResults(Framed* f, CountingResults* res, ResultIndex idx, String outDir, ofstream& estimatesFile);
 };
 };
 

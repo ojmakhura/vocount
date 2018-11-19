@@ -31,15 +31,14 @@ static void help()
             "     [-w=<dataset width>]       		# the number of frames to use for dataset size\n"
             "     [-t=<truth count dir>]			# The folder that contains binary images for each frame in the video with objects tagged \n"
             "     [-s]       						# select roi from the first \n"
-            "     [-d]       						# raw descriptors\n"
-            "     [-f]       						# filtered keypoints\n"
-            "     [-c]       						# cluster analysis method \n"
-            "     [-df]       						# Combine descriptor clustering and filtered descriptors clustering\n"
+            "     [-d]       						# detect clusters in raw descriptors\n"
+            "     [-c]       						# detect clusters in the colour model \n"
+            "     [-f]       						# Filter descriptor clusters with the colour model \n"
+            "     [-cm]       						# Combine descriptor clustering and filtered descriptors clustering\n"
             "     [-rx]       					    # roi x coordiate\n"
             "     [-ry]       					    # roi y coordinate\n"
             "     [-rh]       					    # roi height\n"
             "     [-rw]       					    # roi width\n"
-            "     [-e]       					    # extend the box structures to include clusters not in the initial list\n"
             "     [-r]       					    # rotate the rectangles\n"
             "     [-D]       					    # Enable debug messages\n"
             "     [-O]       					    # Enable using minPts = 2 if no valid clustering results are detected\n"
@@ -102,33 +101,28 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
         settings.selectROI = true;
     }
 
-    if(parser.has("d") || parser.has("df"))
+    if(parser.has("d") || parser.has("cm"))
     {
         printf("*** Raw descriptor clustering activated\n");
-        settings.dClustering = true;
+        settings.descriptorClustering = true;
     }
 
-    if(parser.has("f") || parser.has("df"))
+    if(parser.has("c"))
+    {
+        printf("*** Colour model descriptor clustering activated\n");
+        settings.colourModelClustering = true;
+    }
+
+    if(parser.has("f"))
     {
         printf("*** Filtered descriptor clustering activated\n");
-        settings.fdClustering = true;
+        settings.colourModelFiltering = true;
     }
 
-    if(parser.has("df"))
+    if(parser.has("cm"))
     {
         printf("*** Will combine descriptors and filtered descriptors results\n");
-        settings.dfClustering = true;
-    }
-
-    if(parser.has("e"))
-    {
-        printf("*** Will extend the box structures\n");
-        settings.extend = true;
-        settings.iterations = 1;
-    }
-    else
-    {
-        settings.iterations = 0;
+        settings.combine = true;
     }
 
     if(parser.has("r"))
@@ -301,9 +295,9 @@ int main(int argc, char** argv)
                                  "{help ||}{o||}{n|1|}"
                                  "{v||}{video||}{w|1|}{s||}"
                                  "{c||}{t||}{l||}{ta|BOOSTING|}"
-                                 "{d||}{f||}{df||}{I||}"
+                                 "{d||}{f||}{cm||}{I||}"
                                  "{rx||}{ry||}{rw||}{rh||}"
-                                 "{e||}{r||}{D||}{O||}{minPts|3|}");
+                                 "{r||}{D||}{O||}{minPts|3|}");
 
     if(!processOptions(settings, parser))
     {
@@ -334,7 +328,7 @@ int main(int argc, char** argv)
         /**
          * Finding the colour model for the current frame
          */
-        if(vcount.getFrameCount() == 0 && settings.fdClustering)
+        if(vcount.getFrameCount() == 0 && (settings.colourModelClustering || settings.colourModelFiltering))
         {
             cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Detecting Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
             printf("Finding proper value of minPts\n");
