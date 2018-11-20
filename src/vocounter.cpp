@@ -304,7 +304,7 @@ Mat VOCounter::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>& inKeypoi
 {
     outKeypoints.clear();
     outKeypoints.insert(outKeypoints.end(), inKeypoints.begin(), inKeypoints.end());
-    Mat dset = VOCUtils::getDescriptorDataset(descriptors, &inKeypoints, settings.rotationalInvariance, settings.includeOctave);
+    Mat dset = VOCUtils::getDescriptorDataset(descriptors, &inKeypoints, settings.additions);
     /// Account for multiple frames by using settings.step
     for(int32_t i = 1; i < settings.step; i++)
     {
@@ -316,7 +316,7 @@ Mat VOCounter::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>& inKeypoi
             outKeypoints.insert(outKeypoints.end(), kps.begin(), kps.end());
 
             Mat& desc = this->descriptorHistory[idx];
-            Mat ds = VOCUtils::getDescriptorDataset(desc, &kps, settings.rotationalInvariance, settings.includeOctave);
+            Mat ds = VOCUtils::getDescriptorDataset(desc, &kps, settings.additions);
             dset.push_back(dset);
         }
     }
@@ -386,12 +386,12 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
             {
                 cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Track Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
                 trackFrameColourModel(frame, descriptors, keypoints);
+            }
 
-                if(settings.print)
-                {
-                    Mat frm = VOCUtils::drawKeyPoints(fr, colourModel.getSelectedKeypoints(), colours.red, -1);
-                    VOPrinter::printImage(settings.colourModelDir, frameCount, "frame_kp", frm);
-                }
+            if(settings.print)
+            {
+                Mat frm = VOCUtils::drawKeyPoints(fr, colourModel.getSelectedKeypoints(), colours.red, -1);
+                VOPrinter::printImage(settings.colourModelDir, frameCount, "frame_kp", frm);
             }
 
             VOCUtils::findROIFeatures(&keypoints, roi, colourModel.getRoiFeatures());
@@ -407,10 +407,10 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                 cout << "~~~~~~~~~~~~~~~~~~ Selected Colour Model Descriptor Clustering ~~~~~~~~~~~~~~~~" << endl;
                 printf("Clustering selected keypoints in descriptor space\n\n");
 
+
                 Mat dset = VOCUtils::getDescriptorDataset(colourModel.getSelectedDesc(),
                                                colourModel.getSelectedKeypoints(),
-                                               settings.rotationalInvariance,
-                                               settings.includeOctave);
+                                               settings.additions);
 
                 int32_t ksize = (int32_t)colourModel.getSelectedKeypoints()->size();
 
@@ -429,7 +429,8 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
             /****************************************************************************************************/
             if(settings.combine)
             {
-                cout << "~~~~~~~~~~~~~~~~~~~~ Selected Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~~~" << endl;
+
+                cout << "~~~~~~~~~~~~~~~ Combine descriptor and colour model locations ~~~~~~~~~~~~~~~~~" << endl;
                 printf("Filtering detected objects with colour model\n\n");
                 f->filterLocatedObjets(colourModel.getSelectedKeypoints());
 
@@ -447,7 +448,7 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                         LocatedObject& b = f->getFilteredLocatedObjects()->at(i);
                         rectangle(kimg, b.getBox(), value, 2, 8, 0);
                     }
-                    VOPrinter::printImage(settings.combinationDir, f->getFrameId(), "selected_structures", kimg) ;
+                    VOPrinter::printImage(settings.combinationDir, f->getFrameId(), "combined", kimg) ;
                     double accuracy = 0;
                     int32_t gTruth = this->truth[f->getFrameId()];
                     if(gTruth > 0)

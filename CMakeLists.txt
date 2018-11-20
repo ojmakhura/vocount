@@ -15,7 +15,7 @@ ExternalProject_Add(hdbscan_lib
     GIT_REPOSITORY https://github.com/ojmakhura/hdbscan.git
 	GIT_TAG "master"
 	CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${HDBSCAN_INSTALL_DIR} -DBUILD_JAVA=OFF -DBUILD_PYTHON2=OFF -DBUILD_PYTHON3=OFF -DBUILD_SAMPLES=OFF
-	UPDATE_COMMAND git pull	
+	#UPDATE_COMMAND git pull	
 )
 ExternalProject_Get_Property(hdbscan_lib INSTALL_DIR)
 

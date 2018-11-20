@@ -161,7 +161,7 @@ void VOPrinter::printImages(String& folder, map<String, Mat>* images, int count)
 void VOPrinter::printImage(String folder, int idx, String name, Mat img)
 {
 	stringstream sstm;
-	sstm << folder.c_str() << "/" << idx << " " << name.c_str() << ".jpg";
+	sstm << folder.c_str() << "/" << idx << "_" << name.c_str() << ".jpg";
 	imwrite(sstm.str(), img);
 }
 

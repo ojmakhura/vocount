@@ -35,11 +35,13 @@ static void help()
             "     [-c]       						# detect clusters in the colour model \n"
             "     [-f]       						# Filter descriptor clusters with the colour model \n"
             "     [-cm]       						# Combine descriptor clustering and filtered descriptors clustering\n"
+            "     [-co]       						# print images that show all the clusters in the results without matching and bounding boxes\n"
             "     [-rx]       					    # roi x coordiate\n"
             "     [-ry]       					    # roi y coordinate\n"
             "     [-rh]       					    # roi height\n"
             "     [-rw]       					    # roi width\n"
             "     [-r]       					    # rotate the rectangles\n"
+            "     [-z]       					    # add sizes to dataset\n"
             "     [-D]       					    # Enable debug messages\n"
             "     [-O]       					    # Enable using minPts = 2 if no valid clustering results are detected\n"
             "     [-I=<number of iterations>] 	    # The number of iterations for extending cluster daisy chaining\n"
@@ -125,10 +127,29 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
         settings.combine = true;
     }
 
-    if(parser.has("r"))
+    if(parser.has("co"))
+    {
+        printf("*** Will print clusters only\n");
+        settings.clustersOnly = true;
+    }
+
+    if(parser.has("r") && parser.has("z"))
+    {
+        printf("*** Will rotate the rectangles and include sizes\n");
+        settings.additions = VAdditions::BOTH;
+
+    } else if(parser.has("r"))
     {
         printf("*** Will rotate the rectangles for rotational invariance\n");
-        settings.rotationalInvariance = true;
+        settings.additions = VAdditions::ANGLE;
+
+    } else if(parser.has("z"))
+    {
+        printf("*** Will include sizes in the dataset\n");
+        settings.additions = VAdditions::SIZE;
+    } else
+    {
+        settings.additions = VAdditions::NONE;
     }
 
     if(parser.has("O"))
@@ -295,8 +316,8 @@ int main(int argc, char** argv)
                                  "{help ||}{o||}{n|1|}"
                                  "{v||}{video||}{w|1|}{s||}"
                                  "{c||}{t||}{l||}{ta|BOOSTING|}"
-                                 "{d||}{f||}{cm||}{I||}"
-                                 "{rx||}{ry||}{rw||}{rh||}"
+                                 "{d||}{f||}{cm||}{I||}{co||}"
+                                 "{rx||}{ry||}{rw||}{rh||}{z||}"
                                  "{r||}{D||}{O||}{minPts|3|}");
 
     if(!processOptions(settings, parser))

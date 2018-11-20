@@ -30,6 +30,13 @@ static bool VO_DEBUG = false;
 
 namespace vocount {
 
+enum class VAdditions{
+    SIZE,
+    ANGLE,
+    BOTH,
+    NONE
+};
+
 enum class OutDataIndex
 {
 	FrameNum,
@@ -76,10 +83,10 @@ typedef struct VSETTINGS
 	     colourModelClustering = false,									/// Detect clusters in the colour model
 	     combine = false,											    /// Combine descriptor and colour model clustering
 	     colourModelFiltering = false,                                  /// Filter the descriptor clusters using the colour model
+	     clustersOnly = false,                                          /// Create the images that show clusters
 	     daisyChain = false,
-	     rotationalInvariance = false,
-	     includeOctave = false,
 	     overSegment = false;
+    VAdditions additions = VAdditions::NONE;
 } vsettings;
 
 typedef struct

@@ -495,11 +495,11 @@ void VOCUtils::getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices,
  * @param includeAngle -
  * @param includeOctave -
  */
-Mat VOCUtils::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>* keypoints, bool includeAngle, bool includeOctave)
+Mat VOCUtils::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>* keypoints, VAdditions additions)
 {
     Mat dataset = descriptors.clone();
 
-    if(includeAngle)
+    if(additions == VAdditions::ANGLE || additions == VAdditions::BOTH)
     {
         Mat angles(descriptors.rows, 1, CV_32FC1);
         float* data = angles.ptr<float>(0);
@@ -511,21 +511,23 @@ Mat VOCUtils::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>* keypoints
             data[i] = (M_PI / 180) * kp.angle;
         }
 
+        normalize(angles, angles, 0, 1, cv::NORM_MINMAX, CV_32FC1);
         hconcat(dataset, angles, dataset);
     }
 
-    if(includeOctave)
+    if(additions == VAdditions::SIZE || additions == VAdditions::BOTH)
     {
-        Mat octaves(descriptors.rows, 1, CV_32FC1);
-        float* data = octaves.ptr<float>(0);
+        Mat sizes(descriptors.rows, 1, CV_32FC1);
+        float* data = sizes.ptr<float>(0);
         #pragma omp parallel for
         for(size_t i = 0; i < keypoints->size(); i++)
         {
             KeyPoint kp = keypoints->at(i);
-            data[i] = (M_PI/180) * kp.octave;
+            data[i] = kp.size;
         }
 
-        hconcat(dataset, octaves, dataset);
+        normalize(sizes, sizes, 0, 1, cv::NORM_MINMAX, CV_32FC1);
+        hconcat(dataset, sizes, dataset);
     }
 
     if(!dataset.isContinuous())
@@ -605,5 +607,4 @@ Rect2d VOCUtils::scaleRectangle(Rect2d in_r, double size_1, double size_2)
 
     return r_out;
 }
-
 };
