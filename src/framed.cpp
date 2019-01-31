@@ -107,11 +107,11 @@ map_r* Framed::getResults()
 }
 
 ///
-/// filteredLocatedObjects
+/// combinedLocatedObjects
 ///
-vector<LocatedObject>* Framed::getFilteredLocatedObjects()
+vector<LocatedObject>* Framed::getCombinedLocatedObjects()
 {
-    return &this->filteredLocatedObjects;
+    return &this->combinedLocatedObjects;
 }
 
 ///
@@ -397,7 +397,7 @@ CountingResults* Framed::getResults(ResultIndex idx)
     return results[idx];
 }
 
-void Framed::filterLocatedObjets(vector<KeyPoint>* selectedKeypoints)
+void Framed::combineLocatedObjets(vector<KeyPoint>* selectedKeypoints)
 {
     CountingResults* descriptorResults = results[ResultIndex::Descriptors];
     CountingResults* filteredResults = results[ResultIndex::SelectedKeypoints];
@@ -462,7 +462,7 @@ void Framed::filterLocatedObjets(vector<KeyPoint>* selectedKeypoints)
 
     for(set<size_t>::iterator it = selectedObjects.begin(); it != selectedObjects.end(); it++)
     {
-        filteredLocatedObjects.push_back(combinedObjects.at(*it));
+        combinedLocatedObjects.push_back(combinedObjects.at(*it));
     }
 
     /// We add the filtered results located objects after filtering because
@@ -472,9 +472,9 @@ void Framed::filterLocatedObjets(vector<KeyPoint>* selectedKeypoints)
     for(size_t i = 0; i < p_objects->size(); i++)
     {
         LocatedObject& newObject = p_objects->at(i);
-        LocatedObject::addLocatedObject(&filteredLocatedObjects, &newObject);
+        LocatedObject::addLocatedObject(&combinedLocatedObjects, &newObject);
     }
 
-    printf("Colour model filtering detected %ld objects.\n\n", filteredLocatedObjects.size());
+    printf("Colour model filtering detected %ld objects.\n\n", combinedLocatedObjects.size());
 }
 };

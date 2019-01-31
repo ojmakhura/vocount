@@ -42,13 +42,13 @@ public:
 	/**
 	 *
 	 */
-	static void printMatToFile(const Mat& mtx, String folder, String filename, int fmt);
+	static void printMatToFile(const Mat& mtx, String folder, String filename, Formatter::FormatType fmt);
 
 	/**
 	 *
 	 *
 	 */
-	static void printLabelsToFile(int32_t* labels, int32_t length, String folder, int fmt);
+	static void printLabelsToFile(int32_t* labels, int32_t length, String folder, Formatter::FormatType fmt);
 };
 };
 #endif // VOPRINTER_H_

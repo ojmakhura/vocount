@@ -3,9 +3,12 @@
 
 #include <iostream>
 #include <fstream>
+#include "opencv2/features2d.hpp"
+#include "opencv2/xfeatures2d.hpp"
 #include "vocount/framed.hpp"
 #include "vocount/colour_model.hpp"
 #include "vocount/vocutils.hpp"
+using namespace cv::xfeatures2d;
 
 namespace vocount
 {

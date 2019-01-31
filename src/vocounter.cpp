@@ -1,7 +1,16 @@
+#include <lmdb.h>
+#include <chrono>
+
+#include <opencv2/core/utility.hpp>
+#include <opencv2/tracking.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
+
 #include "vocount/vocounter.hpp"
 #include "vocount/voprinter.hpp"
 #include "vocount/vocount_types.hpp"
-#include <lmdb.h>
+
+using namespace chrono;
 
 namespace vocount
 {
@@ -118,6 +127,8 @@ void VOCounter::processSettings()
         readFrameTruth();
     }
 
+    String estimateFileHeader = "Frame #,Feature Size,Selected Features,# Clusters,Count Estimation,Ground Truth, minPts, Validity, Accuracy, Duration(secs)\n";
+
     /// Check if the ROI was given in the settings
     this->roi = Rect2d(settings.x, settings.y, settings.w, settings.h);
 
@@ -134,7 +145,7 @@ void VOCounter::processSettings()
 
             String name = settings.descriptorDir + "/estimates.csv";
             this->descriptorsEstimatesFile.open(name.c_str());
-            this->descriptorsEstimatesFile << "Frame #,Feature Size,Selected Features,# Clusters,Count Estimation,Ground Truth, minPts, Validity, Accuracy\n";
+            this->descriptorsEstimatesFile << estimateFileHeader;
         }
 
         if(settings.colourModelClustering || settings.colourModelFiltering || settings.combine)
@@ -148,7 +159,7 @@ void VOCounter::processSettings()
 
             name = settings.colourModelDir + "/tracking.csv";
             this->trackingFile.open(name.c_str());
-            this->trackingFile << "Frame #, Num of Points, MinPts, Num of Clusters, Validity\n";
+            this->trackingFile << "Frame #, Num of Points, Selected Points, MinPts, Num of Clusters, Validity, Duration(secs)\n";
 
             if(settings.colourModelClustering || settings.combine)
             {
@@ -157,7 +168,8 @@ void VOCounter::processSettings()
 
                 name = settings.colourClusteringDir + "/estimates.csv";
                 this->cModelEstimatesFile.open(name.c_str());
-                this->cModelEstimatesFile << "Frame #,Feature Size, Selected Features, # Clusters, Count Estimation,Ground Truth, minPts, Validity, Accuracy\n";
+                this->cModelEstimatesFile << estimateFileHeader;
+
             }
 
             if(settings.colourModelFiltering)
@@ -167,7 +179,7 @@ void VOCounter::processSettings()
 
                 name = settings.filteringDir + "/estimates.csv";
                 this->filteringEstimatesFile.open(name.c_str());
-                this->filteringEstimatesFile << "Frame #,Feature Size, Selected Features, # Clusters, Count Estimation,Ground Truth, minPts, Validity, Accuracy\n";
+                this->filteringEstimatesFile << estimateFileHeader;
             }
         }
 
@@ -178,7 +190,7 @@ void VOCounter::processSettings()
 
             String name = settings.combinationDir + "/estimates.csv";
             this->combinedEstimatesFile.open(name.c_str());
-            this->combinedEstimatesFile << "Frame #,Count Estimation,Ground Truth, Accuracy\n";
+            this->combinedEstimatesFile << "Frame #,Count Estimation,Ground Truth, Accuracy, Duration(secs)\n";
         }
     }
 }
@@ -226,7 +238,7 @@ void VOCounter::trackInitialObject(Mat& frame, Mat& descriptors, vector<KeyPoint
             Framed* p_framed = framedHistory[framedHistory.size()-1];
 
             /// Filtered LocatedObjects are less likely to be off
-            vector<LocatedObject>* bxs = p_framed->getFilteredLocatedObjects();
+            vector<LocatedObject>* bxs = p_framed->getCombinedLocatedObjects();
 
             if(bxs->empty() && !(p_framed->getResults()->empty()))
             {
@@ -366,10 +378,18 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
             cout << "~~~~~~~~~~~~~~~~~~~~~ Original Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~" << endl;
 
             vector<KeyPoint> _keypoints = keypoints;
+            steady_clock::time_point start = chrono::steady_clock::now();
             Mat dset = this->getDescriptorDataset(descriptors, keypoints, _keypoints);
             CountingResults* res = f->detectDescriptorsClusters(ResultIndex::Descriptors, dset,
                                    &_keypoints, (int32_t)keypoints.size(), settings.minPts, settings.step,
                                    settings.iterations, settings.overSegment);
+
+            steady_clock::time_point end = chrono::steady_clock::now();
+            double time = chrono::duration_cast<duration<double>>(end - start).count();
+
+            res->setRunningTime(time);
+
+            cout << "Original Descriptor Space Clustering completed in " << time << " seconds" << endl;
 
             if(settings.print)
             {
@@ -407,7 +427,7 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                 cout << "~~~~~~~~~~~~~~~~~~ Selected Colour Model Descriptor Clustering ~~~~~~~~~~~~~~~~" << endl;
                 printf("Clustering selected keypoints in descriptor space\n\n");
 
-
+                steady_clock::time_point start = chrono::steady_clock::now();
                 Mat dset = VOCUtils::getDescriptorDataset(colourModel.getSelectedDesc(),
                                                colourModel.getSelectedKeypoints(),
                                                settings.additions);
@@ -417,6 +437,12 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                 CountingResults* res = f->detectDescriptorsClusters(ResultIndex::SelectedKeypoints, dset,
                                        colourModel.getSelectedKeypoints(), ksize, settings.minPts, settings.step,
                                        settings.iterations, settings.overSegment);
+                steady_clock::time_point end = chrono::steady_clock::now();
+                double time = chrono::duration_cast<duration<double>>(end - start).count();
+
+                res->setRunningTime(time);
+
+                cout << "Selected Colour Model Descriptor Clustering completed in " << time << " seconds" << endl;
 
                 if(settings.print)
                 {
@@ -425,27 +451,28 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
             }
 
             /****************************************************************************************************/
-            /// Filter original descriptor clustering results with the frame colour model
+            /// Combine original descriptor clustering results with the frame colour model clustering results
             /****************************************************************************************************/
             if(settings.combine)
             {
 
                 cout << "~~~~~~~~~~~~~~~ Combine descriptor and colour model locations ~~~~~~~~~~~~~~~~~" << endl;
-                printf("Filtering detected objects with colour model\n\n");
-                f->filterLocatedObjets(colourModel.getSelectedKeypoints());
+                printf("Combinning detected objects from frame descriptors with objects from colour model\n\n");
+                steady_clock::time_point start = chrono::steady_clock::now();
+                f->combineLocatedObjets(colourModel.getSelectedKeypoints());
 
                 if(settings.print)
                 {
                     Mat kimg = VOCUtils::drawKeyPoints(frame, colourModel.getSelectedKeypoints(), colours.red, -1);
 
-                    for(size_t i = 0; i < f->getFilteredLocatedObjects()->size(); i++)
+                    for(size_t i = 0; i < f->getCombinedLocatedObjects()->size(); i++)
                     {
                         Scalar value;
 
                         RNG rng(12345);
                         value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 
-                        LocatedObject& b = f->getFilteredLocatedObjects()->at(i);
+                        LocatedObject& b = f->getCombinedLocatedObjects()->at(i);
                         rectangle(kimg, b.getBox(), value, 2, 8, 0);
                     }
                     VOPrinter::printImage(settings.combinationDir, f->getFrameId(), "combined", kimg) ;
@@ -453,9 +480,12 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                     int32_t gTruth = this->truth[f->getFrameId()];
                     if(gTruth > 0)
                     {
-                        accuracy = ((double)f->getFilteredLocatedObjects()->size() / gTruth) * 100;
+                        accuracy = ((double)f->getCombinedLocatedObjects()->size() / gTruth) * 100;
                     }
-                    combinedEstimatesFile << f->getFrameId() << "," <<  f->getFilteredLocatedObjects()->size() << "," << gTruth << "," << accuracy << "\n";
+                    steady_clock::time_point end = chrono::steady_clock::now();
+                    double time = chrono::duration_cast<duration<double>>(end - start).count();
+                    combinedEstimatesFile << f->getFrameId() << "," <<  f->getCombinedLocatedObjects()->size() << "," << gTruth << "," << accuracy << "," << time <<"\n";
+                    cout << "Combine descriptor and colour model locations completed in " << time << " seconds" << endl;
                 }
             }
 
@@ -469,7 +499,12 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                 printf("Filtering by detecting clusters in the full descriptor clusters\n\n");
 
                 vector<int32_t> *indices = colourModel.getOldIndices();
+                steady_clock::time_point start = chrono::steady_clock::now();
                 CountingResults *d_res = f->getColourModelObjects(indices, settings.iterations);
+                steady_clock::time_point end = chrono::steady_clock::now();
+                double time = chrono::duration_cast<duration<double>>(end - start).count();
+                d_res->setRunningTime(time);
+                cout << "Selected Descriptors in Original Descriptors Clusters completed in " << time << " seconds" << endl;
 
                 if(settings.print)
                 {
@@ -488,8 +523,9 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints)
 {
     vector<KeyPoint> keyp;
+    int32_t selectedMinPts = 2 * colourModel.getMinPts();
     size_t p_size = 0;
-
+    steady_clock::time_point start = chrono::steady_clock::now();
     Mat dataset;
     if(!framedHistory.empty())
     {
@@ -502,7 +538,7 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     keyp.insert(keyp.end(), keypoints.begin(), keypoints.end());
     dataset.push_back(VOCUtils::getColourDataset(frame, &keypoints));
     dataset = dataset.clone();
-    hdbscan scanis(2*colourModel.getMinPts(), DATATYPE_FLOAT);
+    hdbscan scanis(selectedMinPts, DATATYPE_FLOAT);
     scanis.run(dataset.ptr<float>(), dataset.rows, dataset.cols, true);
 
     /****************************************************************************************************/
@@ -519,13 +555,14 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     hdbscan_calculate_stats(distancesMap, &stats);
     int val = hdbscan_analyse_stats(&stats);
 
+
     if(val < 0)
     {
         cout << "Validity is less than 0. Re clustering ..." << endl;
         hdbscan_destroy_distance_map_table(distancesMap);
         hdbscan_destroy_cluster_table(colourModel.getColourModelClusters());
-
-        scanis.reRun(2 * colourModel.getMinPts() - 1);
+        selectedMinPts =2 * colourModel.getMinPts() - 1;
+        scanis.reRun(selectedMinPts);
         prevNumClusters = colourModel.getNumClusters();
         t_map = hdbscan_create_cluster_table(scanis.clusterLabels + p_size, 0, keypoints.size());
         colourModel.setColourModelClusters(t_map);
@@ -536,7 +573,7 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
         val = hdbscan_analyse_stats(&stats);
     }
 
-    printf("------- MinPts = %d - new validity = %d (%d) and old validity = %d (%d)\n", colourModel.getMinPts(), val, colourModel.getNumClusters(), colourModel.getValidity(), prevNumClusters);
+    printf("------- MinPts = %d - new validity = %d (%d) and old validity = %d (%d)\n", selectedMinPts, val, colourModel.getNumClusters(), colourModel.getValidity(), prevNumClusters);
 
     colourModel.setValidity(val);
     set<int32_t> currSelClusters;
@@ -602,11 +639,13 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
         VOCUtils::getSelectedKeypointsDescriptors(descriptors, list, selDesc);
 
     }
-    cout << "Selected " << colourModel.getSelectedKeypoints()->size() << " points" << endl;
 
+    steady_clock::time_point end = chrono::steady_clock::now();
+    double time = duration_cast<duration<double>>(end - start).count();
+    cout << "Selected " << colourModel.getSelectedKeypoints()->size() << " points in " << time << " seconds" << endl;
     if(trackingFile.is_open())
     {
-        trackingFile << frameCount << "," << keypoints.size() << "," << colourModel.getMinPts() << "," << colourModel.getNumClusters() << "," << val << endl;
+        trackingFile << frameCount << "," << keypoints.size() << "," << colourModel.getSelectedKeypoints()->size() << "," << selectedMinPts << "," << colourModel.getNumClusters() << "," << val << "," << time << endl;
     }
 
     colourModel.setSelectedDesc(selDesc);
@@ -727,7 +766,7 @@ void VOCounter::trainColourModel(Mat& frame, vector<KeyPoint>& keypoints)
 
     map<uint, set<int>> numClusterMap;
     printf("Detecting minPts value for colour clustering.\n");
-
+    steady_clock::time_point start = chrono::steady_clock::now();
     hdbscan scan(3, DATATYPE_FLOAT);
 
     for(int i = 3; i <= 30; i++)
@@ -779,11 +818,14 @@ void VOCounter::trainColourModel(Mat& frame, vector<KeyPoint>& keypoints)
     }
 
     colourModel.setMinPts(chooseMinPts(numClusterMap, validities));
-
+    steady_clock::time_point end = chrono::steady_clock::now();
+    double time = duration_cast<duration<double>>(end - start).count();
     printf(">>>>>>>> OPTIMUM CHOICE OF minPts DETECTED AS %d <<<<<<<<<\n", colourModel.getMinPts());
+    printf(">>>>>>>> Completed in %f <<<<<<<<<\n", time);
     if(trainingFile.is_open())
     {
         trainingFile << "Selected minPts," << colourModel.getMinPts() << "\n";
+        trainingFile << "Training Time," << time << endl;
         trainingFile.close();
     }
 }
@@ -977,7 +1019,7 @@ void VOCounter::maintainHistory(Framed* f, Mat& descriptors, vector<KeyPoint>* k
         /// Keypoints history
         this->keypointHistory.erase(this->keypointHistory.begin());
 
-        /// Descritors history
+        /// Descriptors history
         this->descriptorHistory.erase(this->descriptorHistory.begin());
     }
 
@@ -995,8 +1037,6 @@ void VOCounter::printResults(Framed* f, CountingResults* res, ResultIndex idx, S
     String frameDir = VOPrinter::createDirectory(outDir, to_string(frameCount));
     map<String, Mat> selectedClustersImages;
     f->createResultsImages(idx, selectedClustersImages);
-    //Mat frm = VOCUtils::drawKeyPoints(fr, keypoints, colours.red, -1);
-    //VOPrinter::printImage(outDir, frameCount, "frame_kp", frm);
     VOPrinter::printImages(frameDir, &selectedClustersImages, frameCount);
     VOPrinter::printEstimates(estimatesFile, res->getOutputData());
 }

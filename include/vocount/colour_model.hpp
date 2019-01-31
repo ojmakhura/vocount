@@ -2,7 +2,7 @@
 #define COLOURMODEL_H_
 
 #include <listlib/utils.h>
-#include <opencv/cv.hpp>
+#include <opencv2/core.hpp>
 #include <vector>
 #include <map>
 #include <set>

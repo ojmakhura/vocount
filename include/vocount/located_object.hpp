@@ -1,7 +1,7 @@
 #ifndef LOCATEDOBJECT_H_
 #define LOCATEDOBJECT_H_
 
-#include <opencv/cv.hpp>
+#include <opencv2/core.hpp>
 #include <map>
 #include <set>
 

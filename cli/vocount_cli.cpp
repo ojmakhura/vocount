@@ -5,9 +5,10 @@
 #include <fstream>
 #include <vector>
 #include <map>
-#include <opencv/cv.hpp>
-#include <opencv/cxcore.hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/core/ocl.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
 #include <opencv2/optflow.hpp>
 #include <opencv2/core/utility.hpp>
 #include <opencv2/xfeatures2d.hpp>
@@ -301,7 +302,6 @@ int32_t consolePreviewColours(Mat& frame, vector<KeyPoint>& keypoints, map<int32
     cout << "-------------------------------------------------------------------------------" << endl;
     return chosen;
 }
-
 
 int main(int argc, char** argv)
 {

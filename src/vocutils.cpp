@@ -1,3 +1,8 @@
+#include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/features2d.hpp>
+
 #include "vocount/vocutils.hpp"
 #include <omp.h>
 
@@ -467,12 +472,25 @@ Mat VOCUtils::drawKeyPoints(Mat& in, vector<KeyPoint>* points, Scalar colour, in
     {
         for(vector<KeyPoint>::iterator it = points->begin(); it != points->end(); ++it)
         {
-            circle(x, Point(it->pt.x, it->pt.y), 3, colour, CV_FILLED, 8, 0);
+            circle(x, Point(it->pt.x, it->pt.y), 3, colour, cv::FILLED, 8, 0);
         }
     }
     else
     {
-        cv::drawKeypoints( in, *points, x, Scalar::all(-1), type );
+        DrawMatchesFlags flag = DrawMatchesFlags::DEFAULT;
+
+        if(type == 1)
+        {
+            flag = DrawMatchesFlags::DRAW_OVER_OUTIMG;
+        } else if(type == 2)
+        {
+            flag = DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS;
+        } else if(type == 3)
+        {
+            flag = DrawMatchesFlags::DRAW_RICH_KEYPOINTS;
+        }
+
+        cv::drawKeypoints( in, *points, x, Scalar::all(-1), flag);
     }
 
     return x;

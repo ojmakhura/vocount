@@ -76,7 +76,7 @@ public:
 	///
 	/// filteredLocatedObjects
 	///
-    vector<LocatedObject>* getFilteredLocatedObjects();
+    vector<LocatedObject>* getCombinedLocatedObjects();
 
 	///
 	/// groundTruth
@@ -113,7 +113,7 @@ public:
 	 *
 	 * @param keyPoints	- the points to be used for filtering
 	 */
-	void filterLocatedObjets(vector<KeyPoint>* keyPoints);
+	void combineLocatedObjets(vector<KeyPoint>* keyPoints);
 
 	/**
 	 * Use the colour model indices to detect objects in the original descriptor clusters.
@@ -131,7 +131,7 @@ private:
     Rect2d roi;														/// region of interest rectangle
     vector<int32_t> roiFeatures;									/// indices of the features inside the roi
     map_r results;
-    vector<LocatedObject> filteredLocatedObjects;					/// Bounding boxes for the individual objects in the frame
+    vector<LocatedObject> combinedLocatedObjects;					/// Bounding boxes for the individual objects in the frame
 	int32_t groundTruth;
 	int32_t kSize;
 

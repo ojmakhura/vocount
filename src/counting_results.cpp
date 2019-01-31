@@ -161,6 +161,19 @@ void CountingResults::setProminentLocatedObjects(vector<LocatedObject> prominent
 }
 
 ///
+/// minPts
+///
+double CountingResults::getRunningTime()
+{
+    return this->runningTime;
+}
+
+void CountingResults::setRunningTime(double runningTime)
+{
+    this->runningTime = runningTime;
+}
+
+///
 /// clusterLocatedObjects
 ///
 map_st* CountingResults::getClusterLocatedObjects()

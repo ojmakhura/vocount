@@ -1,4 +1,5 @@
 #include "vocount/voprinter.hpp"
+#include <opencv2/imgcodecs.hpp>
 #include <QDir>
 
 namespace vocount
@@ -168,21 +169,21 @@ void VOPrinter::printImage(String folder, int idx, String name, Mat img)
 /**
  *
  */
-void VOPrinter::printMatToFile(const Mat& mtx, String folder, String filename, int fmt)
+void VOPrinter::printMatToFile(const Mat& mtx, String folder, String filename, Formatter::FormatType fmt)
 {
 	String fname = folder;
 	fname += "/";
 	fname += filename;
 
-	if(fmt == Formatter::FMT_CSV){
-		fname += ".csv";
-	} else if(fmt == Formatter::FMT_MATLAB){
+	fname += ".csv";
+
+	if(fmt == Formatter::FMT_MATLAB){
 		fname += ".m";
 	} else if(fmt == Formatter::FMT_PYTHON){
 		fname += ".py";
 	} else if(fmt == Formatter::FMT_NUMPY){
 		fname += ".py";
-	} if(fmt == Formatter::FMT_C){
+	} else if(fmt == Formatter::FMT_C){
 		fname += ".h";
 	}
 
@@ -195,7 +196,7 @@ void VOPrinter::printMatToFile(const Mat& mtx, String folder, String filename, i
  *
  *
  */
-void VOPrinter::printLabelsToFile(int32_t* labels, int32_t length, String folder, int fmt)
+void VOPrinter::printLabelsToFile(int32_t* labels, int32_t length, String folder, Formatter::FormatType fmt)
 {
 	Mat lbs(length, 1, CV_32S, labels);
 	printMatToFile(lbs, folder, "labels", fmt);

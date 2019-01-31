@@ -93,6 +93,12 @@ public:
 	int32_t getMinPts();
 	void setMinPts(int32_t val);
 
+	///
+	/// minPts
+	///
+	double getRunningTime();
+	void setRunningTime(double runningTime);
+
 	/************************************************************************************
 	 *   PUBLIC FUNCTIONS
 	 ************************************************************************************/
@@ -142,6 +148,7 @@ private:
 	int32_t validity = -1;
 	int32_t minPts = 3;
 	int32_t selectedNumClusters = 0;
+	double runningTime = 0.0;
 
 /************************************************************************************
  *   PRIVATE FUNCTIONS

@@ -8,7 +8,7 @@
  */
 
 #include <opencv2/tracking.hpp>
-#include <opencv/cv.hpp>
+#include <opencv2/core.hpp>
 #include <vector>
 #include <map>
 #include <set>
