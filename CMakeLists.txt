@@ -10,25 +10,19 @@ set (VOCOUNT_MINOR_VERSION 0)
 set (VOCOUNT_PATCH_VERSION 0)
 set (VOCOUNT_VERSION ${VOCOUNT_VERSION_MAJOR}.${VOCOUNT_VERSION_MINOR}.${VOCOUNT_PATCH_VERSION})
 
-set(HDBSCAN_INSTALL_DIR ${CMAKE_BINARY_DIR}/thirdparty/hdbscan)
-ExternalProject_Add(hdbscan_lib
-    GIT_REPOSITORY https://github.com/ojmakhura/hdbscan.git
-	GIT_TAG "master"
-	CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${HDBSCAN_INSTALL_DIR} -DBUILD_JAVA=OFF -DBUILD_PYTHON2=OFF -DBUILD_PYTHON3=OFF -DBUILD_SAMPLES=OFF
-	#UPDATE_COMMAND git pull	
-)
-ExternalProject_Get_Property(hdbscan_lib INSTALL_DIR)
-
 #detect architecture
-if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")	
+if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
+	message("Detected 64 bit architecture.")
 	set(LIBDIR "lib64")
 else()
+	message("Detected 32 bit architecture.")
 	set(LIBDIR "lib")
 endif()
 
-set(HDBSCAN_INCLUDE_DIRS ${HDBSCAN_INSTALL_DIR}/include)
-set(HDBSCAN_LIB_DIRS ${HDBSCAN_INSTALL_DIR}/${LIBDIR})
-set(HDBSCAN_LIBRARIES hdbscan listlib gnulib)
+find_package(Hdbscan REQUIRED)
+MESSAGE("Found ${HDBSCAN_INCLUDE_DIRS}")
+MESSAGE("Found ${HDBSCAN_LIB_DIRS}")
+MESSAGE("Found ${HDBSCAN_LIBRARIES}")
 link_directories(${HDBSCAN_LIB_DIRS})
 
 set(INSTALL_LIB_DIR lib CACHE PATH "Installation directory for libraries")

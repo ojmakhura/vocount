@@ -37,6 +37,7 @@ static void help()
             "     [-f]       						# Filter descriptor clusters with the colour model \n"
             "     [-cm]       						# Combine descriptor clustering and filtered descriptors clustering\n"
             "     [-co]       						# print images that show all the clusters in the results without matching and bounding boxes\n"
+            "     [-ct]       						# Track the colour model\n"
             "     [-rx]       					    # roi x coordiate\n"
             "     [-ry]       					    # roi y coordinate\n"
             "     [-rh]       					    # roi height\n"
@@ -104,10 +105,16 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
         settings.selectROI = true;
     }
 
-    if(parser.has("d") || parser.has("cm"))
+    if(parser.has("d") || parser.has("cm") || parser.has("f"))
     {
         printf("*** Raw descriptor clustering activated\n");
         settings.descriptorClustering = true;
+    }
+
+    if(parser.has("c") || parser.has("cm") || parser.has("f") || parser.has("ct"))
+    {
+        printf("*** Colour model tracking activated\n");
+        settings.colourModelTracking = true;
     }
 
     if(parser.has("c"))
@@ -118,7 +125,7 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
 
     if(parser.has("f"))
     {
-        printf("*** Filtered descriptor clustering activated\n");
+        printf("*** Filter descriptor clusters with colour model\n");
         settings.colourModelFiltering = true;
     }
 
@@ -126,6 +133,7 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
     {
         printf("*** Will combine descriptors and filtered descriptors results\n");
         settings.combine = true;
+
     }
 
     if(parser.has("co"))
@@ -226,7 +234,7 @@ int32_t consolePreviewColours(Mat& frame, vector<KeyPoint>& keypoints, map<int32
         cout << "List of results \nminPts\t\tNumber of Clusters\t\tValidity" << endl;
         for(map<int32_t, IntDoubleListMap* >::iterator it = clusterMaps->begin(); it != clusterMaps->end(); ++it)
         {
-            cout << it->first << "\t\t" << g_hash_table_size(it->second) << "\t\t" << validities->at(it->first - 3) << endl;
+            cout << it->first << "\t\t" << g_hash_table_size(it->second)-1 << "\t\t" << validities->at(it->first - 3) << endl;
         }
 
         int32_t sel;
@@ -316,7 +324,7 @@ int main(int argc, char** argv)
                                  "{help ||}{o||}{n|1|}"
                                  "{v||}{video||}{w|1|}{s||}"
                                  "{c||}{t||}{l||}{ta|BOOSTING|}"
-                                 "{d||}{f||}{cm||}{I||}{co||}"
+                                 "{d||}{f||}{cm||}{I||}{co||}{ct||}"
                                  "{rx||}{ry||}{rw||}{rh||}{z||}"
                                  "{r||}{D||}{O||}{minPts|3|}");
 
@@ -349,7 +357,7 @@ int main(int argc, char** argv)
         /**
          * Finding the colour model for the current frame
          */
-        if(vcount.getFrameCount() == 0 && (settings.colourModelClustering || settings.colourModelFiltering))
+        if(vcount.getFrameCount() == 0 && settings.colourModelTracking)
         {
             cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Detecting Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
             printf("Finding proper value of minPts\n");

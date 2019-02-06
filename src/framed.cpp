@@ -18,13 +18,16 @@ Framed::Framed(int32_t frameId, Mat& frame, Mat& descriptors, vector<KeyPoint>& 
     this->frameId = frameId;
     this->groundTruth = groundTruth;
 
-    Mat templ = frame(roi);
-    int result_cols =  frame.cols;
-    int result_rows = frame.rows;
+    if(roi.area())
+    {
+        Mat templ = frame(roi);
+        int result_cols =  frame.cols;
+        int result_rows = frame.rows;
 
-    templateMatch.create( result_rows, result_cols, CV_32FC1 );
-    matchTemplate(frame, templ, templateMatch, TM_SQDIFF);
-    normalize(templateMatch, templateMatch, 0, 1, NORM_MINMAX, -1, Mat());
+        templateMatch.create( result_rows, result_cols, CV_32FC1 );
+        matchTemplate(frame, templ, templateMatch, TM_SQDIFF);
+        normalize(templateMatch, templateMatch, 0, 1, NORM_MINMAX, -1, Mat());
+    }
 }
 
 Framed::~Framed()
@@ -332,7 +335,6 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
 {
     CountingResults* res = new CountingResults();
     CountingResults *d_res = this->getResults(ResultIndex::Descriptors);
-    //IntIntListMap* d_map = d_res->getClusterMap();
     vector<int32_t>* d_labels = d_res->getLabels();
 
     CountingResults *f_res = this->getResults(ResultIndex::SelectedKeypoints);
@@ -351,16 +353,9 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
     int32_t val = -1;
 
     IntIntListMap* c_map = hdbscan_create_cluster_table(labels, 0, kSize);
-    //d_map = hdbscan_get_min_max_distances(&scan, c_map);
-    //hdbscan_calculate_stats(d_map, &stats);
-    //val = hdbscan_analyse_stats(&stats);
     res->setClusterMap(c_map);
-    //res->setDistancesMap(d_map);
     res->getLabels()->insert(res->getLabels()->begin(), labels, labels + indices->size());
     res->setMinPts(d_res->getMinPts());
-    //res->setValidity(val);
-    //res->setStats(stats);
-    //CountingResults* res, Mat& dataset, vector<KeyPoint>* keypoints, int32_t minPts, int32_t iterations
     this->doDetectDescriptorsClusters(res, f_res->getDataset(), f_res->getKeypoints(), f_res->getMinPts(), iterations);
 
     printf("Detected %lu objects\n\n", res->getProminentLocatedObjects()->size());

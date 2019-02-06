@@ -12,7 +12,7 @@ public:
 	/**
 	 *
 	 */
-	static void printEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* estimates);
+	static void printEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* estimates, double duration);
 
 	/**
 	 *

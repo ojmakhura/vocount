@@ -7,7 +7,7 @@ namespace vocount
 /**
  *
  */
-void VOPrinter::printEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* estimates)
+void VOPrinter::printEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* estimates, double duration)
 {
 	myfile << estimates->at(OutDataIndex::FrameNum) << ",";
 	myfile << estimates->at(OutDataIndex::FeatureSize) << ",";
@@ -18,7 +18,8 @@ void VOPrinter::printEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* est
 	myfile << estimates->at(OutDataIndex::MinPts) << ",";
 	myfile << estimates->at(OutDataIndex::Validity) << ",";
 	double accuracy = (estimates->at(OutDataIndex::TruthCount) != 0) ? ((double) estimates->at(OutDataIndex::BoxEst) / estimates->at(OutDataIndex::TruthCount)) * 100 : 0;
-	myfile << accuracy << "\n";
+	myfile << accuracy << ",";
+	myfile << duration << "\n";
 
 	myfile.flush();
 

@@ -80,6 +80,7 @@ typedef struct VSETTINGS
 	bool selectROI = false;
 	bool exit = false;
 	bool descriptorClustering = false,									/// Descriptor space clustering
+		 colourModelTracking = false,
 	     colourModelClustering = false,									/// Detect clusters in the colour model
 	     combine = false,											    /// Combine descriptor and colour model clustering
 	     colourModelFiltering = false,                                  /// Filter the descriptor clusters using the colour model

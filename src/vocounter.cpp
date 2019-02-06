@@ -148,7 +148,7 @@ void VOCounter::processSettings()
             this->descriptorsEstimatesFile << estimateFileHeader;
         }
 
-        if(settings.colourModelClustering || settings.colourModelFiltering || settings.combine)
+        if(settings.colourModelTracking)
         {
             settings.colourModelDir = VOPrinter::createDirectory(settings.outputFolder, "colour_model");
             printf("Created colour_model directory at %s.\n", settings.colourModelDir.c_str());
@@ -160,27 +160,26 @@ void VOCounter::processSettings()
             name = settings.colourModelDir + "/tracking.csv";
             this->trackingFile.open(name.c_str());
             this->trackingFile << "Frame #, Num of Points, Selected Points, MinPts, Num of Clusters, Validity, Duration(secs)\n";
+        }
 
-            if(settings.colourModelClustering || settings.combine)
-            {
-                settings.colourClusteringDir = VOPrinter::createDirectory(settings.colourModelDir, "clusters");
-                printf("Created colour_model clustering directory at %s.\n", settings.colourClusteringDir.c_str());
+        if(settings.colourModelClustering || settings.combine)
+        {
+            settings.colourClusteringDir = VOPrinter::createDirectory(settings.colourModelDir, "clusters");
+            printf("Created colour_model clustering directory at %s.\n", settings.colourClusteringDir.c_str());
 
-                name = settings.colourClusteringDir + "/estimates.csv";
-                this->cModelEstimatesFile.open(name.c_str());
-                this->cModelEstimatesFile << estimateFileHeader;
+            String name = settings.colourClusteringDir + "/estimates.csv";
+            this->cModelEstimatesFile.open(name.c_str());
+            this->cModelEstimatesFile << estimateFileHeader;
+        }
 
-            }
+        if(settings.colourModelFiltering)
+        {
+            settings.filteringDir = VOPrinter::createDirectory(settings.colourModelDir, "filtering");
+            printf("Created colour_model filtering directory at %s.\n", settings.filteringDir.c_str());
 
-            if(settings.colourModelFiltering)
-            {
-                settings.filteringDir = VOPrinter::createDirectory(settings.colourModelDir, "filtering");
-                printf("Created colour_model filtering directory at %s.\n", settings.filteringDir.c_str());
-
-                name = settings.filteringDir + "/estimates.csv";
-                this->filteringEstimatesFile.open(name.c_str());
-                this->filteringEstimatesFile << estimateFileHeader;
-            }
+            String name = settings.filteringDir + "/estimates.csv";
+            this->filteringEstimatesFile.open(name.c_str());
+            this->filteringEstimatesFile << estimateFileHeader;
         }
 
         if(settings.combine)
@@ -350,23 +349,42 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
         cout << "                                        " << this->frameCount << endl;
         cout << "################################################################################" << endl;
         printf("Frame %d truth is %d\n", this->frameCount, this->truth[this->frameCount]);
+        Mat fr = frame.clone();
+
+        if(settings.colourModelTracking)
+        {
+            if(framedHistory.size() > 0)
+            {
+                cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Track Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+                trackFrameColourModel(frame, descriptors, keypoints);
+            }
+
+            if(settings.print)
+            {
+                cout << "Printing colour model to " << settings.colourModelDir << endl;
+                Mat frm = VOCUtils::drawKeyPoints(fr, colourModel.getSelectedKeypoints(), colours.red, -1);
+                VOPrinter::printImage(settings.colourModelDir, frameCount, "frame_kp", frm);
+            }
+        }
+
         vector<int32_t> roiFeatures;
         trackInitialObject(frame, descriptors, keypoints, roiFeatures);
 
         RNG rng(12345);
         Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),	rng.uniform(0, 255));
 
-        Mat fr = frame.clone();
+
         rectangle(fr, this->roi, value, 2, 8, 0);
         cout << this->roi << endl;
         VOCUtils::display("frame", fr);
 
+        Framed* f = new Framed(frameCount, frame, descriptors, keypoints, roiFeatures, this->roi, getCurrentFrameGroundTruth(this->frameCount));
         if(!roiExtracted)
         {
+            this->maintainHistory(f, descriptors, &keypoints);
             return;
         }
 
-        Framed* f = new Framed(frameCount, frame, descriptors, keypoints, roiFeatures, this->roi, getCurrentFrameGroundTruth(this->frameCount));
         //VOCUtils::display("template match", f->getTemplateMatch());
 
         /**
@@ -402,17 +420,6 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 
         if(colourModel.getMinPts() >= 3 && !colourModel.getSelectedKeypoints()->empty())
         {
-            if(framedHistory.size() > 0)
-            {
-                cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Track Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-                trackFrameColourModel(frame, descriptors, keypoints);
-            }
-
-            if(settings.print)
-            {
-                Mat frm = VOCUtils::drawKeyPoints(fr, colourModel.getSelectedKeypoints(), colours.red, -1);
-                VOPrinter::printImage(settings.colourModelDir, frameCount, "frame_kp", frm);
-            }
 
             VOCUtils::findROIFeatures(&keypoints, roi, colourModel.getRoiFeatures());
 
@@ -767,12 +774,14 @@ void VOCounter::trainColourModel(Mat& frame, vector<KeyPoint>& keypoints)
     map<uint, set<int>> numClusterMap;
     printf("Detecting minPts value for colour clustering.\n");
     steady_clock::time_point start = chrono::steady_clock::now();
+    steady_clock::time_point start_three, end_three;
     hdbscan scan(3, DATATYPE_FLOAT);
 
     for(int i = 3; i <= 30; i++)
     {
         if(i == 3)
         {
+            start_three = chrono::steady_clock::now();
             Mat dataset = VOCUtils::getColourDataset(frame, &keypoints);
             scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);
         }
@@ -809,6 +818,11 @@ void VOCounter::trainColourModel(Mat& frame, vector<KeyPoint>& keypoints)
             }
 
             trainingFile << i << "," << idx << "," << ps << "," << val << "\n";
+
+            if(i == 3)
+            {
+                end_three = chrono::steady_clock::now();
+            }
         }
 
         numClusterMap[idx].insert(i);
@@ -820,12 +834,15 @@ void VOCounter::trainColourModel(Mat& frame, vector<KeyPoint>& keypoints)
     colourModel.setMinPts(chooseMinPts(numClusterMap, validities));
     steady_clock::time_point end = chrono::steady_clock::now();
     double time = duration_cast<duration<double>>(end - start).count();
+    double time_three = duration_cast<duration<double>>(end_three - start_three).count();
     printf(">>>>>>>> OPTIMUM CHOICE OF minPts DETECTED AS %d <<<<<<<<<\n", colourModel.getMinPts());
-    printf(">>>>>>>> Completed in %f <<<<<<<<<\n", time);
+    printf(">>>>>>>> Completed minPts = 3 in %f and final time is %f <<<<<<<<<\n", time_three, time);
     if(trainingFile.is_open())
     {
         trainingFile << "Selected minPts," << colourModel.getMinPts() << "\n";
-        trainingFile << "Training Time," << time << endl;
+        trainingFile << ",,,\n";
+        trainingFile << ",Time at 3, Time at 4-30, Final Time, " << endl;
+        trainingFile << "Training Time," << time_three << "," << time - time_three << "," << time << endl;
         trainingFile.close();
     }
 }
@@ -1038,7 +1055,37 @@ void VOCounter::printResults(Framed* f, CountingResults* res, ResultIndex idx, S
     map<String, Mat> selectedClustersImages;
     f->createResultsImages(idx, selectedClustersImages);
     VOPrinter::printImages(frameDir, &selectedClustersImages, frameCount);
-    VOPrinter::printEstimates(estimatesFile, res->getOutputData());
+
+    String minMaxFileNale = frameDir + "/min_max.csv";
+    ofstream minMaxFile(minMaxFileNale.c_str());
+
+    minMaxFile << "Cluster, Number of Points, Min CR, Max CR, CR Ratio, Min DR, Max DR, DR Ratio" << endl;
+
+    IntDistancesMap* distancesMap = res->getDistancesMap();
+    map_kp* selectedClustersPoints = res->getSelectedClustersPoints();
+
+    GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	g_hash_table_iter_init (&iter, distancesMap);
+
+	while (g_hash_table_iter_next (&iter, &key, &value)){
+		int32_t label = *((int32_t *)key);
+
+		map_kp::iterator it = selectedClustersPoints->find(label);
+
+		if(it != selectedClustersPoints->end())
+		{
+            distance_values* dv = (distance_values *)value;
+            minMaxFile << label << it->second.size() << "," << "," << dv->min_cr << "," << dv->max_cr << "," << (dv->min_cr / dv->max_cr) << ",";
+            minMaxFile << dv->min_dr << "," << dv->max_dr << "," << (dv->min_dr / dv->max_dr) << endl;
+		}
+	}
+
+    minMaxFile.flush();
+    minMaxFile.close();
+
+    VOPrinter::printEstimates(estimatesFile, res->getOutputData(), res->getRunningTime());
 }
 
 /************************************************************************************
