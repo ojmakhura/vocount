@@ -120,7 +120,7 @@ public:
 	 *
 	 * @param indices - indices of the colour model keypoints in the original features
 	 */
-	CountingResults* getColourModelObjects(vector<int32_t> *indices, int32_t iterations);
+	CountingResults* getColourModelObjects(vector<int32_t> *indices, int32_t minPts, int32_t iterations);
 
 private:
     int32_t frameId = 0;

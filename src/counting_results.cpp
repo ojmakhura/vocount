@@ -218,6 +218,12 @@ void CountingResults::addToClusterLocatedObjects(Rect2d roi, Mat& frame)
 
         vector<LocatedObject>& availableOjects= clusterLocatedObjects[key];
         IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(clusterMap, &key);
+
+        if(l1 == NULL)
+        {
+            continue;
+        }
+
         KeyPoint f_point = keypoints.at(validObjFeatures[i]);
 
         /// Each point in the cluster should be inside a LocatedObject
@@ -297,6 +303,12 @@ void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>
         int32_t key = it->first;
 
         IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(this->clusterMap, &key);
+
+        if(l1 == NULL)
+        {
+            continue;
+        }
+
         vector<KeyPoint>& kps = this->selectedClustersPoints[key];
         VOCUtils::getListKeypoints(&this->keypoints, l1, &kps);
 
@@ -411,6 +423,12 @@ void CountingResults::extractProminentLocatedObjects()
         vector<LocatedObject>& tmp = it->second;
         int32_t key = it->first;
         IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(clusterMap, &key);
+
+        if(l1 == NULL)
+        {
+            continue;
+        }
+
         int32_t* data = (int32_t *)l1->data;
 
         int32_t t[l1->size];

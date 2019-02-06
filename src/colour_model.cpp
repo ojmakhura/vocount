@@ -133,7 +133,7 @@ void ColourModel::setColourModelClusters(IntIntListMap* colourModelClusters)
 ///
 /// oldIndices
 ///
-vector<int32_t>* ColourModel::getOldIndices()
+/*vector<int32_t>* ColourModel::getOldIndices()
 {
     return &this->oldIndices;
 }
@@ -141,19 +141,19 @@ vector<int32_t>* ColourModel::getOldIndices()
 void ColourModel::setOldIndices(vector<int32_t>& oldIndices)
 {
     this->oldIndices = oldIndices;
-}
+}*/
 
 ///
-/// newIndices
+/// selectedIndices
 ///
-vector<int32_t>* ColourModel::getNewIndices()
+vector<int32_t>* ColourModel::getSelectedIndices()
 {
-    return &this->newIndices;
+    return &this->selectedIndices;
 }
 
-void ColourModel::setNewIndices(vector<int32_t>& newIndices)
+void ColourModel::setSelectedIndices(vector<int32_t>& selectedIndices)
 {
-    this->newIndices = newIndices;
+    this->selectedIndices = selectedIndices;
 }
 
 /************************************************************************************
@@ -192,8 +192,8 @@ void ColourModel::addToSelectedClusters(int32_t idx)
 /**
  *
  */
-void ColourModel::addToOldIndices(int32_t idx)
+void ColourModel::addToSelectedIndices(int32_t idx)
 {
-    this->oldIndices.push_back(idx);
+    this->selectedIndices.push_back(idx);
 }
 };

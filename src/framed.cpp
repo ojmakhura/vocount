@@ -303,25 +303,6 @@ CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, Mat& dataset
     }
 
     this->doDetectDescriptorsClusters(res, dataset, keypoints, minPts, iterations);
-
-    /*res->setDataset(dataset);
-    res->setKeypoints(*keypoints);
-    res->addToClusterLocatedObjects(this->roi, this->frame);
-    */
-    /**
-     * Organise points into the best possible structure. This requires
-     * putting the points into the structure that has the best match to
-     * the original. We use histograms to match.
-     */
-    /*res->extractProminentLocatedObjects();
-
-    for(int32_t i = 0; i < iterations; i++)
-    {
-        res->extendLocatedObjects(this->frame);
-        res->extractProminentLocatedObjects();
-    }
-    */
-
     printf("Detected %lu objects\n\n", res->getProminentLocatedObjects()->size());
     this->results[idx] = res;
 
@@ -331,32 +312,87 @@ CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, Mat& dataset
 /***
  *
  */
-CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t iterations)
+CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t minPts, int32_t iterations)
 {
     CountingResults* res = new CountingResults();
     CountingResults *d_res = this->getResults(ResultIndex::Descriptors);
     vector<int32_t>* d_labels = d_res->getLabels();
 
-    CountingResults *f_res = this->getResults(ResultIndex::SelectedKeypoints);
+    //CountingResults *f_res = this->getResults(ResultIndex::SelectedKeypoints);
 
     int32_t* labels = new int32_t[indices->size()];
 
+    set<int32_t> colourModelLabels;
     /// Get non-noise clusters for the colour model.
     ///#pragma parallel
     for(size_t i = 0; i < indices->size(); i++)
     {
         int32_t idx = indices->at(i);
         labels[i] = d_labels->at(idx);
+        colourModelLabels.insert(d_labels->at(idx));
+    }
+
+    IntIntListMap* c_map = g_hash_table_new(g_int_hash, g_int_equal); //hdbscan_create_cluster_table(labels, 0, indices->size());
+    //IntIntListMap* dd_map = d_res->getClusterMap(); // Cluster map of the frame features
+
+    IntDistancesMap* d_map = g_hash_table_new_full(g_int_hash, g_int_equal, free, free); /// distance map
+
+    /// Create a new cluster and distance maps based on the labels of the colour model in the frame feature clusters
+    for(set<int32_t>::iterator it = colourModelLabels.begin(); it != colourModelLabels.end(); ++it)
+    {
+
+        /// Cluster map
+        int32_t *lb = (int *)malloc(sizeof(int));
+        *lb = *it;
+
+        IntArrayList* clusterList = (IntArrayList *)g_hash_table_lookup(d_res->getClusterMap(), lb);
+        IntArrayList* c_list = int_array_list_init_size(clusterList->size);
+
+        int32_t* clusterData = (int32_t*)clusterList->data;
+
+        for(int32_t i = 0; i < clusterList->size; i++)
+        {
+            int_array_list_append(c_list, clusterData[i]);
+        }
+        g_hash_table_insert(c_map, lb, c_list);
+
+        /// Distance map
+        int32_t *d_lb = (int *)malloc(sizeof(int));
+        *d_lb = *it;
+
+        distance_values* dl = (distance_values *)g_hash_table_lookup(d_res->getDistancesMap(), d_lb);
+        distance_values* t_dl = (distance_values *)malloc(sizeof(distance_values));
+
+        t_dl->min_cr = dl->min_cr;
+        t_dl->max_cr = dl->max_cr;
+        t_dl->cr_confidence = dl->cr_confidence;
+
+        t_dl->min_dr = dl->min_dr;
+        t_dl->max_dr = dl->max_dr;
+        t_dl->dr_confidence = dl->dr_confidence;
+
+        g_hash_table_insert(d_map, d_lb, t_dl);
     }
 
     clustering_stats stats;
-    int32_t val = -1;
+    //hdbscan_print_cluster_table(c_map);
+    hdbscan_calculate_stats(d_map, &stats);
+    int32_t val = hdbscan_analyse_stats(&stats);
 
-    IntIntListMap* c_map = hdbscan_create_cluster_table(labels, 0, kSize);
+    res->setStats(stats);
+    res->setValidity(val);
     res->setClusterMap(c_map);
-    res->getLabels()->insert(res->getLabels()->begin(), labels, labels + indices->size());
+    res->setDistancesMap(d_map);
     res->setMinPts(d_res->getMinPts());
-    this->doDetectDescriptorsClusters(res, f_res->getDataset(), f_res->getKeypoints(), f_res->getMinPts(), iterations);
+    res->getLabels()->insert(res->getLabels()->begin(), d_labels->begin(), d_labels->end());
+
+    // Since we forced over-segmentation of the clusters
+    // we must make it up by extending the box structures
+    if(res->getMinPts() == 2 && minPts > 2)
+    {
+        iterations += 1;
+    }
+    this->doDetectDescriptorsClusters(res, d_res->getDataset(), d_res->getKeypoints(), d_res->getMinPts(), iterations);
 
     printf("Detected %lu objects\n\n", res->getProminentLocatedObjects()->size());
     this->results[ResultIndex::DescriptorFilter] = res;

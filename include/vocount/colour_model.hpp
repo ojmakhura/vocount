@@ -67,14 +67,14 @@ public:
     ///
     /// oldIndices
     ///
-    vector<int32_t>* getOldIndices();
-    void setOldIndices(vector<int32_t>& oldIndices);
+    //vector<int32_t>* getOldIndices();
+    //void setOldIndices(vector<int32_t>& oldIndices);
 
     ///
-    /// newIndices
+    /// selectedIndices
     ///
-    vector<int32_t>* getNewIndices();
-    void setNewIndices(vector<int32_t>& newIndices);
+    vector<int32_t>* getSelectedIndices();
+    void setSelectedIndices(vector<int32_t>& selectedIndices);
 
     ///
     /// colourModelClusters
@@ -107,7 +107,7 @@ public:
     /**
      *
      */
-    void addToOldIndices(int32_t idx);
+    void addToSelectedIndices(int32_t idx);
 
 private:
     int32_t minPts;
@@ -118,8 +118,7 @@ private:
     vector<KeyPoint> selectedKeypoints;
     Mat selectedDesc;
     set<int32_t> selectedClusters;
-    vector<int32_t> oldIndices,             /// Indices for the precious frame
-                    newIndices;             /// Indices for the current frame
+    vector<int32_t> selectedIndices;             /// Indices for the current frame colour model
 
 	/************************************************************************************
      *   PRIVATE FUNCTIONS

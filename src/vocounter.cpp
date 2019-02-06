@@ -355,8 +355,15 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
         {
             if(framedHistory.size() > 0)
             {
-                cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Track Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+                cout << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Track Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
                 trackFrameColourModel(frame, descriptors, keypoints);
+
+                /*cout << "keypoints.size() = " << keypoints.size() << endl;
+                for(uint i = 0; i < colourModel.getSelectedIndices()->size(); i++)
+                {
+                    cout << colourModel.getSelectedIndices()->at(i) << " ";
+                }
+                cout << endl;*/
             }
 
             if(settings.print)
@@ -393,7 +400,7 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
          */
         if(settings.descriptorClustering || settings.colourModelFiltering)
         {
-            cout << "~~~~~~~~~~~~~~~~~~~~~ Original Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~" << endl;
+            cout << "\n~~~~~~~~~~~~~~~~~~~~~ Original Descriptor Space Clustering ~~~~~~~~~~~~~~~~~~~~" << endl;
 
             vector<KeyPoint> _keypoints = keypoints;
             steady_clock::time_point start = chrono::steady_clock::now();
@@ -431,7 +438,7 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
             /****************************************************************************************************/
             if(settings.colourModelClustering || settings.combine)
             {
-                cout << "~~~~~~~~~~~~~~~~~~ Selected Colour Model Descriptor Clustering ~~~~~~~~~~~~~~~~" << endl;
+                cout << "\n~~~~~~~~~~~~~~~~~~ Selected Colour Model Descriptor Clustering ~~~~~~~~~~~~~~~~" << endl;
                 printf("Clustering selected keypoints in descriptor space\n\n");
 
                 steady_clock::time_point start = chrono::steady_clock::now();
@@ -463,7 +470,7 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
             if(settings.combine)
             {
 
-                cout << "~~~~~~~~~~~~~~~ Combine descriptor and colour model locations ~~~~~~~~~~~~~~~~~" << endl;
+                cout << "\n~~~~~~~~~~~~~~~ Combine descriptor and colour model locations ~~~~~~~~~~~~~~~~~" << endl;
                 printf("Combinning detected objects from frame descriptors with objects from colour model\n\n");
                 steady_clock::time_point start = chrono::steady_clock::now();
                 f->combineLocatedObjets(colourModel.getSelectedKeypoints());
@@ -503,11 +510,11 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
             if(settings.colourModelFiltering)
             {
                 cout << "~~~~~~~~~~~~~~~~~~~~ Selected Descriptors in Original Descriptors Clusters ~~~~~~~~~~~~~~~~~~~~~~" << endl;
-                printf("Filtering by detecting clusters in the full descriptor clusters\n\n");
+                printf("Filtering by detecting colour model clusters in the full descriptor clusters\n\n");
 
-                vector<int32_t> *indices = colourModel.getOldIndices();
+                vector<int32_t> *indices = colourModel.getSelectedIndices();
                 steady_clock::time_point start = chrono::steady_clock::now();
-                CountingResults *d_res = f->getColourModelObjects(indices, settings.iterations);
+                CountingResults *d_res = f->getColourModelObjects(indices, settings.minPts, settings.iterations);
                 steady_clock::time_point end = chrono::steady_clock::now();
                 double time = chrono::duration_cast<duration<double>>(end - start).count();
                 d_res->setRunningTime(time);
@@ -562,19 +569,21 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     hdbscan_calculate_stats(distancesMap, &stats);
     int val = hdbscan_analyse_stats(&stats);
 
-
     if(val < 0)
     {
         cout << "Validity is less than 0. Re clustering ..." << endl;
         hdbscan_destroy_distance_map_table(distancesMap);
         hdbscan_destroy_cluster_table(colourModel.getColourModelClusters());
+
         selectedMinPts =2 * colourModel.getMinPts() - 1;
         scanis.reRun(selectedMinPts);
+
         prevNumClusters = colourModel.getNumClusters();
         t_map = hdbscan_create_cluster_table(scanis.clusterLabels + p_size, 0, keypoints.size());
         colourModel.setColourModelClusters(t_map);
         colourModel.setNumClusters(g_hash_table_size(colourModel.getColourModelClusters()));
         distancesMap = hdbscan_get_min_max_distances(&scanis, colourModel.getColourModelClusters());
+
         clustering_stats stats;
         hdbscan_calculate_stats(distancesMap, &stats);
         val = hdbscan_analyse_stats(&stats);
@@ -620,10 +629,11 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     // Need to clear the previous table map
     hdbscan_destroy_cluster_table(prevHashTable);
     hdbscan_destroy_distance_map_table(distancesMap);
+
     colourModel.setSelectedClusters(currSelClusters);
     colourModel.getSelectedKeypoints()->clear();
     colourModel.getRoiFeatures()->clear();
-    colourModel.getOldIndices()->clear();
+    colourModel.getSelectedIndices()->clear();
 
     /****************************************************************************************************/
     /// Image space clustering
@@ -633,13 +643,14 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     /****************************************************************************************************/
 
     Mat selDesc;
+    vector<int32_t> selectedIndices;
     for (set<int32_t>::iterator itt = colourModel.getSelectedClusters()->begin(); itt != colourModel.getSelectedClusters()->end(); ++itt)
     {
-
         int cluster = *itt;
         IntArrayList* list = (IntArrayList*)g_hash_table_lookup(colourModel.getColourModelClusters(), &cluster);
         int32_t* ldata = (int32_t*)list->data;
-        colourModel.getOldIndices()->insert(colourModel.getOldIndices()->end(), ldata, ldata + list->size);
+
+        colourModel.getSelectedIndices()->insert(colourModel.getSelectedIndices()->end(), ldata, ldata + list->size);
         vector<KeyPoint> kk;
         VOCUtils::getListKeypoints(&keypoints, list, &kk);
         colourModel.addToSelectedKeypoints(kk.begin(), kk.end());
@@ -649,7 +660,7 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
 
     steady_clock::time_point end = chrono::steady_clock::now();
     double time = duration_cast<duration<double>>(end - start).count();
-    cout << "Selected " << colourModel.getSelectedKeypoints()->size() << " points in " << time << " seconds" << endl;
+    cout << "Selected " << colourModel.getSelectedKeypoints()->size() << " points in " << time << " seconds."  << endl;
     if(trackingFile.is_open())
     {
         trackingFile << frameCount << "," << keypoints.size() << "," << colourModel.getSelectedKeypoints()->size() << "," << selectedMinPts << "," << colourModel.getNumClusters() << "," << val << "," << time << endl;
@@ -663,7 +674,7 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
  */
 void VOCounter::getLearnedColourModel(int32_t chosen)
 {
-    for(map<int32_t, IntDoubleListMap* >::iterator it = colourModelMaps.begin(); it != colourModelMaps.end(); ++it)
+    for(map<int32_t, IntIntListMap* >::iterator it = colourModelMaps.begin(); it != colourModelMaps.end(); ++it)
     {
         if(it->first == chosen)
         {
@@ -726,6 +737,8 @@ void VOCounter::chooseColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>
 
                     Mat xx;
                     VOCUtils::getSelectedKeypointsDescriptors(descriptors, list, xx);
+                    int32_t* ldata = (int32_t*)list->data;
+                    colourModel.getSelectedIndices()->insert(colourModel.getSelectedIndices()->end(), ldata, ldata + list->size);
 
                     if(selDesc.empty())
                     {
@@ -1077,7 +1090,7 @@ void VOCounter::printResults(Framed* f, CountingResults* res, ResultIndex idx, S
 		if(it != selectedClustersPoints->end())
 		{
             distance_values* dv = (distance_values *)value;
-            minMaxFile << label << it->second.size() << "," << "," << dv->min_cr << "," << dv->max_cr << "," << (dv->min_cr / dv->max_cr) << ",";
+            minMaxFile << label << ","  << it->second.size()<< "," << dv->min_cr << "," << dv->max_cr << "," << (dv->min_cr / dv->max_cr) << ",";
             minMaxFile << dv->min_dr << "," << dv->max_dr << "," << (dv->min_dr / dv->max_dr) << endl;
 		}
 	}
