@@ -505,7 +505,7 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
 
                 vector<int32_t> *indices = colourModel.getSelectedIndices();
                 steady_clock::time_point start = chrono::steady_clock::now();
-                CountingResults *d_res = f->getColourModelObjects(indices, settings.minPts, settings.iterations);
+                CountingResults *d_res = f->getColourModelObjects(indices, settings.minPts, settings.iterations, settings.additions);
                 steady_clock::time_point end = chrono::steady_clock::now();
                 double time = chrono::duration_cast<duration<double>>(end - start).count();
                 d_res->setRunningTime(time);
@@ -515,6 +515,12 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                 {
                     printResults(f, d_res, ResultIndex::DescriptorFilter, settings.filteringDir, filteringEstimatesFile);
                 }
+
+                //vector<KeyPoint> sel;
+                //VOCUtils::getVectorKeypoints(&keypoints, colourModel.getSelectedIndices(), &sel);
+                //Mat mm = frame.clone();
+                //mm = VOCUtils::drawKeyPoints(mm, &sel, Scalar(0, 0, 255), -1);
+                //VOCUtils::display("1 model", mm);
             }
         }
 
@@ -552,7 +558,7 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     /****************************************************************************************************/
     IntIntListMap* prevHashTable = colourModel.getColourModelClusters();
     int32_t prevNumClusters = colourModel.getNumClusters();
-    IntIntListMap* t_map = hdbscan_create_cluster_map(scanis.clusterLabels + p_size, 0, keypoints.size());
+    IntIntListMap* t_map = hdbscan_create_cluster_map(scanis.clusterLabels + p_size, 0, keypoints.size()); // cluster map of the current frame
     colourModel.setColourModelClusters(t_map);
     colourModel.setNumClusters(g_hash_table_size(colourModel.getColourModelClusters()));
     IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scanis, colourModel.getColourModelClusters());
@@ -634,7 +640,6 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     /****************************************************************************************************/
 
     Mat selDesc;
-    vector<int32_t> selectedIndices;
     for (set<int32_t>::iterator itt = colourModel.getSelectedClusters()->begin(); itt != colourModel.getSelectedClusters()->end(); ++itt)
     {
         int cluster = *itt;
@@ -658,6 +663,12 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     }
 
     colourModel.setSelectedDesc(selDesc);
+
+    //vector<KeyPoint> sel;
+    //VOCUtils::getVectorKeypoints(&keypoints, colourModel.getSelectedIndices(), &sel);
+    //Mat mm = frame.clone();
+    //mm = VOCUtils::drawKeyPoints(mm, &sel, colours.red, -1);
+    //VOCUtils::display("model", mm);
 }
 
 /**

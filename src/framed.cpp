@@ -312,7 +312,7 @@ CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, Mat& dataset
 /***
  *
  */
-CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t minPts, int32_t iterations)
+CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t minPts, int32_t iterations, VAdditions additions)
 {
     CountingResults* res = new CountingResults();
     CountingResults *d_res = this->getResults(ResultIndex::Descriptors);
@@ -326,32 +326,26 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
     for(size_t i = 0; i < indices->size(); i++)
     {
         int32_t idx = indices->at(i);
-        labels[i] = d_labels->at(idx);
-        colourModelLabels.insert(d_labels->at(idx));
+        int32_t label = d_labels->at(idx);
+        res->getLabels()->push_back(label);
+
+        if(label > 0)
+        {
+            labels[i] = label;
+            colourModelLabels.insert(label);
+        }
     }
 
     IntIntListMap* c_map = g_hash_table_new(g_int_hash, g_int_equal);
     IntDistancesMap* d_map = g_hash_table_new_full(g_int_hash, g_int_equal, free, free); /// distance map
 
+    c_map = hdbscan_create_cluster_map(labels, 0, indices->size());
+    //d_map = hdbscan_get_min_max_distances(&scan, c_map);
+
+
     /// Create a new cluster and distance maps based on the labels of the colour model in the frame feature clusters
     for(set<int32_t>::iterator it = colourModelLabels.begin(); it != colourModelLabels.end(); ++it)
     {
-
-        /// Cluster map
-        int32_t *lb = (int *)malloc(sizeof(int));
-        *lb = *it;
-
-        IntArrayList* clusterList = (IntArrayList *)g_hash_table_lookup(d_res->getClusterMap(), lb);
-        IntArrayList* c_list = int_array_list_init_size(clusterList->size);
-
-        int32_t* clusterData = (int32_t*)clusterList->data;
-
-        for(int32_t i = 0; i < clusterList->size; i++)
-        {
-            int_array_list_append(c_list, clusterData[i]);
-        }
-        g_hash_table_insert(c_map, lb, c_list);
-
         /// Distance map
         int32_t *d_lb = (int *)malloc(sizeof(int));
         *d_lb = *it;
@@ -379,7 +373,7 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
     res->setClusterMap(c_map);
     res->setDistancesMap(d_map);
     res->setMinPts(d_res->getMinPts());
-    res->getLabels()->insert(res->getLabels()->begin(), d_labels->begin(), d_labels->end());
+    //res->getLabels()->insert(res->getLabels()->begin(), d_labels->begin(), d_labels->end());
 
     // Since we forced over-segmentation of the clusters
     // we must make it up by extending the box structures
@@ -387,11 +381,23 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
     {
         iterations += 1;
     }
-    this->doDetectDescriptorsClusters(res, d_res->getDataset(), d_res->getKeypoints(), d_res->getMinPts(), iterations);
+
+
+    vector<KeyPoint> kps;
+    VOCUtils::getVectorKeypoints(&keypoints, indices, &kps);
+    Mat dset = VOCUtils::getDescriptorDataset(descriptors, &keypoints, additions);
+    this->doDetectDescriptorsClusters(res, dset, &kps, d_res->getMinPts(), iterations);
 
     printf("Detected %lu objects\n\n", res->getProminentLocatedObjects()->size());
     this->results[ResultIndex::DescriptorFilter] = res;
+
     delete [] labels;
+
+    //vector<KeyPoint> sel;
+    //VOCUtils::getVectorKeypoints(d_res->getKeypoints(), indices, &sel);
+    //Mat mm = this->frame.clone();
+    //mm = VOCUtils::drawKeyPoints(mm, &sel, Scalar(0, 0, 255), -1);
+    //VOCUtils::display("model", mm);
 
     return res;
 }
