@@ -6,7 +6,6 @@ namespace vocount
 
 CountingResults::CountingResults()
 {
-    //ctor
     this->clusterMap = NULL;
     this->distancesMap = NULL;
 }
@@ -15,13 +14,13 @@ CountingResults::~CountingResults()
 {
     if(this->clusterMap != NULL)
     {
-        hdbscan_destroy_cluster_table(this->clusterMap);
+        hdbscan_destroy_cluster_map(this->clusterMap);
         this->clusterMap = NULL;
     }
 
     if(this->distancesMap != NULL)
     {
-        hdbscan_destroy_distance_map_table(this->distancesMap);
+        hdbscan_destroy_distance_map(this->distancesMap);
         this->distancesMap = NULL;
     }
 }
@@ -186,12 +185,6 @@ void CountingResults::addToClusterLocatedObjects(Rect2d roi, Mat& frame)
     vector<int32_t> validObjFeatures;
     VOCUtils::findValidROIFeatures(&this->keypoints, roi, &validObjFeatures, &this->labels);
 
-    /// There were no valid ROI features so we have to work with noise cluster
-    // if(validObjFeatures.empty())
-    // {
-    //    VOCUtils::findROIFeatures(&this->keypoints, roi, &validObjFeatures);
-    //}
-
     // sort the valid features by how close to the center they are
     VOCUtils::sortByDistanceFromCenter(roi, &validObjFeatures, &keypoints);
 
@@ -233,8 +226,6 @@ void CountingResults::addToClusterLocatedObjects(Rect2d roi, Mat& frame)
         for(int32_t j = 0; j < l1->size; j++)
         {
             KeyPoint& t_point = keypoints.at(data[j]);
-            //clusterKeypoints.push_back(t_point);
-
             if(mbs.getBox().contains(t_point.pt))  // if the point is inside mbs, add it to mbs' points
             {
                 mbs.getPoints()->insert(data[j]);

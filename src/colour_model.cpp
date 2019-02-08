@@ -17,7 +17,7 @@ ColourModel::~ColourModel()
 {
 	if(colourModelClusters != NULL)
 	{
-		hdbscan_destroy_cluster_table(colourModelClusters);
+		hdbscan_destroy_cluster_map(colourModelClusters);
 	}
 }
 

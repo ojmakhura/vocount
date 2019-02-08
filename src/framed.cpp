@@ -171,7 +171,7 @@ CountingResults* Framed::doCluster(Mat& dataset, int32_t kSize, int32_t step, in
 
         /// Only create the cluster map for the first kSize points which
         /// belong to the current frame
-        c_map = hdbscan_create_cluster_table(scan.clusterLabels, 0, kSize);
+        c_map = hdbscan_create_cluster_map(scan.clusterLabels, 0, kSize);
         d_map = hdbscan_get_min_max_distances(&scan, c_map);
         hdbscan_calculate_stats(d_map, &stats);
         val = hdbscan_analyse_stats(&stats);
@@ -183,13 +183,13 @@ CountingResults* Framed::doCluster(Mat& dataset, int32_t kSize, int32_t step, in
             {
                 if(res->getClusterMap() != NULL)
                 {
-                    hdbscan_destroy_cluster_table(res->getClusterMap());
+                    hdbscan_destroy_cluster_map(res->getClusterMap());
                     res->setClusterMap(NULL);
                 }
 
                 if(res->getDistancesMap() != NULL)
                 {
-                    hdbscan_destroy_distance_map_table(res->getDistancesMap());
+                    hdbscan_destroy_distance_map(res->getDistancesMap());
                     res->setDistancesMap(NULL);
                 }
 
@@ -207,8 +207,8 @@ CountingResults* Framed::doCluster(Mat& dataset, int32_t kSize, int32_t step, in
             }
             else
             {
-                hdbscan_destroy_cluster_table(c_map);
-                hdbscan_destroy_distance_map_table(d_map);
+                hdbscan_destroy_cluster_map(c_map);
+                hdbscan_destroy_distance_map(d_map);
             }
         }
 
@@ -223,13 +223,13 @@ CountingResults* Framed::doCluster(Mat& dataset, int32_t kSize, int32_t step, in
         cout << "Could not detect optimum clusters. Will force over-segmentation of the clusters." << endl;
         if(res->getClusterMap() != NULL)
         {
-            hdbscan_destroy_cluster_table(res->getClusterMap());
+            hdbscan_destroy_cluster_map(res->getClusterMap());
             res->setClusterMap(NULL);
         }
 
         if(res->getDistancesMap() != NULL)
         {
-            hdbscan_destroy_distance_map_table(res->getDistancesMap());
+            hdbscan_destroy_distance_map(res->getDistancesMap());
             res->setDistancesMap(NULL);
         }
 
@@ -240,7 +240,7 @@ CountingResults* Framed::doCluster(Mat& dataset, int32_t kSize, int32_t step, in
 
         m_pts = step * 2;
         scan.reRun(m_pts);
-        c_map = hdbscan_create_cluster_table(scan.clusterLabels, 0, kSize);
+        c_map = hdbscan_create_cluster_map(scan.clusterLabels, 0, kSize);
 
         d_map = hdbscan_get_min_max_distances(&scan, c_map);
         hdbscan_calculate_stats(d_map, &stats);
@@ -318,8 +318,6 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
     CountingResults *d_res = this->getResults(ResultIndex::Descriptors);
     vector<int32_t>* d_labels = d_res->getLabels();
 
-    //CountingResults *f_res = this->getResults(ResultIndex::SelectedKeypoints);
-
     int32_t* labels = new int32_t[indices->size()];
 
     set<int32_t> colourModelLabels;
@@ -332,9 +330,7 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
         colourModelLabels.insert(d_labels->at(idx));
     }
 
-    IntIntListMap* c_map = g_hash_table_new(g_int_hash, g_int_equal); //hdbscan_create_cluster_table(labels, 0, indices->size());
-    //IntIntListMap* dd_map = d_res->getClusterMap(); // Cluster map of the frame features
-
+    IntIntListMap* c_map = g_hash_table_new(g_int_hash, g_int_equal);
     IntDistancesMap* d_map = g_hash_table_new_full(g_int_hash, g_int_equal, free, free); /// distance map
 
     /// Create a new cluster and distance maps based on the labels of the colour model in the frame feature clusters
@@ -375,7 +371,6 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
     }
 
     clustering_stats stats;
-    //hdbscan_print_cluster_table(c_map);
     hdbscan_calculate_stats(d_map, &stats);
     int32_t val = hdbscan_analyse_stats(&stats);
 

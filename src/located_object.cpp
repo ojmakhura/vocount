@@ -213,9 +213,8 @@ int32_t LocatedObject::rectExist(vector<LocatedObject>* locatedObjects, LocatedO
     for(uint i = 0; i < locatedObjects->size(); i++)
     {
         Rect2d intersection = newObject->getBox() & locatedObjects->at(i).getBox();
-        //Rect2d _union = newObject->getBox() | locatedObjects->at(i).getBox();
-
         double sect = ((double)intersection.area() / locatedObjects->at(i).getBox().area());
+
         if(sect > maxIntersect)
         {
             maxIndex = i;
@@ -261,9 +260,6 @@ bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, 
     newObject->setBoxGray(gr);
     newObject->setHistogramCompare(compareHist(existingObject->getHistogram(), newObject->getHistogram(), CV_COMP_CORREL));
     newObject->setMomentsCompare(matchShapes(existingObject->getBoxGray(), newObject->getBoxGray(), CONTOURS_MATCH_I3, 0));
-
-    //cout << "newObject " << newObject->getBox() << " matched to " << existingObject->getBox() << endl;
-    //newObject->setMatchTo(existingObject);
 
     return true;
 }

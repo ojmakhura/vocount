@@ -357,13 +357,6 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
             {
                 cout << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Track Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
                 trackFrameColourModel(frame, descriptors, keypoints);
-
-                /*cout << "keypoints.size() = " << keypoints.size() << endl;
-                for(uint i = 0; i < colourModel.getSelectedIndices()->size(); i++)
-                {
-                    cout << colourModel.getSelectedIndices()->at(i) << " ";
-                }
-                cout << endl;*/
             }
 
             if(settings.print)
@@ -391,8 +384,6 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
             this->maintainHistory(f, descriptors, &keypoints);
             return;
         }
-
-        //VOCUtils::display("template match", f->getTemplateMatch());
 
         /**
          * Clustering in the descriptor space with unfiltered
@@ -561,7 +552,7 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     /****************************************************************************************************/
     IntIntListMap* prevHashTable = colourModel.getColourModelClusters();
     int32_t prevNumClusters = colourModel.getNumClusters();
-    IntIntListMap* t_map = hdbscan_create_cluster_table(scanis.clusterLabels + p_size, 0, keypoints.size());
+    IntIntListMap* t_map = hdbscan_create_cluster_map(scanis.clusterLabels + p_size, 0, keypoints.size());
     colourModel.setColourModelClusters(t_map);
     colourModel.setNumClusters(g_hash_table_size(colourModel.getColourModelClusters()));
     IntDoubleListMap* distancesMap = hdbscan_get_min_max_distances(&scanis, colourModel.getColourModelClusters());
@@ -572,14 +563,14 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     if(val < 0)
     {
         cout << "Validity is less than 0. Re clustering ..." << endl;
-        hdbscan_destroy_distance_map_table(distancesMap);
-        hdbscan_destroy_cluster_table(colourModel.getColourModelClusters());
+        hdbscan_destroy_distance_map(distancesMap);
+        hdbscan_destroy_cluster_map(colourModel.getColourModelClusters());
 
         selectedMinPts =2 * colourModel.getMinPts() - 1;
         scanis.reRun(selectedMinPts);
 
         prevNumClusters = colourModel.getNumClusters();
-        t_map = hdbscan_create_cluster_table(scanis.clusterLabels + p_size, 0, keypoints.size());
+        t_map = hdbscan_create_cluster_map(scanis.clusterLabels + p_size, 0, keypoints.size());
         colourModel.setColourModelClusters(t_map);
         colourModel.setNumClusters(g_hash_table_size(colourModel.getColourModelClusters()));
         distancesMap = hdbscan_get_min_max_distances(&scanis, colourModel.getColourModelClusters());
@@ -627,8 +618,8 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     }
 
     // Need to clear the previous table map
-    hdbscan_destroy_cluster_table(prevHashTable);
-    hdbscan_destroy_distance_map_table(distancesMap);
+    hdbscan_destroy_cluster_map(prevHashTable);
+    hdbscan_destroy_distance_map(distancesMap);
 
     colourModel.setSelectedClusters(currSelClusters);
     colourModel.getSelectedKeypoints()->clear();
@@ -688,7 +679,7 @@ void VOCounter::getLearnedColourModel(int32_t chosen)
         }
         else
         {
-            hdbscan_destroy_cluster_table(it->second);
+            hdbscan_destroy_cluster_map(it->second);
         }
     }
 }
@@ -804,7 +795,7 @@ void VOCounter::trainColourModel(Mat& frame, vector<KeyPoint>& keypoints)
         }
 
         printf("\n\n >>>>>>>>>>>> Clustering for minPts = %d\n", i);
-        IntIntListMap* clusterMap = hdbscan_create_cluster_table(scan.clusterLabels, 0, scan.numPoints);
+        IntIntListMap* clusterMap = hdbscan_create_cluster_map(scan.clusterLabels, 0, scan.numPoints);
         colourModelMaps[i] = clusterMap;
 
         IntDistancesMap* distancesMap = hdbscan_get_min_max_distances(&scan, clusterMap);
@@ -841,7 +832,7 @@ void VOCounter::trainColourModel(Mat& frame, vector<KeyPoint>& keypoints)
         numClusterMap[idx].insert(i);
         validities.push_back(val);
 
-        hdbscan_destroy_distance_map_table(distancesMap);
+        hdbscan_destroy_distance_map(distancesMap);
     }
 
     colourModel.setMinPts(chooseMinPts(numClusterMap, validities));
@@ -881,7 +872,6 @@ int32_t VOCounter::getCurrentFrameGroundTruth(int32_t frameId)
  */
 int VOCounter::chooseMinPts(map<uint, set<int>>& numClusterMap, vector<int>& validities)
 {
-
     uint numClusters = findLargestSet(numClusterMap);
     set<uint> checked;
     pair<set<uint>::iterator, bool> ret = checked.insert(numClusters);
