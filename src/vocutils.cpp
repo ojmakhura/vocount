@@ -102,7 +102,8 @@ int partition (vector<int32_t>* roiFeatures, vector<double>* distances, int low,
 }
 
 /**
- * The main function that implements QuickSort
+ * The main function that implements QuickSort using the distance
+ *
  * @param roiFeatures --> vector to be sorted
  * @param distances --> vector to sort by,
  * @param low  --> Starting index,
@@ -225,10 +226,12 @@ cv::Ptr<cv::Tracker> VOCUtils::createTrackerByName(cv::String name)
 
 
 /**
- * Trim a rectangle
+ * Trim the rectangle if it is within <padding> pixels of the frame edges
  *
- * @param  -
- * @param  -
+ * @param r         - rectangle
+ * @param rows      - frame height
+ * @param cols      - frame width
+ * @param padding   - the number of pixels at which to trim the rectangle
  */
 bool VOCUtils::trimRect(Rect2d& r, int32_t rows, int32_t cols, int32_t padding)
 {
@@ -262,6 +265,10 @@ bool VOCUtils::trimRect(Rect2d& r, int32_t rows, int32_t cols, int32_t padding)
     return trimmed;
 }
 
+/**
+ * Find the proper location of the best match for the rectangle
+ * 
+ */ 
 bool VOCUtils::stabiliseRect(Mat& templateMatch, Rect2d& proposed)
 {
     Rect2d new_r = proposed;

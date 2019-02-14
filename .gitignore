@@ -1,5 +1,3 @@
-thirdparty/lib
-thirdparty/include
-thirdparty/bin
 vui/vui.pro.user*
 build-vui-Desktop-Debug
+.vscode

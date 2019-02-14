@@ -143,7 +143,7 @@ void VOCounter::processSettings()
             settings.descriptorDir = VOPrinter::createDirectory(settings.outputFolder, "descriptors");
             printf("Created descriptors directory at %s.\n", settings.descriptorDir.c_str());
 
-            String name = settings.descriptorDir + "/estimates.csv";
+            String name = settings.descriptorDir + "/descriptors_estimates.csv";
             this->descriptorsEstimatesFile.open(name.c_str());
             this->descriptorsEstimatesFile << estimateFileHeader;
         }
@@ -153,11 +153,11 @@ void VOCounter::processSettings()
             settings.colourModelDir = VOPrinter::createDirectory(settings.outputFolder, "colour_model");
             printf("Created colour_model directory at %s.\n", settings.colourModelDir.c_str());
 
-            String name = settings.colourModelDir + "/training.csv";
+            String name = settings.colourModelDir + "/colour_model_training.csv";
             this->trainingFile.open(name.c_str());
             this->trainingFile << "minPts, Num of Clusters, Cluster 0 Size, Validity" << endl;
 
-            name = settings.colourModelDir + "/tracking.csv";
+            name = settings.colourModelDir + "/colour_model_tracking.csv";
             this->trackingFile.open(name.c_str());
             this->trackingFile << "Frame #, Num of Points, Selected Points, MinPts, Num of Clusters, Validity, Duration(secs)\n";
         }
@@ -167,7 +167,7 @@ void VOCounter::processSettings()
             settings.colourClusteringDir = VOPrinter::createDirectory(settings.colourModelDir, "clusters");
             printf("Created colour_model clustering directory at %s.\n", settings.colourClusteringDir.c_str());
 
-            String name = settings.colourClusteringDir + "/estimates.csv";
+            String name = settings.colourClusteringDir + "/colour_model_estimates.csv";
             this->cModelEstimatesFile.open(name.c_str());
             this->cModelEstimatesFile << estimateFileHeader;
         }
@@ -177,7 +177,7 @@ void VOCounter::processSettings()
             settings.filteringDir = VOPrinter::createDirectory(settings.colourModelDir, "filtering");
             printf("Created colour_model filtering directory at %s.\n", settings.filteringDir.c_str());
 
-            String name = settings.filteringDir + "/estimates.csv";
+            String name = settings.filteringDir + "/filtering_estimates.csv";
             this->filteringEstimatesFile.open(name.c_str());
             this->filteringEstimatesFile << estimateFileHeader;
         }
@@ -187,7 +187,7 @@ void VOCounter::processSettings()
             settings.combinationDir = VOPrinter::createDirectory(settings.outputFolder, "combined");
             printf("Created combined directory at %s.\n", settings.combinationDir.c_str());
 
-            String name = settings.combinationDir + "/estimates.csv";
+            String name = settings.combinationDir + "/combined_estimates.csv";
             this->combinedEstimatesFile.open(name.c_str());
             this->combinedEstimatesFile << "Frame #,Count Estimation,Ground Truth, Accuracy, Duration(secs)\n";
         }
@@ -516,11 +516,6 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                     printResults(f, d_res, ResultIndex::DescriptorFilter, settings.filteringDir, filteringEstimatesFile);
                 }
 
-                //vector<KeyPoint> sel;
-                //VOCUtils::getVectorKeypoints(&keypoints, colourModel.getSelectedIndices(), &sel);
-                //Mat mm = frame.clone();
-                //mm = VOCUtils::drawKeyPoints(mm, &sel, Scalar(0, 0, 255), -1);
-                //VOCUtils::display("1 model", mm);
             }
         }
 
