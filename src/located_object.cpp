@@ -236,8 +236,8 @@ bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, 
 
     VRoi bx(existingObject->getBoundingBox());
     VOCUtils::stabiliseRect(frame, bx.getBox(), n_rect);
-    double angle = first_p.angle - second_p.angle;
-    bx.rotate(angle);
+    //double angle = first_p.angle - second_p.angle;
+    //bx.rotate(angle);
     existingObject->setBoundingBox(bx);
     newObject->setBoundingBox(VRoi(n_rect));
     VOCUtils::trimRect(n_rect, frame.rows, frame.cols, 0);
