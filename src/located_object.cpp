@@ -15,7 +15,7 @@ LocatedObject::~LocatedObject()
 
 LocatedObject::LocatedObject(const LocatedObject& other)
 {
-    this->box = other.box;
+    this->boundingBox = other.boundingBox;
     this->boxImage = other.boxImage.clone();
     histogram = other.histogram.clone();
     points = other.points;
@@ -31,14 +31,14 @@ LocatedObject::LocatedObject(const LocatedObject& other)
 ///
 /// box
 ///
-Rect2d LocatedObject::getBox()
+VRoi LocatedObject::getBoundingBox()
 {
-    return box;
+    return boundingBox;
 }
 
-void LocatedObject::setBox(Rect2d val)
+void LocatedObject::setBoundingBox(VRoi val)
 {
-    box = val;
+    boundingBox = val;
 }
 
 ///
@@ -187,7 +187,7 @@ void LocatedObject::addLocatedObject(vector<LocatedObject>* locatedObjects, Loca
         // by comparing the moments
         if(newObject->getMomentsCompare() < strct.getMomentsCompare())
         {
-            strct.setBox(newObject->getBox());
+            strct.setBoundingBox(newObject->getBoundingBox());
             strct.setMatchPoint(newObject->getMatchPoint());
             strct.setBoxImage(newObject->getBoxImage());
             strct.setBoxGray(newObject->getBoxGray());
@@ -212,8 +212,8 @@ int32_t LocatedObject::rectExist(vector<LocatedObject>* locatedObjects, LocatedO
 
     for(uint i = 0; i < locatedObjects->size(); i++)
     {
-        Rect2d intersection = newObject->getBox() & locatedObjects->at(i).getBox();
-        double sect = ((double)intersection.area() / locatedObjects->at(i).getBox().area());
+        Rect2d intersection = newObject->getBoundingBox().getBox() & locatedObjects->at(i).getBoundingBox().getBox();
+        double sect = ((double)intersection.area() / locatedObjects->at(i).getBoundingBox().getBox().area());
 
         if(sect > maxIntersect)
         {
@@ -232,12 +232,14 @@ int32_t LocatedObject::rectExist(vector<LocatedObject>* locatedObjects, LocatedO
 
 bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* existingObject, LocatedObject* newObject, Mat& frame)
 {
-    Rect2d n_rect = VOCUtils::shiftRect(existingObject->getBox(), first_p.pt, second_p.pt);
+    Rect2d n_rect = VOCUtils::shiftRect(existingObject->getBoundingBox().getBox(), first_p.pt, second_p.pt);
 
-    Rect2d bx = existingObject->getBox();
-    VOCUtils::stabiliseRect(frame, bx, n_rect);
-    existingObject->setBox(bx);
-    newObject->setBox(n_rect);
+    VRoi bx(existingObject->getBoundingBox());
+    VOCUtils::stabiliseRect(frame, bx.getBox(), n_rect);
+    double angle = first_p.angle - second_p.angle;
+    bx.rotate(angle);
+    existingObject->setBoundingBox(bx);
+    newObject->setBoundingBox(VRoi(n_rect));
     VOCUtils::trimRect(n_rect, frame.rows, frame.cols, 0);
 
     if(n_rect.height < 1 || n_rect.width < 1)
@@ -245,7 +247,7 @@ bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, 
         return false;
     }
 
-    double ratio = newObject->getBox().area()/n_rect.area();
+    double ratio = newObject->getBoundingBox().getBox().area()/n_rect.area();
     if(ratio < 0.2)
     {
         return false;

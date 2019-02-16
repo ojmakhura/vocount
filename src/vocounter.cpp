@@ -262,7 +262,7 @@ void VOCounter::trackInitialObject(Mat& frame, Mat& descriptors, vector<KeyPoint
             {
                 roiFeatures.clear();
 
-                Rect2d nRect = bxs->at(in).getBox();
+                Rect2d nRect = bxs->at(in).getBoundingBox().getBox();
                 VOCUtils::trimRect(nRect, frame.rows, frame.cols, 10);
                 in++;
                 cout << nRect << endl;
@@ -287,7 +287,7 @@ void VOCounter::trackInitialObject(Mat& frame, Mat& descriptors, vector<KeyPoint
             /// We could not find a proper replacement so we pick the second object in bxs
             if(d2 < d1 || roiFeatures.empty())
             {
-                Rect2d nRect = bxs->at(1).getBox();
+                Rect2d nRect = bxs->at(1).getBoundingBox().getBox();
                 VOCUtils::trimRect(nRect, frame.rows, frame.cols, 10);
 
                 tracker = VOCUtils::createTrackerByName(settings.trackerAlgorithm);
@@ -478,7 +478,7 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                         value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 
                         LocatedObject& b = f->getCombinedLocatedObjects()->at(i);
-                        rectangle(kimg, b.getBox(), value, 2, 8, 0);
+                        rectangle(kimg, b.getBoundingBox().getBox(), value, 2, 8, 0);
                     }
                     VOPrinter::printImage(settings.combinationDir, f->getFrameId(), "combined", kimg) ;
                     double accuracy = 0;

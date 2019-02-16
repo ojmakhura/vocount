@@ -5,6 +5,8 @@
 #include <map>
 #include <set>
 
+#include "vocount/vroi.hpp"
+
 using namespace cv;
 using namespace std;
 
@@ -25,8 +27,8 @@ public:
 	///
 	/// box
 	///
-    Rect2d getBox();
-    void setBox(Rect2d val);
+    VRoi getBoundingBox();
+    void setBoundingBox(VRoi val);
 
 	///
 	/// boxImage
@@ -106,7 +108,7 @@ public:
      static void addLocatedObject(vector<LocatedObject>* locatedObjects, LocatedObject* newObject);
 
 private:
-    Rect2d box;
+    VRoi boundingBox;
     Mat boxImage;
     Mat boxGray;
     Mat histogram;

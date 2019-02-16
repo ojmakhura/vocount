@@ -22,11 +22,15 @@ using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace vocount;
 
+bool videoMode = true;
+String imagePath;
+
 static void help()
 {
     printf( "This is a programming for estimating the number of objects in the video.\n"
             "Usage: vocount\n"
             "     [-v][-video]=<video>         	   	# Video file to read\n"
+            "     [-image]=<image>           	   	# Image file to read\n"
             "     [-o=<output dir>]     		   	# the directly where to write to frame images\n"
             "     [-n=<sample size>]       			# the number of frames to use for sample size\n"
             "     [-w=<dataset width>]       		# the number of frames to use for dataset size\n"
@@ -42,7 +46,8 @@ static void help()
             "     [-ry]       					    # roi y coordinate\n"
             "     [-rh]       					    # roi height\n"
             "     [-rw]       					    # roi width\n"
-            "     [-r]       					    # rotate the rectangles\n"
+            "     [-r]       					    # add keypoint angles to dataset\n"
+            "     [-R]       					    # rotate the rectangles\n"
             "     [-z]       					    # add sizes to dataset\n"
             "     [-D]       					    # Enable debug messages\n"
             "     [-O]       					    # Enable using minPts = 2 if no valid clustering results are detected\n"
@@ -61,12 +66,18 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
         printf("Will print to %s\n", settings.outputFolder.c_str());
     }
 
-    if (parser.has("v") || parser.has("video"))
+    if (parser.has("v") || parser.has("video") || parser.has("image"))
     {
 
-        settings.inputVideo =
-            parser.has("v") ?
-            parser.get<String>("v") : parser.get<String>("video");
+        if(parser.has("v") || parser.has("video"))
+        {
+            settings.inputFile =
+                parser.has("v") ?
+                parser.get<String>("v") :  parser.get<String>("video");
+        } else {
+            settings.inputFile = parser.get<String>("image");
+            videoMode = false;
+        }
     }
     else
     {
@@ -321,8 +332,8 @@ int main(int argc, char** argv)
     vsettings& settings = vcount.getSettings();
 
     cv::CommandLineParser parser(argc, argv,
-                                 "{help ||}{o||}{n|1|}"
-                                 "{v||}{video||}{w|1|}{s||}"
+                                 "{help ||}{o||}{n|1|}{R||}"
+                                 "{v||}{video||}{image||}{w|1|}{s||}"
                                  "{c||}{t||}{l||}{ta|BOOSTING|}"
                                  "{d||}{f||}{cm||}{I||}{co||}{ct||}"
                                  "{rx||}{ry||}{rw||}{rh||}{z||}"
@@ -334,22 +345,37 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    if(!settings.inputVideo.empty())
+    if(!settings.inputFile.empty() && videoMode)
     {
-        cap.open(settings.inputVideo);
-    }
+        cap.open(settings.inputFile);
 
-    if( !cap.isOpened() )
-    {
-        printf("Could not open stream\n");
-        return -1;
-    }
+        if( !cap.isOpened() )
+        {
+            printf("Could not open stream\n");
+            return -1;
+        }
+    }    
 
     // process the vcount settings to create necessary output folders
     vcount.processSettings();
 
-    while(cap.read(frame))
+    bool tmp = true;
+
+    while(tmp)
     {
+        if(videoMode)
+        {
+            tmp = cap.read(frame);
+        } else {
+            frame = imread(settings.inputFile);
+            tmp = false;
+        }
+
+        if(!tmp && videoMode)
+        {
+            continue;
+        }
+
         vector<KeyPoint> keypoints;
         Mat descriptors;
         detector->detectAndCompute(frame, UMat(), keypoints, descriptors);

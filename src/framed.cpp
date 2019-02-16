@@ -392,13 +392,7 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
     this->results[ResultIndex::DescriptorFilter] = res;
 
     delete [] labels;
-
-    //vector<KeyPoint> sel;
-    //VOCUtils::getVectorKeypoints(d_res->getKeypoints(), indices, &sel);
-    //Mat mm = this->frame.clone();
-    //mm = VOCUtils::drawKeyPoints(mm, &sel, Scalar(0, 0, 255), -1);
-    //VOCUtils::display("model", mm);
-
+    
     return res;
 }
 
@@ -454,7 +448,7 @@ void Framed::combineLocatedObjets(vector<KeyPoint>* selectedKeypoints)
         {
             LocatedObject& bx = combinedObjects.at(j);
 
-            if(bx.getBox().contains(kp.pt))
+            if(bx.getBoundingBox().getBox().contains(kp.pt))
             {
                 #pragma omp critical
                 structures.push_back(j);

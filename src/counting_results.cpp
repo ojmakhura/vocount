@@ -189,9 +189,9 @@ void CountingResults::addToClusterLocatedObjects(Rect2d roi, Mat& frame)
     VOCUtils::sortByDistanceFromCenter(roi, &validObjFeatures, &keypoints);
 
     LocatedObject mbs; /// Create a box structure based on roi
-    mbs.setBox(roi);
+    mbs.setBoundingBox(VRoi(roi));
     mbs.setMatchTo(roi);
-    Mat f_image = frame(mbs.getBox());
+    Mat f_image = frame(mbs.getBoundingBox().getBox());
     mbs.setBoxImage(f_image);
     Mat h = VOCUtils::calculateHistogram(mbs.getBoxImage());
     mbs.setHistogram(h);
@@ -226,7 +226,7 @@ void CountingResults::addToClusterLocatedObjects(Rect2d roi, Mat& frame)
         for(int32_t j = 0; j < l1->size; j++)
         {
             KeyPoint& t_point = keypoints.at(data[j]);
-            if(mbs.getBox().contains(t_point.pt))  // if the point is inside mbs, add it to mbs' points
+            if(mbs.getBoundingBox().getBox().contains(t_point.pt))  // if the point is inside mbs, add it to mbs' points
             {
                 mbs.getPoints()->insert(data[j]);
             }
@@ -237,7 +237,7 @@ void CountingResults::addToClusterLocatedObjects(Rect2d roi, Mat& frame)
                 if(LocatedObject::createNewLocatedObject(f_point, t_point, &mbs, &newObject, frame))
                 {
                     newObject.getPoints()->insert(data[j]);
-                    newObject.setMatchTo(mbs.getBox());
+                    newObject.setMatchTo(mbs.getBoundingBox().getBox());
                     LocatedObject::addLocatedObject(&availableOjects, &newObject);
                 }
             }
@@ -306,17 +306,30 @@ void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>
         this->selectedFeatures += kps.size();
         Mat kimg = VOCUtils::drawKeyPoints(frame, &kps, colours.red, -1);
         vector<LocatedObject>& rects = it->second;
-
+        VRoi tmp;
         for(uint i = 0; i < rects.size() - 1; i++)
         {
             RNG rng(12345);
             Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
                                   rng.uniform(0, 255));
-            rectangle(kimg, rects.at(i).getBox(), value, 2, 8, 0);
+
+            tmp = rects.at(i).getBoundingBox();
+            rectangle(kimg, tmp.getBox(), value, 2, 8, 0);
+
+            /*line(kimg, tmp.getP1(), tmp.getP2(), value, 2);
+            line(kimg, tmp.getP2(), tmp.getP3(), value, 2);
+            line(kimg, tmp.getP3(), tmp.getP4(), value, 2);
+            line(kimg, tmp.getP4(), tmp.getP1(), value, 2);
+            */
         }
 
-        rectangle(kimg, rects.at(rects.size() - 1).getBox(), colours.red, 2, 8, 0);
-
+        tmp = rects.at(rects.size() - 1).getBoundingBox();
+        rectangle(kimg, tmp.getBox(), colours.red, 2, 8, 0);
+        /*line(kimg, tmp.getP1(), tmp.getP2(), colours.red, 2);
+        line(kimg, tmp.getP2(), tmp.getP3(), colours.red, 2);
+        line(kimg, tmp.getP3(), tmp.getP4(), colours.red, 2);
+        line(kimg, tmp.getP4(), tmp.getP1(), colours.red, 2);
+        */
         String ss = "img_keypoints-";
         string s = to_string(key);
         ss += s.c_str();
@@ -352,7 +365,12 @@ void CountingResults::createLocatedObjectsImages(map<String, Mat>& selectedClust
         RNG rng(12345);
         Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
                               rng.uniform(0, 255));
-        rectangle(img_bounds, b.getBox(), value, 2, 8, 0);
+        rectangle(img_bounds, b.getBoundingBox().getBox(), value, 2, 8, 0);
+
+        //line(img_bounds, b.getBoundingBox().getP1(), b.getBoundingBox().getP2(), value, 2);
+        //line(img_bounds, b.getBoundingBox().getP2(), b.getBoundingBox().getP3(), value, 2);
+        //line(img_bounds, b.getBoundingBox().getP3(), b.getBoundingBox().getP4(), value, 2);
+        //line(img_bounds, b.getBoundingBox().getP4(), b.getBoundingBox().getP1(), value, 2);
     }
     selectedClustersImages[ss] = img_bounds;
     this->selectedNumClusters += 1;
@@ -391,15 +409,15 @@ void CountingResults::extendLocatedObjects(Mat& frame)
     for(size_t i = 1; i < this->prominentLocatedObjects.size(); i++)
     {
         LocatedObject& bxs = this->prominentLocatedObjects.at(i);
-
+        Rect2d rec = bxs.getBoundingBox().getBox();
         // Only focus on the ROIs that do not violate the boundaries
         // of the frame
-        if(bxs.getBox().x < 0 || bxs.getBox().y < 0 || bxs.getBox().x + bxs.getBox().width > frame.cols|| bxs.getBox().y + bxs.getBox().height > frame.rows)
+        if(rec.x < 0 || rec.y < 0 || rec.x + rec.width > frame.cols|| rec.y + rec.height > frame.rows)
         {
             continue;
         }
 
-        this->addToClusterLocatedObjects(bxs.getBox(), frame);
+        this->addToClusterLocatedObjects(rec, frame);
     }
 }
 
@@ -437,7 +455,7 @@ void CountingResults::extractProminentLocatedObjects()
             for(size_t l = 0; l < tmp.size(); l++)
             {
                 LocatedObject& tmp_o = tmp[l];
-                if(tmp_o.getBox().contains(kp.pt))
+                if(tmp_o.getBoundingBox().getBox().contains(kp.pt))
                 {
                     if(t[j] == -1)
                     {
@@ -473,7 +491,7 @@ void CountingResults::extractProminentLocatedObjects()
                 // by comparing the histograms
                 if(tmp_o.getHistogramCompare() > strct.getHistogramCompare())
                 {
-                    strct.setBox(tmp_o.getBox());
+                    strct.setBoundingBox(tmp_o.getBoundingBox());
                     strct.setMatchPoint(tmp_o.getMatchPoint());
                     strct.setBoxImage(tmp_o.getBoxImage());
                     strct.setBoxGray(tmp_o.getBoxGray());

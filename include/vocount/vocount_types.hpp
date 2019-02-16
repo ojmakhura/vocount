@@ -64,7 +64,7 @@ enum class ResultIndex
 
 typedef struct VSETTINGS
 {
-	String outputFolder, inputVideo, truthFolder;
+	String outputFolder, inputFile, truthFolder;
 	String trackerAlgorithm;
 	String colourClusteringDir, filteringDir, descriptorDir, colourModelDir,
 	       combinationDir;
@@ -86,7 +86,8 @@ typedef struct VSETTINGS
 	     colourModelFiltering = false,                                  /// Filter the descriptor clusters using the colour model
 	     clustersOnly = false,                                          /// Create the images that show clusters
 	     daisyChain = false,
-	     overSegment = false;
+	     overSegment = false,											/// Use minPts = 2 if val < 4
+		 rotate = false;												/// rotate rectangle
     VAdditions additions = VAdditions::NONE;
 } vsettings;
 
