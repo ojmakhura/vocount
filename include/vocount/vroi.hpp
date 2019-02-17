@@ -33,7 +33,7 @@ public:
     /**
      * box
      */ 
-    Rect2d getBox();
+    Rect2d& getBox();
     void setBox(const Rect2d& box);
 
     /**

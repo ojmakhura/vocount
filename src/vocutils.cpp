@@ -163,7 +163,6 @@ void VOCUtils::sortByDistanceFromCenter(Rect2d& roi, vector<int32_t>* roiFeature
     quickSortByDistance(roiFeatures, &distances, 0, roiFeatures->size()-1);
 }
 
-
 /**
  *
  *
@@ -307,11 +306,11 @@ bool VOCUtils::stabiliseRect(Mat& templateMatch, Rect2d& proposed)
  * @param  -
  * @param  -
  */
-bool VOCUtils::stabiliseRect(Mat& frame, Rect2d templ_r, Rect2d& proposed)
+bool VOCUtils::stabiliseRect(Mat& frame, VRoi& templ_r, VRoi& proposed)
 {
     Mat result;
 
-    Rect2d new_r = proposed;
+    Rect2d new_r = proposed.getBox();
     int half_h = new_r.height/2;
     int half_w = new_r.width/2;
     new_r.x -= half_w/2;
@@ -326,9 +325,17 @@ bool VOCUtils::stabiliseRect(Mat& frame, Rect2d templ_r, Rect2d& proposed)
     }
 
     Mat img = frame(new_r);
-    trimRect(templ_r, frame.rows, frame.cols, 0);
+    Rect2d r_tmp = templ_r.getBox();
+    //cout << "Before trimming " << r_tmp << endl;
+    trimRect(r_tmp, frame.rows, frame.cols, 0);
+    //cout << "After trimming " << r_tmp << endl;
 
-    Mat templ = frame(templ_r);
+    //if(r_tmp.height < 1 || r_tmp.width < 1)
+    //{
+        //return false;
+    //}
+
+    Mat templ = frame(r_tmp);
 
     if(img.rows < templ.rows && img.cols < templ.cols)
     {
@@ -354,8 +361,8 @@ bool VOCUtils::stabiliseRect(Mat& frame, Rect2d templ_r, Rect2d& proposed)
     minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
     matchLoc = minLoc;
 
-    proposed.x = matchLoc.x + new_r.x;
-    proposed.y = matchLoc.y + new_r.y;
+    proposed.getBox().x = matchLoc.x + new_r.x;
+    proposed.getBox().y = matchLoc.y + new_r.y;
 
     return true;
 }
@@ -368,16 +375,17 @@ bool VOCUtils::stabiliseRect(Mat& frame, Rect2d templ_r, Rect2d& proposed)
  * @param  -
  * @param  -
  */
-bool VOCUtils::_stabiliseRect(Mat& frame, Rect2d templ_r, Rect2d& proposed)
+bool VOCUtils::_stabiliseRect(Mat& frame, VRoi& templ_r, VRoi& proposed)
 {
     Mat result;
-    trimRect(templ_r, frame.rows, frame.cols, 0);
-    if(templ_r.height < 1 || templ_r.width < 1)
+    Rect2d r_tmp = templ_r.getBox();
+    trimRect(r_tmp, frame.rows, frame.cols, 0);
+    if(r_tmp.height < 1 || r_tmp.width < 1)
     {
         return false;
     }
 
-    Mat templ = frame(templ_r);
+    Mat templ = frame(r_tmp);
     int result_cols =  frame.cols - templ.cols + 1;
     int result_rows = frame.rows - templ.rows + 1;
 
@@ -387,10 +395,9 @@ bool VOCUtils::_stabiliseRect(Mat& frame, Rect2d templ_r, Rect2d& proposed)
         return false;
     }
 
-    Rect2d rec = proposed;
+    Rect2d& rec = proposed.getBox();
     result.create( result_rows, result_cols, CV_32FC1 );
     matchTemplate( frame, templ, result, TM_SQDIFF);
-
     trimRect(rec, result.rows, result.cols, 0);
 
     if(rec.height < 1 || rec.width < 1)
@@ -410,11 +417,11 @@ bool VOCUtils::_stabiliseRect(Mat& frame, Rect2d templ_r, Rect2d& proposed)
     int half_w = p_img.cols/2;
     Point half_p(half_w, half_h);
     Point diff_p = minLoc - half_p;
-    cout << proposed << " : " << minLoc << " - " << half_p  << " = " << diff_p << endl;
+    //cout << proposed.getBox() << " : " << minLoc << " - " << half_p  << " = " << diff_p << endl;
 
-    proposed.x = proposed.x + diff_p.x;
-    proposed.y = proposed.y + diff_p.y;
-    cout << proposed << endl;
+    proposed.getBox().x = proposed.getBox().x + diff_p.x;
+    proposed.getBox().y = proposed.getBox().y + diff_p.y;
+    //cout << proposed.getBox() << endl;
 
     return true;
 }
@@ -426,15 +433,37 @@ bool VOCUtils::_stabiliseRect(Mat& frame, Rect2d templ_r, Rect2d& proposed)
  * @param  -
  * @param  -
  */
-Rect2d VOCUtils::shiftRect(Rect2d box, Point2f first, Point2f second)
+VRoi VOCUtils::shiftRect(VRoi& vroi, Point2f first, Point2f second)
 {
-    Rect2d n_rect = box;;
+    Rect2d n_rect = vroi.getBox();
     Point2d pshift;
     pshift.x = second.x - first.x;
     pshift.y = second.y - first.y;
     n_rect = n_rect + pshift;
 
-    return n_rect;
+    /// Update the points
+    VRoi n_roi(n_rect);
+    Point2f p_tmp = vroi.getP1();
+    p_tmp.x = p_tmp.x +  pshift.x;
+    p_tmp.y = p_tmp.y +  pshift.y;
+    n_roi.setP1(p_tmp);
+
+    p_tmp = vroi.getP2();
+    p_tmp.x = p_tmp.x +  pshift.x;
+    p_tmp.y = p_tmp.y +  pshift.y;
+    n_roi.setP2(p_tmp);
+
+    p_tmp = vroi.getP3();
+    p_tmp.x = p_tmp.x +  pshift.x;
+    p_tmp.y = p_tmp.y +  pshift.y;
+    n_roi.setP3(p_tmp);
+
+    p_tmp = vroi.getP4();
+    p_tmp.x = p_tmp.x +  pshift.x;
+    p_tmp.y = p_tmp.y +  pshift.y;
+    n_roi.setP4(p_tmp);
+
+    return n_roi;
 }
 
 
@@ -515,10 +544,12 @@ void VOCUtils::getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices,
 }
 
 /**
+ * Compose the descriptor dataset. The dataset may be augmented depending on
+ * the additions provided.
  *
- *
- * @param includeAngle -
- * @param includeOctave -
+ * @param descriptors   -
+ * @param keypoints     -
+ * @param additions     - 
  */
 Mat VOCUtils::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>* keypoints, VAdditions additions)
 {

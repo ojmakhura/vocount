@@ -1,6 +1,7 @@
 #ifndef VOCUTILS_H
 #define VOCUTILS_H
 
+#include "vocount/vroi.hpp"
 #include "vocount_types.hpp"
 #include <listlib/intlist.h>
 
@@ -72,17 +73,17 @@ public:
 	/**
 	 * Use localised template matching to stabilise the detection.
 	 */
-    static bool stabiliseRect(Mat& frame, Rect2d templ_r, Rect2d& proposed);
+    static bool stabiliseRect(Mat& frame, VRoi& templ_r, VRoi& proposed);
 
 	/**
 	 *
 	 */
-    static bool _stabiliseRect(Mat& frame, Rect2d templ_r, Rect2d& proposed);
+    static bool _stabiliseRect(Mat& frame, VRoi& templ_r, VRoi& proposed);
 
 	/**
 	 *
 	 */
-	static Rect2d shiftRect(Rect2d box, Point2f first, Point2f second);
+	static VRoi shiftRect(VRoi& vroi, Point2f first, Point2f second);
 
 	/**
 	 *

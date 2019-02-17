@@ -43,7 +43,7 @@ namespace vocount
     /**
      * box
      */ 
-    Rect2d VRoi::getBox()
+    Rect2d& VRoi::getBox()
     {
         return this->box;
     }
@@ -51,7 +51,7 @@ namespace vocount
     void VRoi::setBox(const Rect2d& box)
     {
         this->box = box;
-        getPointsFromRect(this->box);
+        //getPointsFromRect(this->box);
     }
 
     /**

@@ -263,7 +263,7 @@ void Framed::doDetectDescriptorsClusters(CountingResults* res, Mat& dataset, vec
 {
     res->setDataset(dataset);
     res->setKeypoints(*keypoints);
-    res->addToClusterLocatedObjects(this->roi, this->frame);
+    res->addToClusterLocatedObjects(VRoi(this->roi), this->frame);
 
     /**
      * Organise points into the best possible structure. This requires
@@ -271,7 +271,6 @@ void Framed::doDetectDescriptorsClusters(CountingResults* res, Mat& dataset, vec
      * the original. We use histograms to match.
      */
     res->extractProminentLocatedObjects();
-
 
     for(int32_t i = 0; i < iterations; i++)
     {
@@ -340,7 +339,6 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
     IntDistancesMap* d_map = g_hash_table_new_full(g_int_hash, g_int_equal, free, free); /// distance map
 
     c_map = hdbscan_create_cluster_map(labels, 0, indices->size());
-    //d_map = hdbscan_get_min_max_distances(&scan, c_map);
 
 
     /// Create a new cluster and distance maps based on the labels of the colour model in the frame feature clusters
@@ -373,7 +371,6 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
     res->setClusterMap(c_map);
     res->setDistancesMap(d_map);
     res->setMinPts(d_res->getMinPts());
-    //res->getLabels()->insert(res->getLabels()->begin(), d_labels->begin(), d_labels->end());
 
     // Since we forced over-segmentation of the clusters
     // we must make it up by extending the box structures
@@ -392,7 +389,7 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
     this->results[ResultIndex::DescriptorFilter] = res;
 
     delete [] labels;
-    
+
     return res;
 }
 

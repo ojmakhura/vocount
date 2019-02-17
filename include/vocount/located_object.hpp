@@ -27,8 +27,8 @@ public:
 	///
 	/// box
 	///
-    VRoi getBoundingBox();
-    void setBoundingBox(VRoi val);
+    VRoi& getBoundingBox();
+    void setBoundingBox(VRoi& val);
 
 	///
 	/// boxImage
@@ -75,8 +75,8 @@ public:
 	///
 	/// matchTo
 	///
-    Rect2d getMatchTo();
-    void setMatchTo(Rect2d matchTo);
+    VRoi& getMatchTo();
+    void setMatchTo(VRoi& matchTo);
 
     /************************************************************************************
      *   PUBLIC FUNCTIONS
@@ -108,7 +108,7 @@ public:
      static void addLocatedObject(vector<LocatedObject>* locatedObjects, LocatedObject* newObject);
 
 private:
-    VRoi boundingBox;
+    VRoi boundingBox, matchTo;
     Mat boxImage;
     Mat boxGray;
     Mat histogram;
@@ -116,7 +116,6 @@ private:
     double histogramCompare;
     double momentsCompare;
     Point matchPoint;
-    Rect2d matchTo;
 
     /************************************************************************************
      *   PRIVATE FUNCTIONS

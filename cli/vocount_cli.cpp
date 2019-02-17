@@ -155,12 +155,12 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
 
     if(parser.has("r") && parser.has("z"))
     {
-        printf("*** Will rotate the rectangles and include sizes\n");
+        printf("*** Will add angles and sizes to descriptors.\n");
         settings.additions = VAdditions::BOTH;
 
     } else if(parser.has("r"))
     {
-        printf("*** Will rotate the rectangles for rotational invariance\n");
+        printf("*** Will add angles to descriptors for rotational invariance\n");
         settings.additions = VAdditions::ANGLE;
 
     } else if(parser.has("z"))

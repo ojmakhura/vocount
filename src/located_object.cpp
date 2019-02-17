@@ -31,14 +31,14 @@ LocatedObject::LocatedObject(const LocatedObject& other)
 ///
 /// box
 ///
-VRoi LocatedObject::getBoundingBox()
+VRoi& LocatedObject::getBoundingBox()
 {
     return boundingBox;
 }
 
-void LocatedObject::setBoundingBox(VRoi val)
+void LocatedObject::setBoundingBox(VRoi& val)
 {
-    boundingBox = val;
+    boundingBox = VRoi(val);
 }
 
 ///
@@ -136,14 +136,14 @@ void LocatedObject::setMatchPoint(Point matchPoint)
 ///
 /// matchTo
 ///
-Rect2d LocatedObject::getMatchTo()
+VRoi& LocatedObject::getMatchTo()
 {
     return this->matchTo;
 }
 
-void LocatedObject::setMatchTo(Rect2d matchTo)
+void LocatedObject::setMatchTo(VRoi& matchTo)
 {
-    this->matchTo = matchTo;
+    this->matchTo = VRoi(matchTo);
 }
 
 /************************************************************************************
@@ -232,28 +232,30 @@ int32_t LocatedObject::rectExist(vector<LocatedObject>* locatedObjects, LocatedO
 
 bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* existingObject, LocatedObject* newObject, Mat& frame)
 {
-    Rect2d n_rect = VOCUtils::shiftRect(existingObject->getBoundingBox().getBox(), first_p.pt, second_p.pt);
+    VRoi n_rect = VOCUtils::shiftRect(existingObject->getBoundingBox(), first_p.pt, second_p.pt);
 
-    VRoi bx(existingObject->getBoundingBox());
-    VOCUtils::stabiliseRect(frame, bx.getBox(), n_rect);
-    //double angle = first_p.angle - second_p.angle;
+    VRoi bx = existingObject->getBoundingBox();
+    //double angle = second_p.angle - first_p.angle;
+    //angle = (M_PI / 180) * angle;
     //bx.rotate(angle);
+    VOCUtils::stabiliseRect(frame, bx, n_rect);
     existingObject->setBoundingBox(bx);
-    newObject->setBoundingBox(VRoi(n_rect));
-    VOCUtils::trimRect(n_rect, frame.rows, frame.cols, 0);
+    Rect2d r_tmp = n_rect.getBox();
+    newObject->setBoundingBox(n_rect);
+    VOCUtils::trimRect(r_tmp, frame.rows, frame.cols, 0);
 
-    if(n_rect.height < 1 || n_rect.width < 1)
+    if(r_tmp.height < 1 || r_tmp.width < 1)
     {
         return false;
     }
 
-    double ratio = newObject->getBoundingBox().getBox().area()/n_rect.area();
+    double ratio = newObject->getBoundingBox().getBox().area()/r_tmp.area();
     if(ratio < 0.2)
     {
         return false;
     }
 
-    Mat t_frame = frame(n_rect);
+    Mat t_frame = frame(r_tmp);
     newObject->setBoxImage(t_frame);
     Mat h = VOCUtils::calculateHistogram(newObject->getBoxImage());
     newObject->setHistogram(h);

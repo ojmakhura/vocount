@@ -131,7 +131,7 @@ public:
 	 /**
 	  *
 	  */
-	 void addToClusterLocatedObjects(Rect2d roi, Mat& frame);
+	 void addToClusterLocatedObjects(VRoi roi, Mat& frame);
 
 private:
 	vector<KeyPoint> keypoints;

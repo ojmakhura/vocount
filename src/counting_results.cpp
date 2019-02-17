@@ -180,18 +180,18 @@ map_st* CountingResults::getClusterLocatedObjects()
     return &this->clusterLocatedObjects;
 }
 
-void CountingResults::addToClusterLocatedObjects(Rect2d roi, Mat& frame)
+void CountingResults::addToClusterLocatedObjects(VRoi roi, Mat& frame)
 {
     vector<int32_t> validObjFeatures;
-    VOCUtils::findValidROIFeatures(&this->keypoints, roi, &validObjFeatures, &this->labels);
+    VOCUtils::findValidROIFeatures(&this->keypoints, roi.getBox(), &validObjFeatures, &this->labels);
 
     // sort the valid features by how close to the center they are
-    VOCUtils::sortByDistanceFromCenter(roi, &validObjFeatures, &keypoints);
+    VOCUtils::sortByDistanceFromCenter(roi.getBox(), &validObjFeatures, &keypoints);
 
     LocatedObject mbs; /// Create a box structure based on roi
-    mbs.setBoundingBox(VRoi(roi));
+    mbs.setBoundingBox(roi);
     mbs.setMatchTo(roi);
-    Mat f_image = frame(mbs.getBoundingBox().getBox());
+    Mat f_image = frame(roi.getBox());
     mbs.setBoxImage(f_image);
     Mat h = VOCUtils::calculateHistogram(mbs.getBoxImage());
     mbs.setHistogram(h);
@@ -237,7 +237,7 @@ void CountingResults::addToClusterLocatedObjects(Rect2d roi, Mat& frame)
                 if(LocatedObject::createNewLocatedObject(f_point, t_point, &mbs, &newObject, frame))
                 {
                     newObject.getPoints()->insert(data[j]);
-                    newObject.setMatchTo(mbs.getBoundingBox().getBox());
+                    newObject.setMatchTo(mbs.getBoundingBox());
                     LocatedObject::addLocatedObject(&availableOjects, &newObject);
                 }
             }
@@ -304,7 +304,7 @@ void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>
         VOCUtils::getListKeypoints(&this->keypoints, l1, &kps);
 
         this->selectedFeatures += kps.size();
-        Mat kimg = VOCUtils::drawKeyPoints(frame, &kps, colours.red, -1);
+        Mat kimg = VOCUtils::drawKeyPoints(frame, &kps, colours.red, 3);
         vector<LocatedObject>& rects = it->second;
         VRoi tmp;
         for(uint i = 0; i < rects.size() - 1; i++)
@@ -314,22 +314,22 @@ void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>
                                   rng.uniform(0, 255));
 
             tmp = rects.at(i).getBoundingBox();
-            rectangle(kimg, tmp.getBox(), value, 2, 8, 0);
+            //rectangle(kimg, tmp.getBox(), value, 2, 8, 0);
 
-            /*line(kimg, tmp.getP1(), tmp.getP2(), value, 2);
+            line(kimg, tmp.getP1(), tmp.getP2(), value, 2);
             line(kimg, tmp.getP2(), tmp.getP3(), value, 2);
             line(kimg, tmp.getP3(), tmp.getP4(), value, 2);
             line(kimg, tmp.getP4(), tmp.getP1(), value, 2);
-            */
+            
         }
 
         tmp = rects.at(rects.size() - 1).getBoundingBox();
-        rectangle(kimg, tmp.getBox(), colours.red, 2, 8, 0);
-        /*line(kimg, tmp.getP1(), tmp.getP2(), colours.red, 2);
+        //rectangle(kimg, tmp.getBox(), colours.red, 2, 8, 0);
+        line(kimg, tmp.getP1(), tmp.getP2(), colours.red, 2);
         line(kimg, tmp.getP2(), tmp.getP3(), colours.red, 2);
         line(kimg, tmp.getP3(), tmp.getP4(), colours.red, 2);
         line(kimg, tmp.getP4(), tmp.getP1(), colours.red, 2);
-        */
+        
         String ss = "img_keypoints-";
         string s = to_string(key);
         ss += s.c_str();
@@ -365,12 +365,12 @@ void CountingResults::createLocatedObjectsImages(map<String, Mat>& selectedClust
         RNG rng(12345);
         Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
                               rng.uniform(0, 255));
-        rectangle(img_bounds, b.getBoundingBox().getBox(), value, 2, 8, 0);
+        //rectangle(img_bounds, b.getBoundingBox().getBox(), value, 2, 8, 0);
 
-        //line(img_bounds, b.getBoundingBox().getP1(), b.getBoundingBox().getP2(), value, 2);
-        //line(img_bounds, b.getBoundingBox().getP2(), b.getBoundingBox().getP3(), value, 2);
-        //line(img_bounds, b.getBoundingBox().getP3(), b.getBoundingBox().getP4(), value, 2);
-        //line(img_bounds, b.getBoundingBox().getP4(), b.getBoundingBox().getP1(), value, 2);
+        line(img_bounds, b.getBoundingBox().getP1(), b.getBoundingBox().getP2(), value, 2);
+        line(img_bounds, b.getBoundingBox().getP2(), b.getBoundingBox().getP3(), value, 2);
+        line(img_bounds, b.getBoundingBox().getP3(), b.getBoundingBox().getP4(), value, 2);
+        line(img_bounds, b.getBoundingBox().getP4(), b.getBoundingBox().getP1(), value, 2);
     }
     selectedClustersImages[ss] = img_bounds;
     this->selectedNumClusters += 1;
@@ -417,7 +417,7 @@ void CountingResults::extendLocatedObjects(Mat& frame)
             continue;
         }
 
-        this->addToClusterLocatedObjects(rec, frame);
+        this->addToClusterLocatedObjects(bxs.getBoundingBox(), frame);
     }
 }
 

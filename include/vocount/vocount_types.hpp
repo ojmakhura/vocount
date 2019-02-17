@@ -61,7 +61,6 @@ enum class ResultIndex
 	DescriptorFilter
 };
 
-
 typedef struct VSETTINGS
 {
 	String outputFolder, inputFile, truthFolder;
