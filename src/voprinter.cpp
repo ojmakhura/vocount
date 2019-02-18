@@ -7,17 +7,17 @@ namespace vocount
 /**
  *
  */
-void VOPrinter::printEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* estimates, double duration)
+void VOPrinter::printEstimates(ofstream& myfile, map<OutDataIndex, int32_t>& estimates, double duration)
 {
-	myfile << estimates->at(OutDataIndex::FrameNum) << ",";
-	myfile << estimates->at(OutDataIndex::FeatureSize) << ",";
-	myfile << estimates->at(OutDataIndex::SelectedFeatureSize) << ",";
-	myfile << estimates->at(OutDataIndex::NumClusters) << ",";
-	myfile << estimates->at(OutDataIndex::BoxEst) << ",";
-	myfile << estimates->at(OutDataIndex::TruthCount) << ",";
-	myfile << estimates->at(OutDataIndex::MinPts) << ",";
-	myfile << estimates->at(OutDataIndex::Validity) << ",";
-	double accuracy = (estimates->at(OutDataIndex::TruthCount) != 0) ? ((double) estimates->at(OutDataIndex::BoxEst) / estimates->at(OutDataIndex::TruthCount)) * 100 : 0;
+	myfile << estimates.at(OutDataIndex::FrameNum) << ",";
+	myfile << estimates.at(OutDataIndex::FeatureSize) << ",";
+	myfile << estimates.at(OutDataIndex::SelectedFeatureSize) << ",";
+	myfile << estimates.at(OutDataIndex::NumClusters) << ",";
+	myfile << estimates.at(OutDataIndex::BoxEst) << ",";
+	myfile << estimates.at(OutDataIndex::TruthCount) << ",";
+	myfile << estimates.at(OutDataIndex::MinPts) << ",";
+	myfile << estimates.at(OutDataIndex::Validity) << ",";
+	double accuracy = (estimates.at(OutDataIndex::TruthCount) != 0) ? ((double) estimates.at(OutDataIndex::BoxEst) / estimates.at(OutDataIndex::TruthCount)) * 100 : 0;
 	myfile << accuracy << ",";
 	myfile << duration << "\n";
 
@@ -28,14 +28,14 @@ void VOPrinter::printEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* est
 /**
  *
  */
-void VOPrinter::printClusterEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* estimates, vector<int32_t>* cest)
+void VOPrinter::printClusterEstimates(ofstream& myfile, map<OutDataIndex, int32_t>& estimates, vector<int32_t>& cest)
 {
-	myfile << estimates->at(OutDataIndex::FrameNum) << ",";
-	myfile << estimates->at(OutDataIndex::ClusterSum) << ",";
-	myfile << estimates->at(OutDataIndex::ClusterAverage) << ",";
-	myfile << estimates->at(OutDataIndex::BoxEst) << ",";
+	myfile << estimates.at(OutDataIndex::FrameNum) << ",";
+	myfile << estimates.at(OutDataIndex::ClusterSum) << ",";
+	myfile << estimates.at(OutDataIndex::ClusterAverage) << ",";
+	myfile << estimates.at(OutDataIndex::BoxEst) << ",";
 
-	for(vector<int32_t>::iterator it = cest->begin(); it != cest->end(); ++it){
+	for(vector<int32_t>::iterator it = cest.begin(); it != cest.end(); ++it){
 
 		myfile << *it << ",";
 	}
@@ -150,9 +150,9 @@ String dest = mainFolder;
 /**
  *
  */
-void VOPrinter::printImages(String& folder, map<String, Mat>* images, int count)
+void VOPrinter::printImages(String& folder, map<String, Mat>& images, int count)
 {
-	for(map<String, Mat>::iterator it = images->begin(); it != images->end(); ++it){
+	for(map<String, Mat>::iterator it = images.begin(); it != images.end(); ++it){
 		printImage(folder, count, it->first, it->second);
 	}
 }

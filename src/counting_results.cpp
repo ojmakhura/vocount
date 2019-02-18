@@ -44,12 +44,12 @@ CountingResults& CountingResults::operator=(const CountingResults& rhs)
 ///
 /// keypoints
 ///
-vector<KeyPoint>* CountingResults::getKeypoints()
+vector<KeyPoint>& CountingResults::getKeypoints()
 {
-    return &this->keypoints;
+    return this->keypoints;
 }
 
-void CountingResults::setKeypoints(vector<KeyPoint> keypoints)
+void CountingResults::setKeypoints(vector<KeyPoint>& keypoints)
 {
     this->keypoints.clear();
     this->keypoints.insert(this->keypoints.begin(), keypoints.begin(), keypoints.end());
@@ -84,12 +84,12 @@ void CountingResults::setDistancesMap(IntDistancesMap* distancesMap)
 ///
 /// selectedClustersPoints
 ///
-map_kp* CountingResults::getSelectedClustersPoints()
+map_kp& CountingResults::getSelectedClustersPoints()
 {
-    return &this->selectedClustersPoints;
+    return this->selectedClustersPoints;
 }
 
-void CountingResults::setSelectedClustersPoints(map_kp selectedClustersPoints)
+void CountingResults::setSelectedClustersPoints(map_kp& selectedClustersPoints)
 {
     this->selectedClustersPoints = selectedClustersPoints;
 }
@@ -97,12 +97,12 @@ void CountingResults::setSelectedClustersPoints(map_kp selectedClustersPoints)
 ///
 /// Stats
 ///
-clustering_stats* CountingResults::getStats()
+clustering_stats& CountingResults::getStats()
 {
-    return &this->stats;
+    return this->stats;
 }
 
-void CountingResults::setStats(clustering_stats stats)
+void CountingResults::setStats(clustering_stats& stats)
 {
     this->stats = stats;
 }
@@ -123,12 +123,12 @@ void CountingResults::setClusterMap(IntIntListMap* clusterMap)
 ///
 /// outputData
 ///
-map<OutDataIndex, int32_t>* CountingResults::getOutputData()
+map<OutDataIndex, int32_t>& CountingResults::getOutputData()
 {
-    return &this->outputData;
+    return this->outputData;
 }
 
-void CountingResults::setOutputData(map<OutDataIndex, int32_t> outputData)
+void CountingResults::setOutputData(map<OutDataIndex, int32_t>& outputData)
 {
     this->outputData = outputData;
 }
@@ -136,12 +136,12 @@ void CountingResults::setOutputData(map<OutDataIndex, int32_t> outputData)
 ///
 /// labels
 ///
-vector<int32_t>* CountingResults::getLabels()
+vector<int32_t>& CountingResults::getLabels()
 {
-    return &this->labels;
+    return this->labels;
 }
 
-void CountingResults::setLabels(vector<int32_t> labels)
+void CountingResults::setLabels(vector<int32_t>& labels)
 {
     this->labels = labels;
 }
@@ -149,12 +149,12 @@ void CountingResults::setLabels(vector<int32_t> labels)
 ///
 /// prominentLocatedObjects
 ///
-vector<LocatedObject>* CountingResults::getProminentLocatedObjects()
+vector<LocatedObject>& CountingResults::getProminentLocatedObjects()
 {
-    return &this->prominentLocatedObjects;
+    return this->prominentLocatedObjects;
 }
 
-void CountingResults::setProminentLocatedObjects(vector<LocatedObject> prominentLocatedObjects)
+void CountingResults::setProminentLocatedObjects(vector<LocatedObject>& prominentLocatedObjects)
 {
     this->prominentLocatedObjects = prominentLocatedObjects;
 }
@@ -175,18 +175,18 @@ void CountingResults::setRunningTime(double runningTime)
 ///
 /// clusterLocatedObjects
 ///
-map_st* CountingResults::getClusterLocatedObjects()
+map_st& CountingResults::getClusterLocatedObjects()
 {
-    return &this->clusterLocatedObjects;
+    return this->clusterLocatedObjects;
 }
 
 void CountingResults::addToClusterLocatedObjects(VRoi roi, Mat& frame)
 {
     vector<int32_t> validObjFeatures;
-    VOCUtils::findValidROIFeatures(&this->keypoints, roi.getBox(), &validObjFeatures, &this->labels);
+    VOCUtils::findValidROIFeatures(this->keypoints, roi.getBox(), validObjFeatures, this->labels);
 
     // sort the valid features by how close to the center they are
-    VOCUtils::sortByDistanceFromCenter(roi.getBox(), &validObjFeatures, &keypoints);
+    VOCUtils::sortByDistanceFromCenter(roi.getBox(), validObjFeatures, keypoints);
 
     LocatedObject mbs; /// Create a box structure based on roi
     mbs.setBoundingBox(roi);
@@ -220,7 +220,8 @@ void CountingResults::addToClusterLocatedObjects(VRoi roi, Mat& frame)
         KeyPoint f_point = keypoints.at(validObjFeatures[i]);
 
         /// Each point in the cluster should be inside a LocatedObject
-        mbs.getPoints()->insert(validObjFeatures[i]);
+        //mbs.getPoints().insert(validObjFeatures[i]);
+        mbs.addToPoints(validObjFeatures[i]);
         int32_t* data = (int32_t *)l1->data;
 
         for(int32_t j = 0; j < l1->size; j++)
@@ -228,17 +229,19 @@ void CountingResults::addToClusterLocatedObjects(VRoi roi, Mat& frame)
             KeyPoint& t_point = keypoints.at(data[j]);
             if(mbs.getBoundingBox().getBox().contains(t_point.pt))  // if the point is inside mbs, add it to mbs' points
             {
-                mbs.getPoints()->insert(data[j]);
+                //mbs.getPoints().insert(data[j]);
+                mbs.addToPoints(data[j]);
             }
             else    // else create a new mbs for it
             {
 
                 LocatedObject newObject;
-                if(LocatedObject::createNewLocatedObject(f_point, t_point, &mbs, &newObject, frame))
+                if(LocatedObject::createNewLocatedObject(f_point, t_point, mbs, newObject, frame))
                 {
-                    newObject.getPoints()->insert(data[j]);
+                    //newObject.getPoints().insert(data[j]);
+                    newObject.addToPoints(data[j]);
                     newObject.setMatchTo(mbs.getBoundingBox());
-                    LocatedObject::addLocatedObject(&availableOjects, &newObject);
+                    LocatedObject::addLocatedObject(availableOjects, newObject);
                 }
             }
         }
@@ -247,7 +250,7 @@ void CountingResults::addToClusterLocatedObjects(VRoi roi, Mat& frame)
 }
 
 
-void CountingResults::setClusterLocatedObjects(map_st clusterLocatedObjects)
+void CountingResults::setClusterLocatedObjects(map_st& clusterLocatedObjects)
 {
     this->clusterLocatedObjects = clusterLocatedObjects;
 }
@@ -301,10 +304,10 @@ void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>
         }
 
         vector<KeyPoint>& kps = this->selectedClustersPoints[key];
-        VOCUtils::getListKeypoints(&this->keypoints, l1, &kps);
+        VOCUtils::getListKeypoints(this->keypoints, l1, kps);
 
         this->selectedFeatures += kps.size();
-        Mat kimg = VOCUtils::drawKeyPoints(frame, &kps, colours.red, 3);
+        Mat kimg = VOCUtils::drawKeyPoints(frame, kps, colours.red, 3);
         vector<LocatedObject>& rects = it->second;
         VRoi tmp;
         for(uint i = 0; i < rects.size() - 1; i++)
@@ -344,7 +347,7 @@ void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>
         kp.insert(kp.end(), kps.begin(), kps.end());
     }
 
-    Mat mm = VOCUtils::drawKeyPoints(frame, &kp, colours.red, -1);
+    Mat mm = VOCUtils::drawKeyPoints(frame, kp, colours.red, -1);
 
     String ss = "img_allkps";
     selectedClustersImages[ss] = mm;
@@ -477,7 +480,7 @@ void CountingResults::extractProminentLocatedObjects()
         for(size_t j = 0; j < tmp.size(); j++)
         {
             LocatedObject& tmp_o = tmp[j];
-            int idx = LocatedObject::rectExist(&prominentLocatedObjects, &tmp_o);
+            int idx = LocatedObject::rectExist(prominentLocatedObjects, tmp_o);
 
             if(idx == -1)  // the structure does not exist
             {
@@ -499,11 +502,20 @@ void CountingResults::extractProminentLocatedObjects()
                     strct.setHistogramCompare(tmp_o.getHistogramCompare());
                     strct.setMomentsCompare(tmp_o.getMomentsCompare());
                 }
-                strct.getPoints()->insert(tmp_o.getPoints()->begin(), tmp_o.getPoints()->end());
+                strct.getPoints().insert(tmp_o.getPoints().begin(), tmp_o.getPoints().end());
 
             }
         }
     }
+}
+
+/**
+ *  
+ * 
+ */
+void CountingResults::addToLabels(int32_t label)
+{
+    this->labels.push_back(label);
 }
 
 /************************************************************************************

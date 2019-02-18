@@ -19,7 +19,7 @@ public:
 	 * @param roiFeatures	- valid roiFeatures output
 	 * @param labels		- Clusters labels
 	 */
-    static set<int32_t> findValidROIFeatures(vector<KeyPoint>* keypoints, Rect2d& roi, vector<int32_t>* roiFeatures, vector<int32_t>* labels);
+    static set<int32_t> findValidROIFeatures(vector<KeyPoint>& keypoints, Rect2d& roi, vector<int32_t>& roiFeatures, vector<int32_t>& labels);
 
 	/**
 	 * Find all keypoints inside the roi
@@ -28,7 +28,7 @@ public:
 	 * @param roi			- region of interest
 	 * @param roiFeatures	- valid roiFeatures output
 	 */
-    static void findROIFeatures(vector<KeyPoint>* keypoints, Rect2d& roi, vector<int32_t>* roiFeatures);
+    static void findROIFeatures(vector<KeyPoint>& keypoints, Rect2d& roi, vector<int32_t>& roiFeatures);
 
 	/**
 	 * Sort the roi features by their distance from the center of the region of interest
@@ -37,7 +37,7 @@ public:
 	 * @param roiFeatures	- valid roiFeatures output
 	 * @param keypoints		- local feature keypoints
 	 */
-    static void sortByDistanceFromCenter(Rect2d& roi, vector<int32_t>* roiFeatures, vector<KeyPoint>* keypoints);
+    static void sortByDistanceFromCenter(Rect2d& roi, vector<int32_t>& roiFeatures, vector<KeyPoint>& keypoints);
 
 	/**
 	 * Calculate the histogram
@@ -88,22 +88,22 @@ public:
 	/**
 	 *
 	 */
-	static void getListKeypoints(vector<KeyPoint>* keypoints, IntArrayList* list, vector<KeyPoint>* out);
+	static void getListKeypoints(vector<KeyPoint>& keypoints, IntArrayList* list, vector<KeyPoint>& out);
 
 	/**
 	 *
 	 */
-	static void getVectorKeypoints(vector<KeyPoint>* keypoints, vector<int32_t>* list, vector<KeyPoint>* out);
+	static void getVectorKeypoints(vector<KeyPoint>& keypoints, vector<int32_t>& list, vector<KeyPoint>& out);
 
 	/**
 	 *
 	 */
-	static Mat drawKeyPoints(Mat& in, vector<KeyPoint>* points, Scalar colour, int32_t type);
+	static Mat drawKeyPoints(Mat& in, vector<KeyPoint>& points, Scalar colour, int32_t type);
 
 	/**
 	 *
 	 */
-	static Mat getDescriptorDataset(Mat& descriptors, vector<KeyPoint>* keypoints, VAdditions additions);
+	static Mat getDescriptorDataset(Mat& descriptors, vector<KeyPoint>& keypoints, VAdditions additions);
 
 	/**
 	 *
@@ -113,12 +113,12 @@ public:
 	/**
 	 *
 	 */
-	static Mat getColourDataset(Mat& f, vector<KeyPoint>* pts);
+	static Mat getColourDataset(Mat& f, vector<KeyPoint>& pts);
 
 	/**
 	 *
 	 */
-	static void quickSortByDistance(vector<int32_t>* roiFeatures, vector<double>* distances, int low, int high);
+	static void quickSortByDistance(vector<int32_t>& roiFeatures, vector<double>& distances, int low, int high);
 
 	/**
 	 *

@@ -15,20 +15,20 @@ namespace vocount
  * @param  -
  * @param  -
  */
-set<int32_t> VOCUtils::findValidROIFeatures(vector<KeyPoint>* keypoints, Rect2d& roi, vector<int32_t>* roiFeatures, vector<int32_t>* labels)
+set<int32_t> VOCUtils::findValidROIFeatures(vector<KeyPoint>& keypoints, Rect2d& roi, vector<int32_t>& roiFeatures, vector<int32_t>& labels)
 {
     Rect2d& r = roi;
     Point2f p;
     set<int32_t> roiClusters;
     p.x = (r.x + r.width)/2.0f;
     p.y = (r.y + r.height)/2.0f;
-    for(uint i = 0; i < keypoints->size(); ++i)
+    for(uint i = 0; i < keypoints.size(); ++i)
     {
-        int32_t label = labels->at(i);
-        if(roi.contains(keypoints->at(i).pt) && label != 0)
+        int32_t label = labels.at(i);
+        if(roi.contains(keypoints.at(i).pt) && label != 0)
         {
             roiClusters.insert(label);
-            roiFeatures->push_back(i);
+            roiFeatures.push_back(i);
         }
     }
 
@@ -41,7 +41,7 @@ set<int32_t> VOCUtils::findValidROIFeatures(vector<KeyPoint>* keypoints, Rect2d&
  * @param  -
  * @param  -
  */
-void VOCUtils::findROIFeatures(vector<KeyPoint>* keypoints, Rect2d& roi, vector<int32_t>* roiFeatures)
+void VOCUtils::findROIFeatures(vector<KeyPoint>& keypoints, Rect2d& roi, vector<int32_t>& roiFeatures)
 {
     Rect2d& r = roi;
     Point2f p;
@@ -49,11 +49,11 @@ void VOCUtils::findROIFeatures(vector<KeyPoint>* keypoints, Rect2d& roi, vector<
     p.x = (r.x + r.width)/2.0f;
     p.y = (r.y + r.height)/2.0f;
 
-    for(uint i = 0; i < keypoints->size(); ++i)
+    for(uint i = 0; i < keypoints.size(); ++i)
     {
-        if(roi.contains(keypoints->at(i).pt))
+        if(roi.contains(keypoints.at(i).pt))
         {
-            roiFeatures->push_back(i);
+            roiFeatures.push_back(i);
         }
     }
 }
@@ -80,24 +80,24 @@ void swap(double* a, double* b)
     array, and places all smaller (smaller than pivot)
    to left of pivot and all greater elements to right
    of pivot */
-int partition (vector<int32_t>* roiFeatures, vector<double>* distances, int low, int high)
+int partition (vector<int32_t>& roiFeatures, vector<double>& distances, int low, int high)
 {
-    double pivot = distances->at(high);    // pivot
+    double pivot = distances.at(high);    // pivot
     int i = (low - 1);  // Index of smaller element
 
     for (int j = low; j <= high- 1; j++)
     {
         // If current element is smaller than or
         // equal to pivot
-        if (distances->at(j) <= pivot)
+        if (distances.at(j) <= pivot)
         {
             i++;    // increment index of smaller element
-            swap(&(distances->at(i)), &(distances->at(j)));
-            swap(&(roiFeatures->at(i)), &(roiFeatures->at(j)));
+            swap(&(distances.at(i)), &(distances.at(j)));
+            swap(&(roiFeatures.at(i)), &(roiFeatures.at(j)));
         }
     }
-    swap(&(distances->at(i + 1)), &(distances->at(high)));
-    swap(&(roiFeatures->at(i + 1)), &(roiFeatures->at(high)));
+    swap(&(distances.at(i + 1)), &(distances.at(high)));
+    swap(&(roiFeatures.at(i + 1)), &(roiFeatures.at(high)));
     return (i + 1);
 }
 
@@ -109,7 +109,7 @@ int partition (vector<int32_t>* roiFeatures, vector<double>* distances, int low,
  * @param low  --> Starting index,
  * @param high  --> Ending index
  */
-void VOCUtils::quickSortByDistance(vector<int32_t>* roiFeatures, vector<double>* distances, int low, int high)
+void VOCUtils::quickSortByDistance(vector<int32_t>& roiFeatures, vector<double>& distances, int low, int high)
 {
     if (low < high)
     {
@@ -144,7 +144,7 @@ double VOCUtils::calcDistanceL1(Point2f f1, Point2f f2){
  * @param  -
  * @param  -
  */
-void VOCUtils::sortByDistanceFromCenter(Rect2d& roi, vector<int32_t>* roiFeatures, vector<KeyPoint>* keypoints)
+void VOCUtils::sortByDistanceFromCenter(Rect2d& roi, vector<int32_t>& roiFeatures, vector<KeyPoint>& keypoints)
 {
     vector<double> distances;
     Point2f p;
@@ -152,15 +152,15 @@ void VOCUtils::sortByDistanceFromCenter(Rect2d& roi, vector<int32_t>* roiFeature
     p.x = (roi.x + roi.width)/2.0f;
     p.y = (roi.y + roi.height)/2.0f;
 
-    for(size_t i = 0; i < roiFeatures->size(); i++)
+    for(size_t i = 0; i < roiFeatures.size(); i++)
     {
-        KeyPoint& r_kp = keypoints->at(roiFeatures->at(i));
+        KeyPoint& r_kp = keypoints.at(roiFeatures.at(i));
         double distance = calcDistanceL1(p, r_kp.pt);
         distances.push_back(distance);
         //cout << roiFeatures[i] << ", " << distance << endl;
     }
 
-    quickSortByDistance(roiFeatures, &distances, 0, roiFeatures->size()-1);
+    quickSortByDistance(roiFeatures, distances, 0, roiFeatures.size()-1);
 }
 
 /**
@@ -474,13 +474,13 @@ VRoi VOCUtils::shiftRect(VRoi& vroi, Point2f first, Point2f second)
  * @param  -
  * @param  -
  */
-void VOCUtils::getListKeypoints(vector<KeyPoint>* keypoints, IntArrayList* list, vector<KeyPoint>* out)
+void VOCUtils::getListKeypoints(vector<KeyPoint>& keypoints, IntArrayList* list, vector<KeyPoint>& out)
 {
     int32_t* dt = (int32_t *)list->data;
     for(int i = 0; i < list->size; i++)
     {
         int32_t idx = dt[i];
-        out->push_back(keypoints->at(idx));
+        out.push_back(keypoints.at(idx));
     }
 }
 
@@ -491,22 +491,22 @@ void VOCUtils::getListKeypoints(vector<KeyPoint>* keypoints, IntArrayList* list,
  * @param  -
  * @param  -
  */
-void VOCUtils::getVectorKeypoints(vector<KeyPoint>* keypoints, vector<int32_t>* list, vector<KeyPoint>* out)
+void VOCUtils::getVectorKeypoints(vector<KeyPoint>& keypoints, vector<int32_t>& list, vector<KeyPoint>& out)
 {
-    for(size_t i = 0; i < list->size(); i++)
+    for(size_t i = 0; i < list.size(); i++)
     {
-        int32_t idx = list->at(i);
-        out->push_back(keypoints->at(idx));
+        int32_t idx = list.at(i);
+        out.push_back(keypoints.at(idx));
     }
 }
 
 
-Mat VOCUtils::drawKeyPoints(Mat& in, vector<KeyPoint>* points, Scalar colour, int32_t type)
+Mat VOCUtils::drawKeyPoints(Mat& in, vector<KeyPoint>& points, Scalar colour, int32_t type)
 {
     Mat x = in.clone();
     if(type == -1)
     {
-        for(vector<KeyPoint>::iterator it = points->begin(); it != points->end(); ++it)
+        for(vector<KeyPoint>::iterator it = points.begin(); it != points.end(); ++it)
         {
             circle(x, Point(it->pt.x, it->pt.y), 3, colour, cv::FILLED, 8, 0);
         }
@@ -526,7 +526,7 @@ Mat VOCUtils::drawKeyPoints(Mat& in, vector<KeyPoint>* points, Scalar colour, in
             flag = DrawMatchesFlags::DRAW_RICH_KEYPOINTS;
         }
 
-        cv::drawKeypoints( in, *points, x, Scalar::all(-1), flag);
+        cv::drawKeypoints( in, points, x, Scalar::all(-1), flag);
     }
 
     return x;
@@ -551,7 +551,7 @@ void VOCUtils::getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices,
  * @param keypoints     -
  * @param additions     - 
  */
-Mat VOCUtils::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>* keypoints, VAdditions additions)
+Mat VOCUtils::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>& keypoints, VAdditions additions)
 {
     Mat dataset = descriptors.clone();
 
@@ -561,9 +561,9 @@ Mat VOCUtils::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>* keypoints
         float* data = angles.ptr<float>(0);
 
         #pragma omp parallel for
-        for(size_t i = 0; i < keypoints->size(); i++)
+        for(size_t i = 0; i < keypoints.size(); i++)
         {
-            KeyPoint kp = keypoints->at(i);
+            KeyPoint kp = keypoints.at(i);
             data[i] = (M_PI / 180) * kp.angle;
         }
 
@@ -576,9 +576,9 @@ Mat VOCUtils::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>* keypoints
         Mat sizes(descriptors.rows, 1, CV_32FC1);
         float* data = sizes.ptr<float>(0);
         #pragma omp parallel for
-        for(size_t i = 0; i < keypoints->size(); i++)
+        for(size_t i = 0; i < keypoints.size(); i++)
         {
-            KeyPoint kp = keypoints->at(i);
+            KeyPoint kp = keypoints.at(i);
             data[i] = kp.size;
         }
 
@@ -602,17 +602,17 @@ Mat VOCUtils::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>* keypoints
  * @param f - frame
  * @param pts - local features keypoints
  */
-Mat VOCUtils::getColourDataset(Mat& f, vector<KeyPoint>* pts)
+Mat VOCUtils::getColourDataset(Mat& f, vector<KeyPoint>& pts)
 {
-    Mat m(pts->size(), 3, CV_32FC1);
+    Mat m(pts.size(), 3, CV_32FC1);
     Mat tmpf;
     GaussianBlur(f, tmpf, Size(3, 3), 0, 0 );
     //tmpf = f;
     float* data = m.ptr<float>(0);
     #pragma omp parallel for
-    for(size_t i = 0; i < pts->size(); i++)
+    for(size_t i = 0; i < pts.size(); i++)
     {
-        Point2f pt = pts->at(i).pt;
+        Point2f pt = pts.at(i).pt;
 
         Vec3b p = tmpf.at<Vec3b>(pt);
         int idx = i * 3;

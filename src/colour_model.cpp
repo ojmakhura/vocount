@@ -68,12 +68,12 @@ void ColourModel::setNumClusters(int32_t numClusters)
 ///
 /// roiFeatures
 ///
-vector<int32_t>* ColourModel::getRoiFeatures()
+vector<int32_t>& ColourModel::getRoiFeatures()
 {
-    return &this->roiFeatures;
+    return this->roiFeatures;
 }
 
-void ColourModel::setRoiFeatures(vector<int32_t> roiFeatures)
+void ColourModel::setRoiFeatures(vector<int32_t>& roiFeatures)
 {
     this->roiFeatures = roiFeatures;
 }
@@ -81,12 +81,12 @@ void ColourModel::setRoiFeatures(vector<int32_t> roiFeatures)
 ///
 /// selectedKeypoints
 ///
-vector<KeyPoint>* ColourModel::getSelectedKeypoints()
+vector<KeyPoint>& ColourModel::getSelectedKeypoints()
 {
-    return &this->selectedKeypoints;
+    return this->selectedKeypoints;
 }
 
-void ColourModel::setSelectedKeypoints(vector<KeyPoint> SelectedKeypoints)
+void ColourModel::setSelectedKeypoints(vector<KeyPoint>& SelectedKeypoints)
 {
     this->selectedKeypoints = SelectedKeypoints;
 }
@@ -107,12 +107,12 @@ void ColourModel::setSelectedDesc(Mat& selectedDesc)
 ///
 /// selectedClusters
 ///
-set<int32_t>* ColourModel::getSelectedClusters()
+set<int32_t>& ColourModel::getSelectedClusters()
 {
-    return &this->selectedClusters;
+    return this->selectedClusters;
 }
 
-void ColourModel::setSelectedClusters(set<int32_t> selectedClusters)
+void ColourModel::setSelectedClusters(set<int32_t>& selectedClusters)
 {
     this->selectedClusters = selectedClusters;
 }
@@ -131,24 +131,11 @@ void ColourModel::setColourModelClusters(IntIntListMap* colourModelClusters)
 }
 
 ///
-/// oldIndices
-///
-/*vector<int32_t>* ColourModel::getOldIndices()
-{
-    return &this->oldIndices;
-}
-
-void ColourModel::setOldIndices(vector<int32_t>& oldIndices)
-{
-    this->oldIndices = oldIndices;
-}*/
-
-///
 /// selectedIndices
 ///
-vector<int32_t>* ColourModel::getSelectedIndices()
+vector<int32_t>& ColourModel::getSelectedIndices()
 {
-    return &this->selectedIndices;
+    return this->selectedIndices;
 }
 
 void ColourModel::setSelectedIndices(vector<int32_t>& selectedIndices)

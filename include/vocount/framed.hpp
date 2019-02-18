@@ -7,7 +7,7 @@
 using namespace std;
 using namespace vocount;
 
-typedef map<ResultIndex, CountingResults*> map_r;
+typedef map<ResultIndex, CountingResults> map_r;
 
 namespace vocount
 {
@@ -55,7 +55,7 @@ public:
 	///
 	/// keypoints
 	///
-    vector<KeyPoint>* getKeypoints();
+    vector<KeyPoint>& getKeypoints();
 
 	///
 	/// roi
@@ -66,17 +66,17 @@ public:
 	///
 	/// roiFeatures
 	///
-    vector<int32_t>* getRoiFeatures();
+    vector<int32_t>& getRoiFeatures();
 
     ///
 	/// resutls
 	///
-    map_r* getResults();
+    map_r& getResults();
 
 	///
 	/// filteredLocatedObjects
 	///
-    vector<LocatedObject>* getCombinedLocatedObjects();
+    vector<LocatedObject>& getCombinedLocatedObjects();
 
 	///
 	/// groundTruth
@@ -90,18 +90,18 @@ public:
 	/**
 	 *
 	 */
-	CountingResults* detectDescriptorsClusters(ResultIndex idx, Mat& dataset, vector<KeyPoint>* keypoints, int32_t minPts,
+	void detectDescriptorsClusters(CountingResults& res, Mat& dataset, vector<KeyPoint>& keypoints, int32_t minPts,
 												int32_t kSize, int32_t step, int32_t iterations, bool useTwo);
 
 	/**
 	 *
 	 */
-	void addResults(ResultIndex idx, CountingResults* res);
+	void addResults(ResultIndex idx, CountingResults& res);
 
 	/**
 	 *
 	 */
-	CountingResults* getResults(ResultIndex idx);
+	CountingResults& getResults(ResultIndex idx);
 
 	/**
 	 *
@@ -113,14 +113,14 @@ public:
 	 *
 	 * @param keyPoints	- the points to be used for filtering
 	 */
-	void combineLocatedObjets(vector<KeyPoint>* keyPoints);
+	void combineLocatedObjets(vector<KeyPoint>& keyPoints);
 
 	/**
 	 * Use the colour model indices to detect objects in the original descriptor clusters.
 	 *
 	 * @param indices - indices of the colour model keypoints in the original features
 	 */
-	CountingResults* getColourModelObjects(vector<int32_t> *indices, int32_t minPts, int32_t iterations, VAdditions additions);
+	void getColourModelObjects(CountingResults& res, vector<int32_t>& indices, int32_t minPts, int32_t iterations, VAdditions additions);
 
 private:
     int32_t frameId = 0;
@@ -138,8 +138,8 @@ private:
     /**********************************************************************************************************************
      *   PRIVATE FUNCTIONS
      **********************************************************************************************************************/
-	CountingResults* doCluster(Mat& dataset, int32_t kSize, int32_t step, int32_t f_minPts, bool useTwo);
-	void doDetectDescriptorsClusters(CountingResults* res, Mat& dataset, vector<KeyPoint>* keypoints, int32_t minPts, int32_t iterations);
+	void doCluster(CountingResults& res, Mat& dataset, int32_t kSize, int32_t step, int32_t f_minPts, bool useTwo);
+	void doDetectDescriptorsClusters(CountingResults& res, Mat& dataset, vector<KeyPoint>& keypoints, int32_t minPts, int32_t iterations);
 	void generateSelectedClusterImages();
 
 };

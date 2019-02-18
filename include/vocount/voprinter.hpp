@@ -12,12 +12,12 @@ public:
 	/**
 	 *
 	 */
-	static void printEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* estimates, double duration);
+	static void printEstimates(ofstream& myfile, map<OutDataIndex, int32_t>& estimates, double duration);
 
 	/**
 	 *
 	 */
-	static void printClusterEstimates(ofstream& myfile, map<OutDataIndex, int32_t>* estimates, vector<int32_t>* cest);
+	static void printClusterEstimates(ofstream& myfile, map<OutDataIndex, int32_t>& estimates, vector<int32_t>& cest);
 
 	/**
 	 *
@@ -32,7 +32,7 @@ public:
 	/**
 	 *
 	 */
-	static void printImages(String& folder, map<String, Mat>* images, int count);
+	static void printImages(String& folder, map<String, Mat>& images, int count);
 
 	/**
 	 *

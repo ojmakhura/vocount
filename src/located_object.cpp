@@ -10,7 +10,7 @@ LocatedObject::LocatedObject()
 
 LocatedObject::~LocatedObject()
 {
-
+    
 }
 
 LocatedObject::LocatedObject(const LocatedObject& other)
@@ -84,9 +84,9 @@ void LocatedObject::setHistogram(Mat& val)
 ///
 /// points
 ///
-set<int32_t>* LocatedObject::getPoints()
+set<int32_t>& LocatedObject::getPoints()
 {
-    return &points;
+    return points;
 }
 
 void LocatedObject::setPoints(set<int32_t>& val)
@@ -170,33 +170,33 @@ void LocatedObject::removeFromPoints(int32_t p)
 /**
  *
  */
-void LocatedObject::addLocatedObject(vector<LocatedObject>* locatedObjects, LocatedObject* newObject)
+void LocatedObject::addLocatedObject(vector<LocatedObject>& locatedObjects, LocatedObject& newObject)
 {
 
     int32_t idx = LocatedObject::rectExist(locatedObjects, newObject);
 
     if(idx == -1)  // the structure does not exist
     {
-        locatedObjects->push_back(*newObject);
+        locatedObjects.push_back(newObject);
     }
     else
     {
-        LocatedObject& strct = locatedObjects->at(idx);
+        LocatedObject& strct = locatedObjects.at(idx);
 
         // Find out which structure is more similar to the original
         // by comparing the moments
-        if(newObject->getMomentsCompare() < strct.getMomentsCompare())
+        if(newObject.getMomentsCompare() < strct.getMomentsCompare())
         {
-            strct.setBoundingBox(newObject->getBoundingBox());
-            strct.setMatchPoint(newObject->getMatchPoint());
-            strct.setBoxImage(newObject->getBoxImage());
-            strct.setBoxGray(newObject->getBoxGray());
-            strct.setHistogram(newObject->getHistogram());
-            strct.setHistogramCompare(newObject->getHistogramCompare());
-            strct.setMomentsCompare(newObject->getMomentsCompare());
+            strct.setBoundingBox(newObject.getBoundingBox());
+            strct.setMatchPoint(newObject.getMatchPoint());
+            strct.setBoxImage(newObject.getBoxImage());
+            strct.setBoxGray(newObject.getBoxGray());
+            strct.setHistogram(newObject.getHistogram());
+            strct.setHistogramCompare(newObject.getHistogramCompare());
+            strct.setMomentsCompare(newObject.getMomentsCompare());
         }
 
-        strct.getPoints()->insert(newObject->getPoints()->begin(), newObject->getPoints()->end());
+        strct.getPoints().insert(newObject.getPoints().begin(), newObject.getPoints().end());
     }
 }
 
@@ -204,16 +204,16 @@ void LocatedObject::addLocatedObject(vector<LocatedObject>* locatedObjects, Loca
  * Check the rectangle already exists
  * TODO: accommodate differing rectangle sizes
  */
-int32_t LocatedObject::rectExist(vector<LocatedObject>* locatedObjects, LocatedObject* newObject)
+int32_t LocatedObject::rectExist(vector<LocatedObject>& locatedObjects, LocatedObject& newObject)
 {
 
     double maxIntersect = 0.0;
     int32_t maxIndex = -1;
 
-    for(uint i = 0; i < locatedObjects->size(); i++)
+    for(uint i = 0; i < locatedObjects.size(); i++)
     {
-        Rect2d intersection = newObject->getBoundingBox().getBox() & locatedObjects->at(i).getBoundingBox().getBox();
-        double sect = ((double)intersection.area() / locatedObjects->at(i).getBoundingBox().getBox().area());
+        Rect2d intersection = newObject.getBoundingBox().getBox() & locatedObjects.at(i).getBoundingBox().getBox();
+        double sect = ((double)intersection.area() / locatedObjects.at(i).getBoundingBox().getBox().area());
 
         if(sect > maxIntersect)
         {
@@ -230,18 +230,18 @@ int32_t LocatedObject::rectExist(vector<LocatedObject>* locatedObjects, LocatedO
     return -1;
 }
 
-bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* existingObject, LocatedObject* newObject, Mat& frame)
+bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject& existingObject, LocatedObject& newObject, Mat& frame)
 {
-    VRoi n_rect = VOCUtils::shiftRect(existingObject->getBoundingBox(), first_p.pt, second_p.pt);
+    VRoi n_rect = VOCUtils::shiftRect(existingObject.getBoundingBox(), first_p.pt, second_p.pt);
 
-    VRoi bx = existingObject->getBoundingBox();
+    VRoi bx = existingObject.getBoundingBox();
     //double angle = second_p.angle - first_p.angle;
     //angle = (M_PI / 180) * angle;
     //bx.rotate(angle);
     VOCUtils::stabiliseRect(frame, bx, n_rect);
-    existingObject->setBoundingBox(bx);
+    existingObject.setBoundingBox(bx);
     Rect2d r_tmp = n_rect.getBox();
-    newObject->setBoundingBox(n_rect);
+    newObject.setBoundingBox(n_rect);
     VOCUtils::trimRect(r_tmp, frame.rows, frame.cols, 0);
 
     if(r_tmp.height < 1 || r_tmp.width < 1)
@@ -249,21 +249,21 @@ bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, 
         return false;
     }
 
-    double ratio = newObject->getBoundingBox().getBox().area()/r_tmp.area();
+    double ratio = newObject.getBoundingBox().getBox().area()/r_tmp.area();
     if(ratio < 0.2)
     {
         return false;
     }
 
     Mat t_frame = frame(r_tmp);
-    newObject->setBoxImage(t_frame);
-    Mat h = VOCUtils::calculateHistogram(newObject->getBoxImage());
-    newObject->setHistogram(h);
+    newObject.setBoxImage(t_frame);
+    Mat h = VOCUtils::calculateHistogram(newObject.getBoxImage());
+    newObject.setHistogram(h);
     Mat gr;
-    cvtColor(newObject->getBoxImage(), gr, COLOR_RGB2GRAY);
-    newObject->setBoxGray(gr);
-    newObject->setHistogramCompare(compareHist(existingObject->getHistogram(), newObject->getHistogram(), CV_COMP_CORREL));
-    newObject->setMomentsCompare(matchShapes(existingObject->getBoxGray(), newObject->getBoxGray(), CONTOURS_MATCH_I3, 0));
+    cvtColor(newObject.getBoxImage(), gr, COLOR_RGB2GRAY);
+    newObject.setBoxGray(gr);
+    newObject.setHistogramCompare(compareHist(existingObject.getHistogram(), newObject.getHistogram(), CV_COMP_CORREL));
+    newObject.setMomentsCompare(matchShapes(existingObject.getBoxGray(), newObject.getBoxGray(), CONTOURS_MATCH_I3, 0));
 
     return true;
 }

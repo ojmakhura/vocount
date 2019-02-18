@@ -24,8 +24,8 @@ public:
 	///
 	/// keypoints
 	///
-	vector<KeyPoint>* getKeypoints();
-	void setKeypoints(vector<KeyPoint> keypoints);
+	vector<KeyPoint>& getKeypoints();
+	void setKeypoints(vector<KeyPoint>& keypoints);
 
 	///
 	/// dataset
@@ -42,14 +42,14 @@ public:
 	///
 	/// selectedClustersPoints
 	///
-	map_kp* getSelectedClustersPoints();
-	void setSelectedClustersPoints(map_kp selectedClustersPoints);
+	map_kp& getSelectedClustersPoints();
+	void setSelectedClustersPoints(map_kp& selectedClustersPoints);
 
 	///
 	/// Stats
 	///
-	clustering_stats* getStats();
-	void setStats(clustering_stats stats);
+	clustering_stats& getStats();
+	void setStats(clustering_stats& stats);
 
 	///
 	/// clusterMap
@@ -60,26 +60,26 @@ public:
 	///
 	/// outputData
 	///
-	map<OutDataIndex, int32_t>* getOutputData();
-	void setOutputData(map<OutDataIndex, int32_t> outputData);
+	map<OutDataIndex, int32_t>& getOutputData();
+	void setOutputData(map<OutDataIndex, int32_t>& outputData);
 
 	///
 	/// labels
 	///
-	vector<int32_t>* getLabels();
-	void setLabels(vector<int32_t> labels);
+	vector<int32_t>& getLabels();
+	void setLabels(vector<int32_t>& labels);
 
 	///
 	/// prominentLocatedObjects
 	///
-	vector<LocatedObject>* getProminentLocatedObjects();
-	void setProminentLocatedObjects(vector<LocatedObject> prominentLocatedObjects);
+	vector<LocatedObject>& getProminentLocatedObjects();
+	void setProminentLocatedObjects(vector<LocatedObject>& prominentLocatedObjects);
 
 	///
 	/// clusterLocatedObjects
 	///
-	map_st* getClusterLocatedObjects();
-	void setClusterLocatedObjects(map_st clusterLocatedObjects);
+	map_st& getClusterLocatedObjects();
+	void setClusterLocatedObjects(map_st& clusterLocatedObjects);
 
 	///
 	/// validity
@@ -132,6 +132,12 @@ public:
 	  *
 	  */
 	 void addToClusterLocatedObjects(VRoi roi, Mat& frame);
+
+	 /**
+	  * 
+	  * 
+	  */
+	 void addToLabels(int32_t label); 
 
 private:
 	vector<KeyPoint> keypoints;

@@ -32,10 +32,6 @@ Framed::Framed(int32_t frameId, Mat& frame, Mat& descriptors, vector<KeyPoint>& 
 
 Framed::~Framed()
 {
-    for(map_r::iterator iter = results.begin(); iter != results.end(); iter++)
-    {
-        delete iter->second;
-    }
 }
 
 /**********************************************************************************************************************
@@ -75,9 +71,9 @@ Mat& Framed::getFrame()
 ///
 /// keypoints
 ///
-vector<KeyPoint>* Framed::getKeypoints()
+vector<KeyPoint>& Framed::getKeypoints()
 {
-    return &this->keypoints;
+    return this->keypoints;
 }
 
 ///
@@ -96,25 +92,25 @@ void Framed::setROI(Rect2d roi)
 ///
 /// roiFeatures
 ///
-vector<int32_t>* Framed::getRoiFeatures()
+vector<int32_t>& Framed::getRoiFeatures()
 {
-    return &this->roiFeatures;
+    return this->roiFeatures;
 }
 
 ///
 /// results
 ///
-map_r* Framed::getResults()
+map_r& Framed::getResults()
 {
-    return &this->results;
+    return this->results;
 }
 
 ///
 /// combinedLocatedObjects
 ///
-vector<LocatedObject>* Framed::getCombinedLocatedObjects()
+vector<LocatedObject>& Framed::getCombinedLocatedObjects()
 {
-    return &this->combinedLocatedObjects;
+    return this->combinedLocatedObjects;
 }
 
 ///
@@ -144,9 +140,9 @@ Mat& Framed::getTemplateMatch()
 /**
  *
  */
-CountingResults* Framed::doCluster(Mat& dataset, int32_t kSize, int32_t step, int32_t f_minPts, bool useTwo)
+void Framed::doCluster(CountingResults& res, Mat& dataset, int32_t kSize, int32_t step, int32_t f_minPts, bool useTwo)
 {
-    CountingResults* res = new CountingResults();
+    //CountingResults* res = new CountingResults();
 
     int32_t m_pts = step * f_minPts;
     hdbscan scan(m_pts, DATATYPE_FLOAT);
@@ -178,32 +174,32 @@ CountingResults* Framed::doCluster(Mat& dataset, int32_t kSize, int32_t step, in
 
         if(c_map != NULL)
         {
-            uint hsize = res->getClusterMap() == NULL ? 0 : g_hash_table_size(res->getClusterMap());
-            if(g_hash_table_size(c_map) > hsize || val > res->getValidity())
+            uint hsize = res.getClusterMap() == NULL ? 0 : g_hash_table_size(res.getClusterMap());
+            if(g_hash_table_size(c_map) > hsize || val > res.getValidity())
             {
-                if(res->getClusterMap() != NULL)
+                if(res.getClusterMap() != NULL)
                 {
-                    hdbscan_destroy_cluster_map(res->getClusterMap());
-                    res->setClusterMap(NULL);
+                    hdbscan_destroy_cluster_map(res.getClusterMap());
+                    res.setClusterMap(NULL);
                 }
 
-                if(res->getDistancesMap() != NULL)
+                if(res.getDistancesMap() != NULL)
                 {
-                    hdbscan_destroy_distance_map(res->getDistancesMap());
-                    res->setDistancesMap(NULL);
+                    hdbscan_destroy_distance_map(res.getDistancesMap());
+                    res.setDistancesMap(NULL);
                 }
 
-                if(!(res->getLabels()->empty()))
+                if(!(res.getLabels().empty()))
                 {
-                    res->getLabels()->clear();
+                    res.getLabels().clear();
                 }
 
-                res->setClusterMap(c_map);
-                res->setDistancesMap(d_map);
-                res->getLabels()->insert(res->getLabels()->begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
-                res->setMinPts(m_pts);
-                res->setValidity(val);
-                res->setStats(stats);
+                res.setClusterMap(c_map);
+                res.setDistancesMap(d_map);
+                res.getLabels().insert(res.getLabels().begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
+                res.setMinPts(m_pts);
+                res.setValidity(val);
+                res.setStats(stats);
             }
             else
             {
@@ -218,24 +214,24 @@ CountingResults* Framed::doCluster(Mat& dataset, int32_t kSize, int32_t step, in
     }
 
     /// The validity less than 2 so we force oversegmentation
-    if(res->getValidity() <= 2 && useTwo)
+    if(res.getValidity() <= 2 && useTwo)
     {
         cout << "Could not detect optimum clusters. Will force over-segmentation of the clusters." << endl;
-        if(res->getClusterMap() != NULL)
+        if(res.getClusterMap() != NULL)
         {
-            hdbscan_destroy_cluster_map(res->getClusterMap());
-            res->setClusterMap(NULL);
+            hdbscan_destroy_cluster_map(res.getClusterMap());
+            res.setClusterMap(NULL);
         }
 
-        if(res->getDistancesMap() != NULL)
+        if(res.getDistancesMap() != NULL)
         {
-            hdbscan_destroy_distance_map(res->getDistancesMap());
-            res->setDistancesMap(NULL);
+            hdbscan_destroy_distance_map(res.getDistancesMap());
+            res.setDistancesMap(NULL);
         }
 
-        if(!(res->getLabels()->empty()))
+        if(!(res.getLabels().empty()))
         {
-            res->getLabels()->clear();
+            res.getLabels().clear();
         }
 
         m_pts = step * 2;
@@ -246,36 +242,34 @@ CountingResults* Framed::doCluster(Mat& dataset, int32_t kSize, int32_t step, in
         hdbscan_calculate_stats(d_map, &stats);
         val = hdbscan_analyse_stats(&stats);
 
-        res->setClusterMap(c_map);
-        res->setDistancesMap(d_map);
-        res->getLabels()->insert(res->getLabels()->begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
-        res->setMinPts(m_pts);
-        res->setValidity(val);
-        res->setStats(stats);
+        res.setClusterMap(c_map);
+        res.setDistancesMap(d_map);
+        res.getLabels().insert(res.getLabels().begin(), scan.clusterLabels, scan.clusterLabels + keypoints.size());
+        res.setMinPts(m_pts);
+        res.setValidity(val);
+        res.setStats(stats);
     }
 
-    printf("Selected minPts = %d and cluster table has %d\n", res->getMinPts(), g_hash_table_size(res->getClusterMap()));
-
-    return res;
+    printf("Selected minPts = %d and cluster table has %d\n", res.getMinPts(), g_hash_table_size(res.getClusterMap()));
 }
 
-void Framed::doDetectDescriptorsClusters(CountingResults* res, Mat& dataset, vector<KeyPoint>* keypoints, int32_t minPts, int32_t iterations)
+void Framed::doDetectDescriptorsClusters(CountingResults& res, Mat& dataset, vector<KeyPoint>& keypoints, int32_t minPts, int32_t iterations)
 {
-    res->setDataset(dataset);
-    res->setKeypoints(*keypoints);
-    res->addToClusterLocatedObjects(VRoi(this->roi), this->frame);
+    res.setDataset(dataset);
+    res.setKeypoints(keypoints);
+    res.addToClusterLocatedObjects(VRoi(this->roi), this->frame);
 
     /**
      * Organise points into the best possible structure. This requires
      * putting the points into the structure that has the best match to
      * the original. We use histograms to match.
      */
-    res->extractProminentLocatedObjects();
+    res.extractProminentLocatedObjects();
 
     for(int32_t i = 0; i < iterations; i++)
     {
-        res->extendLocatedObjects(this->frame);
-        res->extractProminentLocatedObjects();
+        res.extendLocatedObjects(this->frame);
+        res.extractProminentLocatedObjects();
     }
 
 }
@@ -290,43 +284,40 @@ void Framed::doDetectDescriptorsClusters(CountingResults* res, Mat& dataset, vec
  * Prominent structures are extracted by comapring the structure in each
  * cluster.
  */
-CountingResults* Framed::detectDescriptorsClusters(ResultIndex idx, Mat& dataset, vector<KeyPoint>* keypoints, int32_t kSize, int32_t minPts, int32_t step, int32_t iterations, bool useTwo)
+void Framed::detectDescriptorsClusters(CountingResults& res, Mat& dataset, vector<KeyPoint>& keypoints, int32_t kSize, int32_t minPts, int32_t step, int32_t iterations, bool useTwo)
 {
-    CountingResults* res = doCluster(dataset, kSize, step, minPts, useTwo);
+    doCluster(res, dataset, kSize, step, minPts, useTwo);
 
     // Since we forced over-segmentation of the clusters
     // we must make it up by extending the box structures
-    if(res->getMinPts() == 2 && minPts > 2)
+    if(res.getMinPts() == 2 && minPts > 2)
     {
         iterations += 1;
     }
 
     this->doDetectDescriptorsClusters(res, dataset, keypoints, minPts, iterations);
-    printf("Detected %lu objects\n\n", res->getProminentLocatedObjects()->size());
-    this->results[idx] = res;
-
-    return res;
+    printf("Detected %lu objects\n\n", res.getProminentLocatedObjects().size());
 }
 
 /***
  *
  */
-CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t minPts, int32_t iterations, VAdditions additions)
+void Framed::getColourModelObjects(CountingResults& res, vector<int32_t>& indices, int32_t minPts, int32_t iterations, VAdditions additions)
 {
-    CountingResults* res = new CountingResults();
-    CountingResults *d_res = this->getResults(ResultIndex::Descriptors);
-    vector<int32_t>* d_labels = d_res->getLabels();
+    CountingResults& d_res = this->getResults(ResultIndex::Descriptors);
+    vector<int32_t>& d_labels = d_res.getLabels();
 
-    int32_t* labels = new int32_t[indices->size()];
+    int32_t* labels = new int32_t[indices.size()];
 
     set<int32_t> colourModelLabels;
     /// Get non-noise clusters for the colour model.
     ///#pragma parallel
-    for(size_t i = 0; i < indices->size(); i++)
+    for(size_t i = 0; i < indices.size(); i++)
     {
-        int32_t idx = indices->at(i);
-        int32_t label = d_labels->at(idx);
-        res->getLabels()->push_back(label);
+        int32_t idx = indices.at(i);
+        int32_t label = d_labels.at(idx);
+        //res->getLabels().push_back(label);
+        res.addToLabels(label);
 
         if(label > 0)
         {
@@ -338,7 +329,7 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
     IntIntListMap* c_map = g_hash_table_new(g_int_hash, g_int_equal);
     IntDistancesMap* d_map = g_hash_table_new_full(g_int_hash, g_int_equal, free, free); /// distance map
 
-    c_map = hdbscan_create_cluster_map(labels, 0, indices->size());
+    c_map = hdbscan_create_cluster_map(labels, 0, indices.size());
 
 
     /// Create a new cluster and distance maps based on the labels of the colour model in the frame feature clusters
@@ -348,7 +339,7 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
         int32_t *d_lb = (int *)malloc(sizeof(int));
         *d_lb = *it;
 
-        distance_values* dl = (distance_values *)g_hash_table_lookup(d_res->getDistancesMap(), d_lb);
+        distance_values* dl = (distance_values *)g_hash_table_lookup(d_res.getDistancesMap(), d_lb);
         distance_values* t_dl = (distance_values *)malloc(sizeof(distance_values));
 
         t_dl->min_cr = dl->min_cr;
@@ -366,31 +357,28 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
     hdbscan_calculate_stats(d_map, &stats);
     int32_t val = hdbscan_analyse_stats(&stats);
 
-    res->setStats(stats);
-    res->setValidity(val);
-    res->setClusterMap(c_map);
-    res->setDistancesMap(d_map);
-    res->setMinPts(d_res->getMinPts());
+    res.setStats(stats);
+    res.setValidity(val);
+    res.setClusterMap(c_map);
+    res.setDistancesMap(d_map);
+    res.setMinPts(d_res.getMinPts());
 
     // Since we forced over-segmentation of the clusters
     // we must make it up by extending the box structures
-    if(res->getMinPts() == 2 && minPts > 2)
+    if(res.getMinPts() == 2 && minPts > 2)
     {
         iterations += 1;
     }
 
 
     vector<KeyPoint> kps;
-    VOCUtils::getVectorKeypoints(&keypoints, indices, &kps);
-    Mat dset = VOCUtils::getDescriptorDataset(descriptors, &keypoints, additions);
-    this->doDetectDescriptorsClusters(res, dset, &kps, d_res->getMinPts(), iterations);
+    VOCUtils::getVectorKeypoints(keypoints, indices, kps);
+    Mat dset = VOCUtils::getDescriptorDataset(descriptors, keypoints, additions);
+    this->doDetectDescriptorsClusters(res, dset, kps, d_res.getMinPts(), iterations);
 
-    printf("Detected %lu objects\n\n", res->getProminentLocatedObjects()->size());
-    this->results[ResultIndex::DescriptorFilter] = res;
+    printf("Detected %lu objects\n\n", res.getProminentLocatedObjects().size());
 
     delete [] labels;
-
-    return res;
 }
 
 /**
@@ -398,36 +386,37 @@ CountingResults* Framed::getColourModelObjects(vector<int32_t> *indices, int32_t
  */
 void Framed::createResultsImages(ResultIndex idx, map<String, Mat>& selectedClustersImages)
 {
-    CountingResults* res = this->getResults(idx);
-    res->generateSelectedClusterImages(this->frame, selectedClustersImages);
-    res->createLocatedObjectsImages(selectedClustersImages);
-    res->generateOutputData(this->frameId, this->groundTruth, this->roiFeatures);
+    CountingResults& res = this->getResults(idx);
+    res.generateSelectedClusterImages(this->frame, selectedClustersImages);
+    res.createLocatedObjectsImages(selectedClustersImages);
+    res.generateOutputData(this->frameId, this->groundTruth, this->roiFeatures);
 }
 
 /**
  *
  */
-void Framed::addResults(ResultIndex idx, CountingResults* res)
+void Framed::addResults(ResultIndex idx, CountingResults& res)
 {
     results[idx] = res;
 }
 
 /**
- *
+ * Returns the results identified by idx. If the results do not exist,
+ * it will return a newly created instance of CountingResults.
  */
-CountingResults* Framed::getResults(ResultIndex idx)
+CountingResults& Framed::getResults(ResultIndex idx)
 {
     return results[idx];
 }
 
-void Framed::combineLocatedObjets(vector<KeyPoint>* selectedKeypoints)
+void Framed::combineLocatedObjets(vector<KeyPoint>& selectedKeypoints)
 {
-    CountingResults* descriptorResults = results[ResultIndex::Descriptors];
-    CountingResults* filteredResults = results[ResultIndex::SelectedKeypoints];
+    CountingResults& descriptorResults = results[ResultIndex::Descriptors];
+    CountingResults& filteredResults = results[ResultIndex::SelectedKeypoints];
 
     //create a new vector from the ResultIndex::SelectedKeypoints structures
     // Combine the raw descriptor results and filtered descriptor results
-    vector<LocatedObject> combinedObjects(descriptorResults->getProminentLocatedObjects()->begin(), descriptorResults->getProminentLocatedObjects()->end());
+    vector<LocatedObject> combinedObjects(descriptorResults.getProminentLocatedObjects().begin(), descriptorResults.getProminentLocatedObjects().end());
 
     /**
      * For each keypoint in the selected set, we find all box_structures that
@@ -435,12 +424,12 @@ void Framed::combineLocatedObjets(vector<KeyPoint>* selectedKeypoints)
      * Also a vector of vectors is not the most elegant container. A map<> would
      * be more suitable but it does not work well with OpenMP parallelisation.
      */
-    vector<vector<size_t>> filteredObjects(selectedKeypoints->size(), vector<size_t>());
+    vector<vector<size_t>> filteredObjects(selectedKeypoints.size(), vector<size_t>());
     #pragma omp parallel for
     for(size_t i = 0; i < filteredObjects.size(); i++)
     {
         vector<size_t>& structures = filteredObjects[i];
-        KeyPoint kp = selectedKeypoints->at(i);
+        KeyPoint kp = selectedKeypoints.at(i);
         for(size_t j = 0; j < combinedObjects.size(); j++)
         {
             LocatedObject& bx = combinedObjects.at(j);
@@ -490,12 +479,12 @@ void Framed::combineLocatedObjets(vector<KeyPoint>* selectedKeypoints)
 
     /// We add the filtered results located objects after filtering because
     /// we can be sure they do not contain false positives
-    vector<LocatedObject>* p_objects = filteredResults->getProminentLocatedObjects();
+    vector<LocatedObject>& p_objects = filteredResults.getProminentLocatedObjects();
 
-    for(size_t i = 0; i < p_objects->size(); i++)
+    for(size_t i = 0; i < p_objects.size(); i++)
     {
-        LocatedObject& newObject = p_objects->at(i);
-        LocatedObject::addLocatedObject(&combinedLocatedObjects, &newObject);
+        LocatedObject& newObject = p_objects.at(i);
+        LocatedObject::addLocatedObject(combinedLocatedObjects, newObject);
     }
 
     printf("Colour model filtering detected %ld objects.\n\n", combinedLocatedObjects.size());

@@ -225,7 +225,7 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
  * they want.
  *
  */
-int32_t consolePreviewColours(Mat& frame, vector<KeyPoint>& keypoints, map<int32_t, IntIntListMap* >* clusterMaps, vector<int32_t>* validities, int32_t autoChoice)
+int32_t consolePreviewColours(Mat& frame, vector<KeyPoint>& keypoints, map<int32_t, IntIntListMap* >& clusterMaps, vector<int32_t>& validities, int32_t autoChoice)
 {
     int32_t chosen = autoChoice;
     COLOURS c;
@@ -243,18 +243,18 @@ int32_t consolePreviewColours(Mat& frame, vector<KeyPoint>& keypoints, map<int32
     {
         cout << "-------------------------------------------------------------------------------" << endl;
         cout << "List of results \nminPts\t\tNumber of Clusters\t\tValidity" << endl;
-        for(map<int32_t, IntDoubleListMap* >::iterator it = clusterMaps->begin(); it != clusterMaps->end(); ++it)
+        for(map<int32_t, IntDoubleListMap* >::iterator it = clusterMaps.begin(); it != clusterMaps.end(); ++it)
         {
-            cout << it->first << "\t\t" << g_hash_table_size(it->second)-1 << "\t\t" << validities->at(it->first - 3) << endl;
+            cout << it->first << "\t\t" << g_hash_table_size(it->second)-1 << "\t\t" << validities.at(it->first - 3) << endl;
         }
 
         int32_t sel;
         cout << "Select minPts to preview: ";
         cin >> sel;
         cout << "Use 'n' to step through clusters and 'q' to exit preview." << endl;
-        map<int32_t, IntDoubleListMap* >::iterator it = clusterMaps->find(sel);
+        map<int32_t, IntDoubleListMap* >::iterator it = clusterMaps.find(sel);
 
-        if(it == clusterMaps->end())
+        if(it == clusterMaps.end())
         {
             cout << "minPts = " << sel << " is not in the results." << endl;
             continue;
@@ -272,8 +272,8 @@ int32_t consolePreviewColours(Mat& frame, vector<KeyPoint>& keypoints, map<int32
             IntArrayList* list = (IntArrayList*)value;
             int32_t* k = (int32_t *)key;
             vector<KeyPoint> kps;
-            VOCUtils::getListKeypoints(&keypoints, list, &kps);
-            Mat m = VOCUtils::drawKeyPoints(frame, &kps, c.red, -1);
+            VOCUtils::getListKeypoints(keypoints, list, kps);
+            Mat m = VOCUtils::drawKeyPoints(frame, kps, c.red, -1);
             // print the choice images
             String imName = "choice_cluster_";
             imName += std::to_string(*k).c_str();
@@ -388,9 +388,9 @@ int main(int argc, char** argv)
             cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Detecting Colour Model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
             printf("Finding proper value of minPts\n");
             vcount.trainColourModel(frame, keypoints);
-            int32_t chosen = consolePreviewColours(frame, keypoints, vcount.getColourModelMaps(), vcount.getValidities(), vcount.getColourModel()->getMinPts());
+            int32_t chosen = consolePreviewColours(frame, keypoints, vcount.getColourModelMaps(), vcount.getValidities(), vcount.getColourModel().getMinPts());
             vcount.getLearnedColourModel(chosen);
-            cout << "Selected ............ " << vcount.getColourModel()->getMinPts() << endl;
+            cout << "Selected ............ " << vcount.getColourModel().getMinPts() << endl;
             vcount.chooseColourModel(frame, descriptors, keypoints);
         }
 

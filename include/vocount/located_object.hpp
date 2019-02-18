@@ -51,7 +51,7 @@ public:
 	///
 	/// points
 	///
-    set<int32_t>* getPoints();
+    set<int32_t>& getPoints();
     void setPoints(set<int32_t>& val);
 
 	///
@@ -95,17 +95,17 @@ public:
      /**
       *
       */
-     static int32_t rectExist(vector<LocatedObject>* locatedObjects, LocatedObject* newObject);
+     static int32_t rectExist(vector<LocatedObject>& locatedObjects, LocatedObject& newObject);
 
      /**
       *
       */
-     static bool createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject* existingObject, LocatedObject* newObject, Mat& frame);
+     static bool createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, LocatedObject& existingObject, LocatedObject& newObject, Mat& frame);
 
      /**
       *
       */
-     static void addLocatedObject(vector<LocatedObject>* locatedObjects, LocatedObject* newObject);
+     static void addLocatedObject(vector<LocatedObject>& locatedObjects, LocatedObject& newObject);
 
 private:
     VRoi boundingBox, matchTo;

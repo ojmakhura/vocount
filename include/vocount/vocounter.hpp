@@ -92,22 +92,22 @@ public:
     ///
     /// colourModelMaps
     ///
-    map<int32_t, IntIntListMap*>* getColourModelMaps();
+    map<int32_t, IntIntListMap*>& getColourModelMaps();
 
     ///
     /// validities
     ///
-    vector<int32_t>* getValidities();
+    vector<int32_t>& getValidities();
 
     ///
     /// colourModel
     ///
-   ColourModel* getColourModel();
+   ColourModel& getColourModel();
 
     ///
     /// colourModel
     ///
-   vector<Framed*>* getFramedHistory();
+   vector<Framed>& getFramedHistory();
 
 private:
     /**********************************************************************************************************************
@@ -119,7 +119,7 @@ private:
     Ptr<Tracker> tracker;
     Rect2d roi;
     map_t clusterEstimates;
-    vector<Framed*> framedHistory;
+    vector<Framed> framedHistory;
     vector<vector<KeyPoint>> keypointHistory;
     vector<Mat> descriptorHistory;
     map<int32_t, int32_t> truth;
@@ -176,7 +176,7 @@ private:
      *
      * @param f - Framed object to add to the history
      */
-    void maintainHistory(Framed* f, Mat& descriptors, vector<KeyPoint>* keypoints);
+    void maintainHistory(Mat& descriptors, vector<KeyPoint>* keypoints);
 
     /**
      * Compile a descriptor dataset
@@ -186,7 +186,7 @@ private:
     /**
      *
      */
-    void printResults(Framed* f, CountingResults* res, ResultIndex idx, String outDir, ofstream& estimatesFile);
+    void printResults(Framed& f, CountingResults& res, ResultIndex idx, String outDir, ofstream& estimatesFile);
 };
 };
 

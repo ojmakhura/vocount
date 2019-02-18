@@ -43,14 +43,14 @@ public:
     ///
     /// roiFeatures
     ///
-    vector<int32_t>* getRoiFeatures();
-    void setRoiFeatures(vector<int32_t> roiFeatures);
+    vector<int32_t>& getRoiFeatures();
+    void setRoiFeatures(vector<int32_t>& roiFeatures);
 
     ///
     /// selectedKeypoints
     ///
-    vector<KeyPoint>* getSelectedKeypoints();
-    void setSelectedKeypoints(vector<KeyPoint> selectedKeypoints);
+    vector<KeyPoint>& getSelectedKeypoints();
+    void setSelectedKeypoints(vector<KeyPoint>& selectedKeypoints);
 
     ///
     /// selectedDesc
@@ -61,19 +61,13 @@ public:
     ///
     /// selectedClusters
     ///
-    set<int32_t>* getSelectedClusters();
-    void setSelectedClusters(set<int32_t> selectedClusters);
-
-    ///
-    /// oldIndices
-    ///
-    //vector<int32_t>* getOldIndices();
-    //void setOldIndices(vector<int32_t>& oldIndices);
+    set<int32_t>& getSelectedClusters();
+    void setSelectedClusters(set<int32_t>& selectedClusters);
 
     ///
     /// selectedIndices
     ///
-    vector<int32_t>* getSelectedIndices();
+    vector<int32_t>& getSelectedIndices();
     void setSelectedIndices(vector<int32_t>& selectedIndices);
 
     ///
