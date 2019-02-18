@@ -107,7 +107,7 @@ public:
     ///
     /// colourModel
     ///
-   vector<Framed>& getFramedHistory();
+   vector<Framed*>& getFramedHistory();
 
 private:
     /**********************************************************************************************************************
@@ -119,7 +119,7 @@ private:
     Ptr<Tracker> tracker;
     Rect2d roi;
     map_t clusterEstimates;
-    vector<Framed> framedHistory;
+    vector<Framed*> framedHistory;
     vector<vector<KeyPoint>> keypointHistory;
     vector<Mat> descriptorHistory;
     map<int32_t, int32_t> truth;
@@ -176,7 +176,7 @@ private:
      *
      * @param f - Framed object to add to the history
      */
-    void maintainHistory(Mat& descriptors, vector<KeyPoint>* keypoints);
+    void maintainHistory(Framed* framed, Mat& descriptors, vector<KeyPoint>* keypoints);
 
     /**
      * Compile a descriptor dataset

@@ -32,6 +32,7 @@ Framed::Framed(int32_t frameId, Mat& frame, Mat& descriptors, vector<KeyPoint>& 
 
 Framed::~Framed()
 {
+
 }
 
 /**********************************************************************************************************************
@@ -316,8 +317,8 @@ void Framed::getColourModelObjects(CountingResults& res, vector<int32_t>& indice
     {
         int32_t idx = indices.at(i);
         int32_t label = d_labels.at(idx);
-        //res->getLabels().push_back(label);
-        res.addToLabels(label);
+        res.getLabels().push_back(label);
+        //res.addToLabels(label);
 
         if(label > 0)
         {
@@ -328,9 +329,7 @@ void Framed::getColourModelObjects(CountingResults& res, vector<int32_t>& indice
 
     IntIntListMap* c_map = g_hash_table_new(g_int_hash, g_int_equal);
     IntDistancesMap* d_map = g_hash_table_new_full(g_int_hash, g_int_equal, free, free); /// distance map
-
     c_map = hdbscan_create_cluster_map(labels, 0, indices.size());
-
 
     /// Create a new cluster and distance maps based on the labels of the colour model in the frame feature clusters
     for(set<int32_t>::iterator it = colourModelLabels.begin(); it != colourModelLabels.end(); ++it)
