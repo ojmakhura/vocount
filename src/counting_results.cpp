@@ -288,7 +288,7 @@ void CountingResults::setMinPts(int32_t val)
 /**
  *
  */
-void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>& selectedClustersImages)
+void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>& selectedClustersImages, OutputType outputType)
 {
     COLOURS colours;
     vector<KeyPoint> kp;
@@ -307,42 +307,47 @@ void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>
         VOCUtils::getListKeypoints(this->keypoints, l1, kps);
 
         this->selectedFeatures += kps.size();
-        Mat kimg = VOCUtils::drawKeyPoints(frame, kps, colours.red, 3);
-        vector<LocatedObject>& rects = it->second;
-        VRoi tmp;
-        for(uint i = 0; i < rects.size() - 1; i++)
+
+        if(outputType == OutputType::ALL)
         {
-            RNG rng(12345);
-            Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
-                                  rng.uniform(0, 255));
+            Mat kimg = VOCUtils::drawKeyPoints(frame, kps, colours.red, 3);
+            vector<LocatedObject>& rects = it->second;
+            VRoi tmp;
+            for(uint i = 0; i < rects.size() - 1; i++)
+            {
+                RNG rng(12345);
+                Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
+                                    rng.uniform(0, 255));
 
-            tmp = rects.at(i).getBoundingBox();
-            //rectangle(kimg, tmp.getBox(), value, 2, 8, 0);
+                tmp = rects.at(i).getBoundingBox();
+                //rectangle(kimg, tmp.getBox(), value, 2, 8, 0);
 
-            line(kimg, tmp.getP1(), tmp.getP2(), value, 2);
-            line(kimg, tmp.getP2(), tmp.getP3(), value, 2);
-            line(kimg, tmp.getP3(), tmp.getP4(), value, 2);
-            line(kimg, tmp.getP4(), tmp.getP1(), value, 2);
+                line(kimg, tmp.getP1(), tmp.getP2(), value, 2);
+                line(kimg, tmp.getP2(), tmp.getP3(), value, 2);
+                line(kimg, tmp.getP3(), tmp.getP4(), value, 2);
+                line(kimg, tmp.getP4(), tmp.getP1(), value, 2);
+                
+            }
+
+            tmp = rects.at(rects.size() - 1).getBoundingBox();
+            //rectangle(kimg, tmp.getBox(), colours.red, 2, 8, 0);
+            line(kimg, tmp.getP1(), tmp.getP2(), colours.red, 2);
+            line(kimg, tmp.getP2(), tmp.getP3(), colours.red, 2);
+            line(kimg, tmp.getP3(), tmp.getP4(), colours.red, 2);
+            line(kimg, tmp.getP4(), tmp.getP1(), colours.red, 2);
             
+            String ss = "img_keypoints-";
+            string s = to_string(key);
+            ss += s.c_str();
+            distance_values *dv = (distance_values *)g_hash_table_lookup(this->distancesMap, &key);
+
+            ss += "-";
+            ss += to_string((int)dv->cr_confidence);
+            ss += "-";
+            ss += to_string((int)dv->dr_confidence);
+            selectedClustersImages[ss] = kimg.clone();
         }
-
-        tmp = rects.at(rects.size() - 1).getBoundingBox();
-        //rectangle(kimg, tmp.getBox(), colours.red, 2, 8, 0);
-        line(kimg, tmp.getP1(), tmp.getP2(), colours.red, 2);
-        line(kimg, tmp.getP2(), tmp.getP3(), colours.red, 2);
-        line(kimg, tmp.getP3(), tmp.getP4(), colours.red, 2);
-        line(kimg, tmp.getP4(), tmp.getP1(), colours.red, 2);
         
-        String ss = "img_keypoints-";
-        string s = to_string(key);
-        ss += s.c_str();
-        distance_values *dv = (distance_values *)g_hash_table_lookup(this->distancesMap, &key);
-
-        ss += "-";
-        ss += to_string((int)dv->cr_confidence);
-        ss += "-";
-        ss += to_string((int)dv->dr_confidence);
-        selectedClustersImages[ss] = kimg.clone();
         this->selectedNumClusters += 1;
         kp.insert(kp.end(), kps.begin(), kps.end());
     }

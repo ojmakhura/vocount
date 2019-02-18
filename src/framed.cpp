@@ -5,7 +5,7 @@ namespace vocount
 {
 Framed::Framed()
 {
-    //ctor
+    
 }
 
 Framed::Framed(int32_t frameId, Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints, vector<int32_t> roiFeatures, Rect2d roi, int32_t groundTruth)
@@ -383,11 +383,16 @@ void Framed::getColourModelObjects(CountingResults& res, vector<int32_t>& indice
 /**
  *
  */
-void Framed::createResultsImages(ResultIndex idx, map<String, Mat>& selectedClustersImages)
+void Framed::createResultsImages(ResultIndex idx, map<String, Mat>& selectedClustersImages, OutputType outputType)
 {
     CountingResults& res = this->getResults(idx);
-    res.generateSelectedClusterImages(this->frame, selectedClustersImages);
-    res.createLocatedObjectsImages(selectedClustersImages);
+    
+    if (outputType == OutputType::FINALIMAGES || outputType == OutputType::ALL)
+    {
+        res.generateSelectedClusterImages(this->frame, selectedClustersImages, outputType);
+        res.createLocatedObjectsImages(selectedClustersImages);
+    }
+    
     res.generateOutputData(this->frameId, this->groundTruth, this->roiFeatures);
 }
 

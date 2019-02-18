@@ -121,7 +121,7 @@ public:
 	/**
 	 * Generate images for each of the selected clusters
 	 */
-	 void generateSelectedClusterImages(Mat& frame, map<String, Mat>& selectedClustersImages);
+	 void generateSelectedClusterImages(Mat& frame, map<String, Mat>& selectedClustersImages, OutputType outputType);
 
 	 /**
 	  * Generate output data

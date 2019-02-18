@@ -663,12 +663,6 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     }
 
     colourModel.setSelectedDesc(selDesc);
-
-    //vector<KeyPoint> sel;
-    //VOCUtils::getVectorKeypoints(&keypoints, colourModel.getSelectedIndices(), &sel);
-    //Mat mm = frame.clone();
-    //mm = VOCUtils::drawKeyPoints(mm, &sel, colours.red, -1);
-    //VOCUtils::display("model", mm);
 }
 
 /**
@@ -1064,41 +1058,45 @@ void VOCounter::maintainHistory(Framed* framed, Mat& descriptors, vector<KeyPoin
  */
 void VOCounter::printResults(Framed& framed, CountingResults& res, ResultIndex idx, String outDir, ofstream& estimatesFile)
 {
-    String frameDir = VOPrinter::createDirectory(outDir, to_string(frameCount));
     map<String, Mat> selectedClustersImages;
-    framed.createResultsImages(idx, selectedClustersImages);
-    VOPrinter::printImages(frameDir, selectedClustersImages, frameCount);
-
-    String minMaxFileNale = frameDir + "/min_max.csv";
-    ofstream minMaxFile(minMaxFileNale.c_str());
-
-    minMaxFile << "Cluster, Number of Points, Min CR, Max CR, CR Ratio, Min DR, Max DR, DR Ratio" << endl;
-
-    IntDistancesMap* distancesMap = res.getDistancesMap();
-    map_kp& selectedClustersPoints = res.getSelectedClustersPoints();
-
-    GHashTableIter iter;
-	gpointer key;
-	gpointer value;
-	g_hash_table_iter_init (&iter, distancesMap);
-
-	while (g_hash_table_iter_next (&iter, &key, &value)){
-		int32_t label = *((int32_t *)key);
-
-		map_kp::iterator it = selectedClustersPoints.find(label);
-
-		if(it != selectedClustersPoints.end())
-		{
-            distance_values* dv = (distance_values *)value;
-            minMaxFile << label << ","  << it->second.size()<< "," << dv->min_cr << "," << dv->max_cr << "," << (dv->min_cr / dv->max_cr) << ",";
-            minMaxFile << dv->min_dr << "," << dv->max_dr << "," << (dv->min_dr / dv->max_dr) << endl;
-		}
-	}
-
-    minMaxFile.flush();
-    minMaxFile.close();
-
+    framed.createResultsImages(idx, selectedClustersImages, settings.outputType);
     VOPrinter::printEstimates(estimatesFile, res.getOutputData(), res.getRunningTime());
+
+    if(settings.outputType == OutputType::FINALIMAGES || settings.outputType == OutputType::ALL)
+    {
+        String frameDir = VOPrinter::createDirectory(outDir, to_string(frameCount));
+        VOPrinter::printImages(frameDir, selectedClustersImages, frameCount);
+
+        String minMaxFileNale = frameDir + "/min_max.csv";
+        ofstream minMaxFile(minMaxFileNale.c_str());
+
+        minMaxFile << "Cluster, Number of Points, Min CR, Max CR, CR Ratio, Min DR, Max DR, DR Ratio" << endl;
+
+        IntDistancesMap* distancesMap = res.getDistancesMap();
+        map_kp& selectedClustersPoints = res.getSelectedClustersPoints();
+
+        GHashTableIter iter;
+        gpointer key;
+        gpointer value;
+        g_hash_table_iter_init (&iter, distancesMap);
+
+        while (g_hash_table_iter_next (&iter, &key, &value)){
+            int32_t label = *((int32_t *)key);
+
+            map_kp::iterator it = selectedClustersPoints.find(label);
+
+            if(it != selectedClustersPoints.end())
+            {
+                distance_values* dv = (distance_values *)value;
+                minMaxFile << label << ","  << it->second.size()<< "," << dv->min_cr << "," << dv->max_cr << "," << (dv->min_cr / dv->max_cr) << ",";
+                minMaxFile << dv->min_dr << "," << dv->max_dr << "," << (dv->min_dr / dv->max_dr) << endl;
+            }
+        }
+
+        minMaxFile.flush();
+        minMaxFile.close();
+    }
+    
 }
 
 /************************************************************************************

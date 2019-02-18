@@ -2,7 +2,7 @@
 #define FRAMED_H_
 
 #include <memory>
-#include "counting_results.hpp"
+#include "vocount/counting_results.hpp"
 
 using namespace std;
 using namespace vocount;
@@ -106,7 +106,7 @@ public:
 	/**
 	 *
 	 */
-	void createResultsImages(ResultIndex idx, map<String, Mat>& selectedClustersImages);
+	void createResultsImages(ResultIndex idx, map<String, Mat>& selectedClustersImages, OutputType outputType);
 
 	/**
 	 * Use the colour model to filter out false positives.

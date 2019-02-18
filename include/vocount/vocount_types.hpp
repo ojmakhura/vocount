@@ -61,6 +61,13 @@ enum class ResultIndex
 	DescriptorFilter
 };
 
+enum class OutputType
+{
+	ESTIMATES,
+	FINALIMAGES,
+	ALL
+};
+
 typedef struct VSETTINGS
 {
 	String outputFolder, inputFile, truthFolder;
@@ -87,6 +94,7 @@ typedef struct VSETTINGS
 	     daisyChain = false,
 	     overSegment = false,											/// Use minPts = 2 if val < 4
 		 rotate = false;												/// rotate rectangle
+	OutputType outputType = OutputType::ALL;							/// Which output to print to file			
     VAdditions additions = VAdditions::NONE;
 } vsettings;
 

@@ -53,6 +53,9 @@ static void help()
             "     [-O]       					    # Enable using minPts = 2 if no valid clustering results are detected\n"
             "     [-I=<number of iterations>] 	    # The number of iterations for extending cluster daisy chaining\n"
             "     [-minPts=<first minPts value>] 	# The first minPts value to try\n"
+            "     [-eo                              # Print estimates only without images\n"
+            "     [-fi                              # Print estimates and final images only.\n"
+            "     [-pa                              # Print estimates and all the images.\n"
             "\n" );
 }
 
@@ -64,6 +67,20 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
         settings.outputFolder = parser.get<String>("o");
         settings.print = true;
         printf("Will print to %s\n", settings.outputFolder.c_str());
+
+        if(parser.has("eo"))
+        {
+            settings.outputType = OutputType::ESTIMATES;
+            printf("*** Printing estimates only\n");
+        } else if (parser.has("fi"))
+        {
+            settings.outputType = OutputType::FINALIMAGES;
+            printf("*** Printing estimates and final images only\n");
+        } else if (parser.has("pa"))
+        {
+            settings.outputType = OutputType::ALL;
+            printf("*** Printing estimates, final and cluster images images only\n");
+        }
     }
 
     if (parser.has("v") || parser.has("video") || parser.has("image"))
@@ -337,7 +354,8 @@ int main(int argc, char** argv)
                                  "{c||}{t||}{l||}{ta|BOOSTING|}"
                                  "{d||}{f||}{cm||}{I||}{co||}{ct||}"
                                  "{rx||}{ry||}{rw||}{rh||}{z||}"
-                                 "{r||}{D||}{O||}{minPts|3|}");
+                                 "{r||}{D||}{O||}{minPts|3|}"
+                                 "{eo||}{fi||}{pa||}");
 
     if(!processOptions(settings, parser))
     {
