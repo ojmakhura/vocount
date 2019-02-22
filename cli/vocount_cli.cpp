@@ -56,6 +56,8 @@ static void help()
             "     [-eo                              # Print estimates only without images\n"
             "     [-fi                              # Print estimates and final images only.\n"
             "     [-pa                              # Print estimates and all the images.\n"
+            "     [-tr=<Tracker name>               # The name of the SOT to use.\n"
+            "     [-tp                              # Print tracker information\n"
             "\n" );
 }
 
@@ -123,9 +125,14 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
         settings.truthFolder = parser.get<String>("t");
     }
 
-    if(parser.has("ta"))
+    if(parser.has("tr"))
     {
-        settings.trackerAlgorithm = parser.get<String>("ta");
+        settings.trackerAlgorithm = parser.get<String>("tr");
+    }
+
+    if(parser.has("tp"))
+    {
+        settings.printTracking = true;
     }
 
     if(parser.has("s"))
@@ -351,7 +358,7 @@ int main(int argc, char** argv)
     cv::CommandLineParser parser(argc, argv,
                                  "{help ||}{o||}{n|1|}{R||}"
                                  "{v||}{video||}{image||}{w|1|}{s||}"
-                                 "{c||}{t||}{l||}{ta|BOOSTING|}"
+                                 "{c||}{t||}{l||}{tr|BOOSTING|}{tp||}"
                                  "{d||}{f||}{cm||}{I||}{co||}{ct||}"
                                  "{rx||}{ry||}{rw||}{rh||}{z||}"
                                  "{r||}{D||}{O||}{minPts|3|}"

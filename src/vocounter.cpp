@@ -377,6 +377,7 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
         rectangle(fr, this->roi, value, 2, 8, 0);
         cout << this->roi << endl;
         VOCUtils::display("frame", fr);
+        VOPrinter::printImage(settings.outputFolder, frameCount, "frame", fr);
         Framed* framed = new Framed(frameCount, frame, descriptors, keypoints, roiFeatures, this->roi, getCurrentFrameGroundTruth(this->frameCount));
         if(!roiExtracted)
         {

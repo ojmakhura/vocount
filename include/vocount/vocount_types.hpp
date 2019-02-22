@@ -81,7 +81,8 @@ typedef struct VSETTINGS
 			y = 0,
 			w = 0,
 			h = 0;
-	bool print = false;
+	bool print = false, 
+		 printTracking = false;
 	bool interactive = false;
 	bool selectROI = false;
 	bool exit = false;

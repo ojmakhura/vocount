@@ -206,20 +206,26 @@ cv::Ptr<cv::Tracker> VOCUtils::createTrackerByName(cv::String name)
     cv::Ptr<cv::Tracker> tracker;
 
     if (name == "KCF")
+    {
         tracker = cv::TrackerKCF::create();
-    else if (name == "TLD")
+    } else if (name == "TLD"){
         tracker = cv::TrackerTLD::create();
-    else if (name == "BOOSTING")
+    } else if (name == "BOOSTING"){
         tracker = cv::TrackerBoosting::create();
-    else if (name == "MEDIAN_FLOW")
+    }else if (name == "MEDIAN_FLOW"){
         tracker = cv::TrackerMedianFlow::create();
-    else if (name == "MIL")
+    }else if (name == "MIL"){
         tracker = cv::TrackerMIL::create();
-    else if (name == "GOTURN")
+    }else if (name == "GOTURN"){
         tracker = cv::TrackerGOTURN::create();
-    else
+    }else if (name == "MOSSE"){
+        tracker = cv::TrackerMOSSE::create();
+    }else if (name == "CSRT"){
+        tracker = cv::TrackerCSRT::create();
+    }else
         CV_Error(cv::Error::StsBadArg, "Invalid tracking algorithm name\n");
 
+    cout << "Created " << name.c_str() << " tracker" << endl;
     return tracker;
 }
 
