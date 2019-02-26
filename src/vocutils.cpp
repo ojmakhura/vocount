@@ -514,7 +514,7 @@ Mat VOCUtils::drawKeyPoints(Mat& in, vector<KeyPoint>& points, Scalar colour, in
     {
         for(vector<KeyPoint>::iterator it = points.begin(); it != points.end(); ++it)
         {
-            circle(x, Point(it->pt.x, it->pt.y), 3, colour, cv::FILLED, 8, 0);
+            circle(x, Point(it->pt.x, it->pt.y), 4, colour, cv::FILLED, 8, 0);
         }
     }
     else

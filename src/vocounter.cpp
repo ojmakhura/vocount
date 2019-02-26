@@ -377,7 +377,9 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
         rectangle(fr, this->roi, value, 2, 8, 0);
         cout << this->roi << endl;
         VOCUtils::display("frame", fr);
-        VOPrinter::printImage(settings.outputFolder, frameCount, "frame", fr);
+        if(settings.printTracking){
+            VOPrinter::printImage(settings.outputFolder, frameCount, "tracker", fr);
+        }
         Framed* framed = new Framed(frameCount, frame, descriptors, keypoints, roiFeatures, this->roi, getCurrentFrameGroundTruth(this->frameCount));
         if(!roiExtracted)
         {
@@ -1060,7 +1062,12 @@ void VOCounter::maintainHistory(Framed* framed, Mat& descriptors, vector<KeyPoin
 void VOCounter::printResults(Framed& framed, CountingResults& res, ResultIndex idx, String outDir, ofstream& estimatesFile)
 {
     map<String, Mat> selectedClustersImages;
-    framed.createResultsImages(idx, selectedClustersImages, settings.outputType);
+    if(settings.clustersOnly)
+    {
+        framed.generateAllClusterImages(idx, selectedClustersImages);
+    } else {
+        framed.createResultsImages(idx, selectedClustersImages, settings.outputType);
+    }
     VOPrinter::printEstimates(estimatesFile, res.getOutputData(), res.getRunningTime());
 
     if(settings.outputType == OutputType::FINALIMAGES || settings.outputType == OutputType::ALL)
@@ -1071,7 +1078,7 @@ void VOCounter::printResults(Framed& framed, CountingResults& res, ResultIndex i
         String minMaxFileNale = frameDir + "/min_max.csv";
         ofstream minMaxFile(minMaxFileNale.c_str());
 
-        minMaxFile << "Cluster, Number of Points, Min CR, Max CR, CR Ratio, Min DR, Max DR, DR Ratio" << endl;
+        minMaxFile << "Cluster, Number of Points, Min CR, Max CR, CR Ratio, CR Confidence, Min DR, Max DR, DR Ratio, DR Confidence" << endl;
 
         IntDistancesMap* distancesMap = res.getDistancesMap();
         map_kp& selectedClustersPoints = res.getSelectedClustersPoints();
@@ -1089,8 +1096,10 @@ void VOCounter::printResults(Framed& framed, CountingResults& res, ResultIndex i
             if(it != selectedClustersPoints.end())
             {
                 distance_values* dv = (distance_values *)value;
-                minMaxFile << label << ","  << it->second.size()<< "," << dv->min_cr << "," << dv->max_cr << "," << (dv->min_cr / dv->max_cr) << ",";
-                minMaxFile << dv->min_dr << "," << dv->max_dr << "," << (dv->min_dr / dv->max_dr) << endl;
+                minMaxFile << label << ","  << it->second.size()<< "," << dv->min_cr << "," << dv->max_cr << ",";
+                minMaxFile << (dv->min_cr / dv->max_cr) << "," << dv->cr_confidence << ",";
+                minMaxFile << dv->min_dr << "," << dv->max_dr << ",";
+                minMaxFile << (dv->min_dr / dv->max_dr) << "," << dv->dr_confidence<< endl;
             }
         }
 

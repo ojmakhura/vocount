@@ -1,5 +1,6 @@
 #include "vocount/framed.hpp"
 #include "vocount/vocutils.hpp"
+#include <string>
 
 namespace vocount
 {
@@ -378,6 +379,37 @@ void Framed::getColourModelObjects(CountingResults& res, vector<int32_t>& indice
     printf("Detected %lu objects\n\n", res.getProminentLocatedObjects().size());
 
     delete [] labels;
+}
+
+void Framed::generateAllClusterImages(ResultIndex idx, map<String, Mat>& selectedClustersImages)
+{
+    CountingResults& res = this->getResults(idx);
+    COLOURS colours;
+
+    GHashTableIter iter;
+	gpointer key;
+	gpointer value;
+	g_hash_table_iter_init (&iter, res.getClusterMap());
+
+	while (g_hash_table_iter_next (&iter, &key, &value)){
+		int32_t* k = (int32_t *)key;
+        IntArrayList* l1 = (IntArrayList*)value;
+
+        vector<KeyPoint>& kps = res.getSelectedClustersPoints()[*k];
+        VOCUtils::getListKeypoints(this->keypoints, l1, kps);
+        Mat kimg = VOCUtils::drawKeyPoints(this->frame, kps, colours.red, -1);
+        String ss = "img_keypoints-";
+        string s = to_string(*k);
+        ss += s.c_str();
+        distance_values *dv = (distance_values *)g_hash_table_lookup(res.getDistancesMap(), k);
+
+        ss += "-";
+        ss += to_string((int)dv->cr_confidence);
+        ss += "-";
+        ss += to_string((int)dv->dr_confidence);
+        selectedClustersImages[ss] = kimg.clone();
+	}
+    res.generateOutputData(this->frameId, this->groundTruth, this->roiFeatures);
 }
 
 /**

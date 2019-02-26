@@ -104,6 +104,12 @@ public:
 	CountingResults& getResults(ResultIndex idx);
 
 	/**
+	 * Generate cluster images for all clusters in the cluster ma.
+	 * 
+	 */
+	void generateAllClusterImages(ResultIndex idx, map<String, Mat>& selectedClustersImages); 
+
+	/**
 	 *
 	 */
 	void createResultsImages(ResultIndex idx, map<String, Mat>& selectedClustersImages, OutputType outputType);

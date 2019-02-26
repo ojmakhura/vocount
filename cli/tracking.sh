@@ -211,31 +211,31 @@ cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-1.mkv -o=tracking/voc-18-bl-
 cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-1.mkv -o=tracking/voc-18-bl-1/csrt -rw=20 -rh=21 -rx=569 -ry=89 -tr=CSRT -tp
 
 # run voc-18-bl-2.mkv
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-1/mil -rw=34 -rh=35 -rx=701 -ry=227 -tr=MIL -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-1/boosting -rw=34 -rh=35 -rx=701 -ry=227 -tr=BOOSTING -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-1/median_flow -rw=34 -rh=35 -rx=701 -ry=227 -tr=MEDIAN_FLOW -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-1/tld -rw=34 -rh=35 -rx=701 -ry=227 -tr=TLD -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-1/kcf -rw=34 -rh=35 -rx=701 -ry=227 -tr=KCF -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-1/goturn -rw=34 -rh=35 -rx=701 -ry=227 -tr=GOTURN -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-1/mosse -rw=34 -rh=35 -rx=701 -ry=227 -tr=MOSSE -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-1/csrt -rw=34 -rh=35 -rx=701 -ry=227 -tr=CSRT -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-2/mil -rw=34 -rh=35 -rx=701 -ry=227 -tr=MIL -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-2/boosting -rw=34 -rh=35 -rx=701 -ry=227 -tr=BOOSTING -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-2/median_flow -rw=34 -rh=35 -rx=701 -ry=227 -tr=MEDIAN_FLOW -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-2/tld -rw=34 -rh=35 -rx=701 -ry=227 -tr=TLD -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-2/kcf -rw=34 -rh=35 -rx=701 -ry=227 -tr=KCF -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-2/goturn -rw=34 -rh=35 -rx=701 -ry=227 -tr=GOTURN -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-2/mosse -rw=34 -rh=35 -rx=701 -ry=227 -tr=MOSSE -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-2.mkv -o=tracking/voc-18-bl-2/csrt -rw=34 -rh=35 -rx=701 -ry=227 -tr=CSRT -tp
 
 # run voc-18-bl-3.mkv
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-1/mil -rw=90 -rh=89 -rx=1377 -ry=377 -tr=MIL -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-1/boosting -rw=90 -rh=89 -rx=1377 -ry=377 -tr=BOOSTING -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-1/median_flow -rw=90 -rh=89 -rx=1377 -ry=377 -tr=MEDIAN_FLOW -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-1/tld -rw=90 -rh=89 -rx=1377 -ry=377 -tr=TLD -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-1/kcf -rw=90 -rh=89 -rx=1377 -ry=377 -tr=KCF -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-1/goturn -rw=90 -rh=89 -rx=1377 -ry=377 -tr=GOTURN -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-1/mosse -rw=90 -rh=89 -rx=1377 -ry=377 -tr=MOSSE -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-1/csrt -rw=90 -rh=89 -rx=1377 -ry=377 -tr=CSRT -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-3/mil -rw=90 -rh=89 -rx=1377 -ry=377 -tr=MIL -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-3/boosting -rw=90 -rh=89 -rx=1377 -ry=377 -tr=BOOSTING -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-3/median_flow -rw=90 -rh=89 -rx=1377 -ry=377 -tr=MEDIAN_FLOW -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-3/tld -rw=90 -rh=89 -rx=1377 -ry=377 -tr=TLD -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-3/kcf -rw=90 -rh=89 -rx=1377 -ry=377 -tr=KCF -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-3/goturn -rw=90 -rh=89 -rx=1377 -ry=377 -tr=GOTURN -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-3/mosse -rw=90 -rh=89 -rx=1377 -ry=377 -tr=MOSSE -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-3.mkv -o=tracking/voc-18-bl-3/csrt -rw=90 -rh=89 -rx=1377 -ry=377 -tr=CSRT -tp
 
 # run voc-18-bl-4.mkv
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-1/mil -rw=107 -rh=111 -rx=1208 -ry=386 -tr=MIL -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-1/boosting -rw=107 -rh=111 -rx=1208 -ry=386 -tr=BOOSTING -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-1/median_flow -rw=107 -rh=111 -rx=1208 -ry=386 -tr=MEDIAN_FLOW -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-1/tld -rw=107 -rh=111 -rx=1208 -ry=386 -tr=TLD -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-1/kcf -rw=107 -rh=111 -rx=1208 -ry=386 -tr=KCF -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-1/goturn -rw=107 -rh=111 -rx=1208 -ry=386 -tr=GOTURN -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-1/mosse -rw=107 -rh=111 -rx=1208 -ry=386 -tr=MOSSE -tp
-cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-1/csrt -rw=107 -rh=111 -rx=1208 -ry=386 -tr=CSRT -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-4/mil -rw=107 -rh=111 -rx=1208 -ry=386 -tr=MIL -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-4/boosting -rw=107 -rh=111 -rx=1208 -ry=386 -tr=BOOSTING -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-4/median_flow -rw=107 -rh=111 -rx=1208 -ry=386 -tr=MEDIAN_FLOW -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-4/tld -rw=107 -rh=111 -rx=1208 -ry=386 -tr=TLD -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-4/kcf -rw=107 -rh=111 -rx=1208 -ry=386 -tr=KCF -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-4/goturn -rw=107 -rh=111 -rx=1208 -ry=386 -tr=GOTURN -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-4/mosse -rw=107 -rh=111 -rx=1208 -ry=386 -tr=MOSSE -tp
+cli/vocount_cli -v=../voc-18/videos/blood/voc-18-bl-4.mkv -o=tracking/voc-18-bl-4/csrt -rw=107 -rh=111 -rx=1208 -ry=386 -tr=CSRT -tp
