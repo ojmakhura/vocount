@@ -153,9 +153,8 @@ void Framed::doCluster(CountingResults& res, Mat& dataset, int32_t kSize, int32_
     IntDistancesMap* d_map = NULL;
     clustering_stats stats;
     int32_t val = -1;
-
     int32_t i = 0;
-
+   
     while(val <= 2 && i < 5)
     {
         if(m_pts == (step * f_minPts))
@@ -215,6 +214,8 @@ void Framed::doCluster(CountingResults& res, Mat& dataset, int32_t kSize, int32_
         m_pts = (f_minPts + i) * step;
     }
 
+    //printf("Testing minPts = %d with validity = %d and cluster map size = %d\n", m_pts, val, g_hash_table_size(c_map));
+
     /// The validity less than 2 so we force oversegmentation
     if(res.getValidity() <= 2 && useTwo)
     {
@@ -239,7 +240,6 @@ void Framed::doCluster(CountingResults& res, Mat& dataset, int32_t kSize, int32_
         m_pts = step * 2;
         scan.reRun(m_pts);
         c_map = hdbscan_create_cluster_map(scan.clusterLabels, 0, kSize);
-
         d_map = hdbscan_get_min_max_distances(&scan, c_map);
         hdbscan_calculate_stats(d_map, &stats);
         val = hdbscan_analyse_stats(&stats);
@@ -304,39 +304,32 @@ void Framed::detectDescriptorsClusters(CountingResults& res, Mat& dataset, vecto
 /***
  *
  */
-void Framed::getColourModelObjects(CountingResults& res, vector<int32_t>& indices, int32_t minPts, int32_t iterations, VAdditions additions)
+void Framed::filterDescriptorClustersWithColourModel(CountingResults& res, vector<int32_t>& indices, int32_t minPts, int32_t iterations, VAdditions additions)
 {
     CountingResults& d_res = this->getResults(ResultIndex::Descriptors);
     vector<int32_t>& d_labels = d_res.getLabels();
 
     int32_t* labels = new int32_t[indices.size()];
-
+    IntIntListMap* c_map = g_hash_table_new(g_int_hash, g_int_equal);
     set<int32_t> colourModelLabels;
-    /// Get non-noise clusters for the colour model.
+    /// Get all clusters for the colour model.
     ///#pragma parallel
     for(size_t i = 0; i < indices.size(); i++)
     {
-        int32_t idx = indices.at(i);
-        int32_t label = d_labels.at(idx);
-        res.getLabels().push_back(label);
-        //res.addToLabels(label);
-
-        if(label > 0)
-        {
-            labels[i] = label;
-            colourModelLabels.insert(label);
-        }
+        int32_t label = d_labels.at(indices.at(i));
+        res.getLabels().push_back(label);        
+        labels[i] = label;
+        colourModelLabels.insert(label);
     }
 
-    IntIntListMap* c_map = g_hash_table_new(g_int_hash, g_int_equal);
+    
     IntDistancesMap* d_map = g_hash_table_new_full(g_int_hash, g_int_equal, free, free); /// distance map
     c_map = hdbscan_create_cluster_map(labels, 0, indices.size());
-
     /// Create a new cluster and distance maps based on the labels of the colour model in the frame feature clusters
     for(set<int32_t>::iterator it = colourModelLabels.begin(); it != colourModelLabels.end(); ++it)
     {
         /// Distance map
-        int32_t *d_lb = (int *)malloc(sizeof(int));
+        int32_t *d_lb = (int32_t *)malloc(sizeof(int32_t));
         *d_lb = *it;
 
         distance_values* dl = (distance_values *)g_hash_table_lookup(d_res.getDistancesMap(), d_lb);
@@ -396,13 +389,13 @@ void Framed::generateAllClusterImages(ResultIndex idx, map<String, Mat>& selecte
         IntArrayList* l1 = (IntArrayList*)value;
 
         vector<KeyPoint>& kps = res.getSelectedClustersPoints()[*k];
-        VOCUtils::getListKeypoints(this->keypoints, l1, kps);
+        VOCUtils::getListKeypoints(res.getKeypoints(), l1, kps);
         Mat kimg = VOCUtils::drawKeyPoints(this->frame, kps, colours.red, -1);
         String ss = "img_keypoints-";
         string s = to_string(*k);
         ss += s.c_str();
         distance_values *dv = (distance_values *)g_hash_table_lookup(res.getDistancesMap(), k);
-
+        
         ss += "-";
         ss += to_string((int)dv->cr_confidence);
         ss += "-";
@@ -513,7 +506,7 @@ void Framed::combineLocatedObjets(vector<KeyPoint>& selectedKeypoints)
         combinedLocatedObjects.push_back(combinedObjects.at(*it));
     }
 
-    /// We add the filtered results located objects after filtering because
+    /// We add the colour model results located objects after filtering because
     /// we can be sure they do not contain false positives
     vector<LocatedObject>& p_objects = filteredResults.getProminentLocatedObjects();
 

@@ -220,7 +220,6 @@ void CountingResults::addToClusterLocatedObjects(VRoi roi, Mat& frame)
         KeyPoint f_point = keypoints.at(validObjFeatures[i]);
 
         /// Each point in the cluster should be inside a LocatedObject
-        //mbs.getPoints().insert(validObjFeatures[i]);
         mbs.addToPoints(validObjFeatures[i]);
         int32_t* data = (int32_t *)l1->data;
 
@@ -229,7 +228,6 @@ void CountingResults::addToClusterLocatedObjects(VRoi roi, Mat& frame)
             KeyPoint& t_point = keypoints.at(data[j]);
             if(mbs.getBoundingBox().getBox().contains(t_point.pt))  // if the point is inside mbs, add it to mbs' points
             {
-                //mbs.getPoints().insert(data[j]);
                 mbs.addToPoints(data[j]);
             }
             else    // else create a new mbs for it
@@ -238,7 +236,6 @@ void CountingResults::addToClusterLocatedObjects(VRoi roi, Mat& frame)
                 LocatedObject newObject;
                 if(LocatedObject::createNewLocatedObject(f_point, t_point, mbs, newObject, frame))
                 {
-                    //newObject.getPoints().insert(data[j]);
                     newObject.addToPoints(data[j]);
                     newObject.setMatchTo(mbs.getBoundingBox());
                     LocatedObject::addLocatedObject(availableOjects, newObject);
@@ -310,7 +307,7 @@ void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>
 
         if(outputType == OutputType::ALL)
         {
-            Mat kimg = VOCUtils::drawKeyPoints(frame, kps, colours.red, 3);
+            Mat kimg = VOCUtils::drawKeyPoints(frame, kps, colours.red, -1);
             vector<LocatedObject>& rects = it->second;
             VRoi tmp;
             for(uint i = 0; i < rects.size() - 1; i++)
@@ -395,7 +392,7 @@ void CountingResults::generateOutputData(int32_t frameId, int32_t groundTruth, v
     else
     {
         outputData[OutDataIndex::SampleSize] = 0;
-        outputData[OutDataIndex::BoxEst] = g_hash_table_size(clusterMap) - 1;
+        outputData[OutDataIndex::BoxEst] = 0; // Count only the ROI object
     }
 
     outputData[OutDataIndex::SelectedSampleSize] = selSampleSize;

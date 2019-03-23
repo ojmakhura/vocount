@@ -400,8 +400,8 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
             Mat dset = this->getDescriptorDataset(descriptors, keypoints, _keypoints);
             
             CountingResults& res = framed->getResults(ResultIndex::Descriptors);            
-            framed->detectDescriptorsClusters(res, dset, _keypoints, (int32_t)keypoints.size(), settings.minPts, settings.step,
-                                   settings.iterations, settings.overSegment);
+            framed->detectDescriptorsClusters(res, dset, _keypoints, (int32_t)keypoints.size(), settings.minPts[0], settings.step,
+                                   settings.iterations[0], settings.overSegment);
 
             steady_clock::time_point end = chrono::steady_clock::now();
             double time = chrono::duration_cast<duration<double>>(end - start).count();
@@ -444,8 +444,8 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                 
                 CountingResults& res = framed->getResults(ResultIndex::SelectedKeypoints);
                 framed->detectDescriptorsClusters(res, dset,
-                                       colourModel.getSelectedKeypoints(), ksize, settings.minPts, settings.step,
-                                       settings.iterations, settings.overSegment);
+                                       colourModel.getSelectedKeypoints(), ksize, settings.minPts[0], settings.step,
+                                       settings.iterations[0], settings.overSegment);
                 steady_clock::time_point end = chrono::steady_clock::now();
                 double time = chrono::duration_cast<duration<double>>(end - start).count();
 
@@ -512,7 +512,7 @@ void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& key
                 steady_clock::time_point start = chrono::steady_clock::now();
 
                 CountingResults& d_res = framed->getResults(ResultIndex::DescriptorFilter);                
-                framed->getColourModelObjects(d_res, indices, settings.minPts, settings.iterations, settings.additions);
+                framed->filterDescriptorClustersWithColourModel(d_res, indices, settings.minPts[0], settings.iterations[0], settings.additions);
 
                 steady_clock::time_point end = chrono::steady_clock::now();
                 double time = chrono::duration_cast<duration<double>>(end - start).count();
@@ -601,7 +601,7 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
         int32_t* ldata = (int32_t*)list->data;
 
         /**
-         * Since I have no idea whether the clusters from the previous frames will be clustered in the same manner
+         * Since we have no idea whether the clusters from the previous frames will be clustered in the same manner
          * I have to get the cluster with the largest number of points from selected clusters
          **/
         map<int32_t, vector<int32_t>> temp;
@@ -657,6 +657,12 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
 
     }
 
+    /*
+    vector<KeyPoint> k2;
+    VOCUtils::getVectorKeypoints(keypoints, colourModel.getSelectedIndices(), k2);
+    Mat x1 = VOCUtils::drawKeyPoints(frame, k2, Scalar(255, 0, 0), -1);
+    VOCUtils::display("Colour Model", x1);
+    */
     steady_clock::time_point end = chrono::steady_clock::now();
     double time = duration_cast<duration<double>>(end - start).count();
     cout << "Selected " << colourModel.getSelectedKeypoints().size() << " points in " << time << " seconds."  << endl;

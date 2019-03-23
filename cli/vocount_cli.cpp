@@ -204,13 +204,18 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
 
     if(parser.has("I"))
     {
-        String s = parser.get<String>("I");
-        settings.iterations = atoi(s.c_str());
-        printf("*** Daisy-chaining iteration set to %d\n", settings.iterations);
+        const String s = parser.get<String>("I");
+        stringstream stmp(s.c_str());
+        string word;
+        while (getline(stmp, word, ',')) { 
+            settings.iterations.push_back(atoi(word.c_str())); 
+        } 
+        
+        cout << "*** Daisy-chaining iteration set to " << s << endl;
     }
     else
     {
-        settings.iterations = 0;
+        settings.iterations.push_back(0); 
     }
 
     if(parser.has("D"))
@@ -222,8 +227,14 @@ bool processOptions(vsettings& settings, CommandLineParser& parser)
     if(parser.has("minPts"))
     {
         String s = parser.get<String>("minPts");
-        settings.minPts = atoi(s.c_str());
-        printf("*** minPts = %d\n", settings.minPts);
+        stringstream stmp(s.c_str());
+        string word;
+        while (getline(stmp, word, ',')) { 
+            settings.minPts.push_back(atoi(word.c_str())); 
+        } 
+        cout << "*** minPts = " << s << endl;
+    } else {
+        settings.minPts.push_back(3);
     }
 
     if(parser.has("rx") && parser.has("ry") && parser.has("rw") && parser.has("rh"))

@@ -126,7 +126,7 @@ public:
 	 *
 	 * @param indices - indices of the colour model keypoints in the original features
 	 */
-	void getColourModelObjects(CountingResults& res, vector<int32_t>& indices, int32_t minPts, int32_t iterations, VAdditions additions);
+	void filterDescriptorClustersWithColourModel(CountingResults& res, vector<int32_t>& indices, int32_t minPts, int32_t iterations, VAdditions additions);
 
 private:
     int32_t frameId = 0;

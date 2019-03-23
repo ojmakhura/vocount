@@ -66,7 +66,7 @@ LIBS += -L../thirdparty/lib \
 
 unix {
     CONFIG += link_pkgconfig
-    PKGCONFIG += opencv
+    PKGCONFIG += opencv4
 }
 
 QMAKE_CXXFLAGS += -fopenmp

@@ -75,8 +75,8 @@ typedef struct VSETTINGS
 	String colourClusteringDir, filteringDir, descriptorDir, colourModelDir,
 	       combinationDir;
 	int32_t step, rsize;											/// How many frames to use in the dataset
-	int32_t iterations = 0;
-	int32_t minPts = 3;
+	vector<int32_t> iterations;
+	vector<int32_t> minPts;
 	int32_t x = 0,
 			y = 0,
 			w = 0,
