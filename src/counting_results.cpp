@@ -1,5 +1,6 @@
 #include "vocount/counting_results.hpp"
 #include "vocount/vocutils.hpp"
+#include "vocount/voprinter.hpp"
 
 namespace vocount
 {
@@ -398,7 +399,7 @@ void CountingResults::generateOutputData(int32_t frameId, int32_t groundTruth, v
     outputData[OutDataIndex::SelectedSampleSize] = selSampleSize;
     outputData[OutDataIndex::FeatureSize] = this->keypoints.size();
     outputData[OutDataIndex::SelectedFeatureSize] = selectedFeatures;
-    outputData[OutDataIndex::NumClusters] = this->selectedNumClusters;
+    outputData[OutDataIndex::NumClusters] = this->selectedNumClusters > 0 ? this->selectedNumClusters : g_hash_table_size(this->clusterMap);
     outputData[OutDataIndex::FrameNum] = frameId;
     outputData[OutDataIndex::Validity] = validity;
     outputData[OutDataIndex::MinPts] = this->minPts;
@@ -427,86 +428,18 @@ void CountingResults::extendLocatedObjects(Mat& frame)
 }
 
 /**
- * Extract prominent
+ * Extract prominent objects
  */
 void CountingResults::extractProminentLocatedObjects()
-{
-
+{    
     for(map_st::iterator it = clusterLocatedObjects.begin(); it != clusterLocatedObjects.end(); ++it)
     {
         vector<LocatedObject>& tmp = it->second;
-        int32_t key = it->first;
-        IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(clusterMap, &key);
-
-        if(l1 == NULL)
-        {
-            continue;
-        }
-
-        int32_t* data = (int32_t *)l1->data;
-
-        int32_t t[l1->size];
-        for(int32_t j = 0; j < l1->size; j++)
-        {
-            t[j] = -1;
-        }
-
-        double t_cmp[l1->size];
-
-        for(int32_t j = 0; j < l1->size; j++)
-        {
-            KeyPoint kp = keypoints.at(data[j]);
-
-            for(size_t l = 0; l < tmp.size(); l++)
-            {
-                LocatedObject& tmp_o = tmp[l];
-                if(tmp_o.getBoundingBox().getBox().contains(kp.pt))
-                {
-                    if(t[j] == -1)
-                    {
-                        t[j] = l;
-                        t_cmp[j] = tmp_o.getHistogramCompare();
-                        tmp_o.addToPoints(data[j]);
-                    }
-                    else if(t_cmp[j] < tmp_o.getHistogramCompare())
-                    {
-                        tmp[t[j]].removeFromPoints(data[j]); // remove this point
-                        t_cmp[j] = tmp_o.getHistogramCompare();
-                        t[j] = l;
-                        tmp[t[j]].addToPoints(data[j]);
-                    }
-                }
-            }
-        }
 
         for(size_t j = 0; j < tmp.size(); j++)
         {
             LocatedObject& tmp_o = tmp[j];
-            int idx = LocatedObject::rectExist(prominentLocatedObjects, tmp_o);
-
-            if(idx == -1)  // the structure does not exist
-            {
-                prominentLocatedObjects.push_back(tmp_o);
-            }
-            else    /// The rect exist s merge the points
-            {
-                LocatedObject& strct = prominentLocatedObjects.at(idx);
-
-                // Find out which structure is more similar to the original
-                // by comparing the histograms
-                if(tmp_o.getHistogramCompare() > strct.getHistogramCompare())
-                {
-                    strct.setBoundingBox(tmp_o.getBoundingBox());
-                    strct.setMatchPoint(tmp_o.getMatchPoint());
-                    strct.setBoxImage(tmp_o.getBoxImage());
-                    strct.setBoxGray(tmp_o.getBoxGray());
-                    strct.setHistogram(tmp_o.getHistogram());
-                    strct.setHistogramCompare(tmp_o.getHistogramCompare());
-                    strct.setMomentsCompare(tmp_o.getMomentsCompare());
-                }
-                strct.getPoints().insert(tmp_o.getPoints().begin(), tmp_o.getPoints().end());
-
-            }
+            LocatedObject::addLocatedObject(this->prominentLocatedObjects, tmp_o);
         }
     }
 }

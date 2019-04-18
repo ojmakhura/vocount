@@ -212,8 +212,8 @@ int32_t LocatedObject::rectExist(vector<LocatedObject>& locatedObjects, LocatedO
 
     for(uint i = 0; i < locatedObjects.size(); i++)
     {
-        Rect2d intersection = newObject.getBoundingBox().getBox() & locatedObjects.at(i).getBoundingBox().getBox();
-        double sect = ((double)intersection.area() / locatedObjects.at(i).getBoundingBox().getBox().area());
+        Rect2d intersection = newObject.getBoundingBox().getBox() & locatedObjects.at(i).getBoundingBox().getBox();        
+        double sect = ((double)intersection.area() / locatedObjects.at(i).getBoundingBox().getBox().area());        
 
         if(sect > maxIntersect)
         {
@@ -226,7 +226,7 @@ int32_t LocatedObject::rectExist(vector<LocatedObject>& locatedObjects, LocatedO
     {
         return maxIndex;
     }
-
+    
     return -1;
 }
 

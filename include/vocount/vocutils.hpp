@@ -135,7 +135,6 @@ public:
 	 * scale the rectagle.
 	 */
 	static Rect2d scaleRectangle(Rect2d in_r, double size_1, double size_2);
-
 };
 }
 #endif // VOCUTILS_H

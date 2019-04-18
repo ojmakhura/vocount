@@ -341,7 +341,8 @@ Mat VOCounter::getDescriptorDataset(Mat& descriptors, vector<KeyPoint>& inKeypoi
 void VOCounter::processFrame(Mat& frame, Mat& descriptors, vector<KeyPoint>& keypoints)
 {
     this->frameCount++;
-
+    
+    //medianBlur(frame, frame, 5);
     /// Only process is there are some keypoints
     if(!keypoints.empty())
     {
@@ -777,6 +778,7 @@ void VOCounter::chooseColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>
     }
     selDesc = selDesc.clone();
     colourModel.setSelectedDesc(selDesc);
+    
 }
 
 /**

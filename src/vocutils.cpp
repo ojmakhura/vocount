@@ -613,6 +613,7 @@ Mat VOCUtils::getColourDataset(Mat& f, vector<KeyPoint>& pts)
     Mat m(pts.size(), 3, CV_32FC1);
     Mat tmpf;
     GaussianBlur(f, tmpf, Size(3, 3), 0, 0 );
+    //medianBlur(f, tmpf, 3);
     //tmpf = f;
     float* data = m.ptr<float>(0);
     #pragma omp parallel for
