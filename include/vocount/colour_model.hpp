@@ -1,7 +1,8 @@
 #ifndef COLOURMODEL_H_
 #define COLOURMODEL_H_
 
-#include <listlib/utils.h>
+#include <hdbscan/utils.h>
+#include <hdbscan/hdbscan.h>
 #include <opencv2/core.hpp>
 #include <vector>
 #include <map>

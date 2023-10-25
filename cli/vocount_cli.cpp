@@ -304,7 +304,7 @@ int32_t consolePreviewColours(Mat& frame, vector<KeyPoint>& keypoints, map<int32
 
         while (g_hash_table_iter_next (&iter, &key, &value))
         {
-            IntArrayList* list = (IntArrayList*)value;
+            ArrayList* list = (ArrayList*)value;
             int32_t* k = (int32_t *)key;
             vector<KeyPoint> kps;
             VOCUtils::getListKeypoints(keypoints, list, kps);

@@ -598,7 +598,7 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     for (set<int32_t>::iterator itt = colourModel.getSelectedClusters().begin(); itt != colourModel.getSelectedClusters().end(); ++itt)
     {
         int32_t cluster = *itt;
-        IntArrayList* list = (IntArrayList*)g_hash_table_lookup(prevHashTable, &cluster);
+        ArrayList* list = (ArrayList*)hashtable_lookup(prevHashTable, &cluster);
         int32_t* ldata = (int32_t*)list->data;
 
         /**
@@ -647,7 +647,7 @@ void VOCounter::trackFrameColourModel(Mat& frame, Mat& descriptors, vector<KeyPo
     for (set<int32_t>::iterator itt = colourModel.getSelectedClusters().begin(); itt != colourModel.getSelectedClusters().end(); ++itt)
     {
         int cluster = *itt;
-        IntArrayList* list = (IntArrayList*)g_hash_table_lookup(colourModel.getColourModelClusters(), &cluster);
+        ArrayList* list = (ArrayList*)hashtable_lookup(colourModel.getColourModelClusters(), &cluster);
         int32_t* ldata = (int32_t*)list->data;
 
         colourModel.getSelectedIndices().insert(colourModel.getSelectedIndices().end(), ldata, ldata + list->size);
@@ -714,7 +714,7 @@ void VOCounter::chooseColourModel(Mat& frame, Mat& descriptors, vector<KeyPoint>
 
     while (g_hash_table_iter_next (&iter, &key, &value))
     {
-        IntArrayList* list = (IntArrayList*)value;
+        ArrayList* list = (ArrayList*)value;
         int32_t* k = (int32_t *)key;
         vector<KeyPoint> kps;
         VOCUtils::getListKeypoints(keypoints, list, kps);
@@ -820,7 +820,7 @@ void VOCounter::trainColourModel(Mat& frame, vector<KeyPoint>& keypoints)
         int val = hdbscan_analyse_stats(&stats);
         uint idx = g_hash_table_size(clusterMap) - 1;
         int k = 0;
-        IntArrayList* p = (IntArrayList *)g_hash_table_lookup (clusterMap, &k);
+        ArrayList* p = (ArrayList *)hashtable_lookup (clusterMap, &k);
 
         if(p == NULL)
         {

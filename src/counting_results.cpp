@@ -196,7 +196,7 @@ void CountingResults::addToClusterLocatedObjects(VRoi roi, Mat& frame)
     mbs.setBoxImage(f_image);
     Mat h = VOCUtils::calculateHistogram(mbs.getBoxImage());
     mbs.setHistogram(h);
-    mbs.setHistogramCompare(compareHist(mbs.getHistogram(), mbs.getHistogram(), CV_COMP_CORREL));
+    mbs.setHistogramCompare(compareHist(mbs.getHistogram(), mbs.getHistogram(), cv::HISTCMP_CORREL ));
     mbs.setMomentsCompare (matchShapes(mbs.getBoxGray(), mbs.getBoxGray(), CONTOURS_MATCH_I3, 0));
 
     /// generate box structures based on the valid object points
@@ -211,9 +211,11 @@ void CountingResults::addToClusterLocatedObjects(VRoi roi, Mat& frame)
         }
 
         vector<LocatedObject>& availableOjects= clusterLocatedObjects[key];
-        IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(clusterMap, &key);
+        ArrayList* l1 = array_list_init(12, sizeof(int32_t *), int_ptr_compare);
+        
+        int r = hashtable_lookup(clusterMap, &key, l1);
 
-        if(l1 == NULL)
+        if(r == 0)
         {
             continue;
         }
@@ -294,9 +296,11 @@ void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>
     {
         int32_t key = it->first;
 
-        IntArrayList* l1 = (IntArrayList*)g_hash_table_lookup(this->clusterMap, &key);
+        ArrayList* l1 = array_list_init(12, sizeof(int32_t *), int_ptr_compare);
+        
+        int r = hashtable_lookup(clusterMap, &key, l1);
 
-        if(l1 == NULL)
+        if(r == 0)
         {
             continue;
         }
@@ -337,12 +341,21 @@ void CountingResults::generateSelectedClusterImages(Mat& frame, map<String, Mat>
             String ss = "img_keypoints-";
             string s = to_string(key);
             ss += s.c_str();
-            distance_values *dv = (distance_values *)g_hash_table_lookup(this->distancesMap, &key);
+
+
+            distance_values dv ;
+            
+            int r = hashtable_lookup(this->distancesMap, &key, &dv);
+
+            if(r == 0)
+            {
+                continue;
+            }
 
             ss += "-";
-            ss += to_string((int)dv->cr_confidence);
+            ss += to_string((int)dv.dr_confidence);
             ss += "-";
-            ss += to_string((int)dv->dr_confidence);
+            ss += to_string((int)dv.dr_confidence);
             selectedClustersImages[ss] = kimg.clone();
         }
         
@@ -399,7 +412,7 @@ void CountingResults::generateOutputData(int32_t frameId, int32_t groundTruth, v
     outputData[OutDataIndex::SelectedSampleSize] = selSampleSize;
     outputData[OutDataIndex::FeatureSize] = this->keypoints.size();
     outputData[OutDataIndex::SelectedFeatureSize] = selectedFeatures;
-    outputData[OutDataIndex::NumClusters] = this->selectedNumClusters > 0 ? this->selectedNumClusters : g_hash_table_size(this->clusterMap);
+    outputData[OutDataIndex::NumClusters] = this->selectedNumClusters > 0 ? this->selectedNumClusters : hashtable_size(this->clusterMap);
     outputData[OutDataIndex::FrameNum] = frameId;
     outputData[OutDataIndex::Validity] = validity;
     outputData[OutDataIndex::MinPts] = this->minPts;

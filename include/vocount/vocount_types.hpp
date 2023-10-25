@@ -17,14 +17,25 @@
 #include <iostream>
 #include <fstream>
 
+// #include <hdbscan/hdbscan.hpp>
+
 using namespace cv;
 using namespace std;
 
 #define MIN_HESSIAN 500
 typedef map<int32_t, vector<KeyPoint>> map_kp;
-typedef map<int32_t, vector<int32_t>> map_t;
-typedef map<int32_t, vector<double>> map_d;
-typedef set<int32_t> set_t;
+
+// #ifndef map_t
+// typedef map<label_t, vector<index_t>> map_t;
+// #endif
+
+// #ifndef map_d
+// typedef map<label_t, vector<distance_t>> map_d;
+// #endif
+
+// #ifndef set_i
+// typedef set<index_t> set_i;
+// #endif
 
 static bool VO_DEBUG = false;
 

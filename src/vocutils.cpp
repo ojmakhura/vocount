@@ -480,7 +480,7 @@ VRoi VOCUtils::shiftRect(VRoi& vroi, Point2f first, Point2f second)
  * @param  -
  * @param  -
  */
-void VOCUtils::getListKeypoints(vector<KeyPoint>& keypoints, IntArrayList* list, vector<KeyPoint>& out)
+void VOCUtils::getListKeypoints(vector<KeyPoint>& keypoints, ArrayList* list, vector<KeyPoint>& out)
 {
     int32_t* dt = (int32_t *)list->data;
     for(int i = 0; i < list->size; i++)
@@ -541,7 +541,7 @@ Mat VOCUtils::drawKeyPoints(Mat& in, vector<KeyPoint>& points, Scalar colour, in
 /**
  *
  */
-void VOCUtils::getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices, Mat& out)
+void VOCUtils::getSelectedKeypointsDescriptors(Mat& desc, ArrayList* indices, Mat& out)
 {
 	int32_t *dt = (int32_t *)indices->data;
 	for(int i = 0; i < indices->size; i++){

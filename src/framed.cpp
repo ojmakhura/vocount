@@ -147,7 +147,7 @@ void Framed::doCluster(CountingResults& res, Mat& dataset, int32_t kSize, int32_
     //CountingResults* res = new CountingResults();
 
     int32_t m_pts = step * f_minPts;
-    hdbscan scan(m_pts, DATATYPE_FLOAT);
+    hdbscan scan(m_pts);
 
     IntIntListMap* c_map = NULL;
     IntDistancesMap* d_map = NULL;
@@ -159,7 +159,7 @@ void Framed::doCluster(CountingResults& res, Mat& dataset, int32_t kSize, int32_
     {
         if(m_pts == (step * f_minPts))
         {
-            scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE);
+            scan.run(dataset.ptr<float>(), dataset.rows, dataset.cols, TRUE, H_FLOAT);
         }
         else
         {
@@ -175,8 +175,8 @@ void Framed::doCluster(CountingResults& res, Mat& dataset, int32_t kSize, int32_
 
         if(c_map != NULL)
         {
-            uint hsize = res.getClusterMap() == NULL ? 0 : g_hash_table_size(res.getClusterMap());
-            if(g_hash_table_size(c_map) > hsize || val > res.getValidity())
+            uint hsize = res.getClusterMap() == NULL ? 0 : hashtable_size(res.getClusterMap());
+            if(hashtable_size(c_map) > hsize || val > res.getValidity())
             {
                 if(res.getClusterMap() != NULL)
                 {
@@ -209,12 +209,12 @@ void Framed::doCluster(CountingResults& res, Mat& dataset, int32_t kSize, int32_
             }
         }
 
-        printf("Testing minPts = %d with validity = %d and cluster map size = %d\n", m_pts, val, g_hash_table_size(c_map));
+        printf("Testing minPts = %d with validity = %d and cluster map size = %d\n", m_pts, val, hashtable_size(c_map));
         i++;
         m_pts = (f_minPts + i) * step;
     }
 
-    //printf("Testing minPts = %d with validity = %d and cluster map size = %d\n", m_pts, val, g_hash_table_size(c_map));
+    //printf("Testing minPts = %d with validity = %d and cluster map size = %d\n", m_pts, val, hashtable_size(c_map));
 
     /// The validity less than 2 so we force oversegmentation
     if(res.getValidity() <= 2 && useTwo)
@@ -252,7 +252,7 @@ void Framed::doCluster(CountingResults& res, Mat& dataset, int32_t kSize, int32_
         res.setStats(stats);
     }
 
-    printf("Selected minPts = %d and cluster table has %d\n", res.getMinPts(), g_hash_table_size(res.getClusterMap()));
+    printf("Selected minPts = %d and cluster table has %d\n", res.getMinPts(), hashtable_size(res.getClusterMap()));
 }
 
 void Framed::doDetectDescriptorsClusters(CountingResults& res, Mat& dataset, vector<KeyPoint>& keypoints, int32_t minPts, int32_t iterations)
@@ -309,8 +309,8 @@ void Framed::filterDescriptorClustersWithColourModel(CountingResults& res, vecto
     CountingResults& d_res = this->getResults(ResultIndex::Descriptors);
     vector<int32_t>& d_labels = d_res.getLabels();
 
-    int32_t* labels = new int32_t[indices.size()];
-    IntIntListMap* c_map = g_hash_table_new(g_int_hash, g_int_equal);
+    label_t* labels = new label_t[indices.size()];
+    // IntIntListMap* c_map = g_hash_table_new(g_int_hash, g_int_equal);
     set<int32_t> colourModelLabels;
     /// Get all clusters for the colour model.
     ///#pragma parallel
@@ -323,8 +323,8 @@ void Framed::filterDescriptorClustersWithColourModel(CountingResults& res, vecto
     }
 
     
-    IntDistancesMap* d_map = g_hash_table_new_full(g_int_hash, g_int_equal, free, free); /// distance map
-    c_map = hdbscan_create_cluster_map(labels, 0, indices.size());
+    IntDistancesMap* d_map = hashtable_init(45, H_INT, H_PTR, int_compare);; //g_hash_table_new_full(g_int_hash, g_int_equal, free, free); /// distance map
+    IntIntListMap* c_map = hdbscan_create_cluster_map(labels, 0, indices.size());
     /// Create a new cluster and distance maps based on the labels of the colour model in the frame feature clusters
     for(set<int32_t>::iterator it = colourModelLabels.begin(); it != colourModelLabels.end(); ++it)
     {
@@ -332,18 +332,20 @@ void Framed::filterDescriptorClustersWithColourModel(CountingResults& res, vecto
         int32_t *d_lb = (int32_t *)malloc(sizeof(int32_t));
         *d_lb = *it;
 
-        distance_values* dl = (distance_values *)g_hash_table_lookup(d_res.getDistancesMap(), d_lb);
+        distance_values dl;
+        
+        (distance_values *)hashtable_lookup(d_res.getDistancesMap(), d_lb, &dl);
         distance_values* t_dl = (distance_values *)malloc(sizeof(distance_values));
 
-        t_dl->min_cr = dl->min_cr;
-        t_dl->max_cr = dl->max_cr;
-        t_dl->cr_confidence = dl->cr_confidence;
+        t_dl->min_cr = dl.min_cr;
+        t_dl->max_cr = dl.max_cr;
+        t_dl->cr_confidence = dl.cr_confidence;
 
-        t_dl->min_dr = dl->min_dr;
-        t_dl->max_dr = dl->max_dr;
-        t_dl->dr_confidence = dl->dr_confidence;
+        t_dl->min_dr = dl.min_dr;
+        t_dl->max_dr = dl.max_dr;
+        t_dl->dr_confidence = dl.dr_confidence;
 
-        g_hash_table_insert(d_map, d_lb, t_dl);
+        hashtable_insert(d_map, d_lb, t_dl);
     }
 
     clustering_stats stats;
@@ -378,30 +380,59 @@ void Framed::generateAllClusterImages(ResultIndex idx, map<String, Mat>& selecte
 {
     CountingResults& res = this->getResults(idx);
     COLOURS colours;
+    
+    IntIntListMap* cmap = res.getClusterMap();
+    map_kp kpMap = res.getSelectedClustersPoints();
 
-    GHashTableIter iter;
-	gpointer key;
-	gpointer value;
-	g_hash_table_iter_init (&iter, res.getClusterMap());
+    set_t* keys = cmap->keys;
 
-	while (g_hash_table_iter_next (&iter, &key, &value)){
-		int32_t* k = (int32_t *)key;
-        IntArrayList* l1 = (IntArrayList*)value;
+    for(int i = 0; i < keys->size; i++) {
+        int32_t key;
+        set_value_at(keys, i, &key);
 
-        vector<KeyPoint>& kps = res.getSelectedClustersPoints()[*k];
-        VOCUtils::getListKeypoints(res.getKeypoints(), l1, kps);
+        int32_t k = key;
+
+        ArrayList l1;
+        hashtable_lookup(cmap, &key, &l1);
+
+        vector<KeyPoint>& kps = kpMap[key];
+        VOCUtils::getListKeypoints(res.getKeypoints(), &l1, kps);
+
         Mat kimg = VOCUtils::drawKeyPoints(this->frame, kps, colours.red, -1);
         String ss = "img_keypoints-";
-        string s = to_string(*k);
+        string s = to_string(k);
         ss += s.c_str();
-        distance_values *dv = (distance_values *)g_hash_table_lookup(res.getDistancesMap(), k);
-        
+        distance_values dv;
+        hashtable_lookup(res.getDistancesMap(), &k, &dv);
+
         ss += "-";
-        ss += to_string((int)dv->cr_confidence);
+        ss += to_string((int)dv.cr_confidence);
         ss += "-";
-        ss += to_string((int)dv->dr_confidence);
+        ss += to_string((int)dv.dr_confidence);
         selectedClustersImages[ss] = kimg.clone();
-	}
+    }
+
+	// g_hash_table_iter_init (&iter, res.getClusterMap());
+
+	// while (g_hash_table_iter_next (&iter, &key, &value)){
+	// 	int32_t* k = (int32_t *)key;
+    //     ArrayList* l1 = (ArrayList*)value;
+
+    //     vector<KeyPoint>& kps = res.getSelectedClustersPoints()[*k];
+    //     VOCUtils::getListKeypoints(res.getKeypoints(), l1, kps);
+    //     Mat kimg = VOCUtils::drawKeyPoints(this->frame, kps, colours.red, -1);
+    //     String ss = "img_keypoints-";
+    //     string s = to_string(*k);
+    //     ss += s.c_str();
+    //     distance_values dv;
+    //     hashtable_lookup(res.getDistancesMap(), k, &dv);
+        
+    //     ss += "-";
+    //     ss += to_string((int)dv.,cr_confidence);
+    //     ss += "-";
+    //     ss += to_string((int)dv.dr_confidence);
+    //     selectedClustersImages[ss] = kimg.clone();
+	// }
     res.generateOutputData(this->frameId, this->groundTruth, this->roiFeatures);
 }
 

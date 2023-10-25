@@ -3,7 +3,7 @@
 
 #include "vocount/vroi.hpp"
 #include "vocount_types.hpp"
-#include <listlib/intlist.h>
+#include <collections/list.h>
 
 namespace vocount
 {
@@ -88,7 +88,7 @@ public:
 	/**
 	 *
 	 */
-	static void getListKeypoints(vector<KeyPoint>& keypoints, IntArrayList* list, vector<KeyPoint>& out);
+	static void getListKeypoints(vector<KeyPoint>& keypoints, ArrayList* list, vector<KeyPoint>& out);
 
 	/**
 	 *
@@ -128,7 +128,7 @@ public:
 	/**
 	 *
 	 */
-	static void getSelectedKeypointsDescriptors(Mat& desc, IntArrayList* indices, Mat& out);
+	static void getSelectedKeypointsDescriptors(Mat& desc, ArrayList* indices, Mat& out);
 
 	/**
 	 * Given a Rectangle and a reference feature size, use a target feature size to

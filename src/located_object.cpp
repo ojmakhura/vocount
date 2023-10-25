@@ -262,7 +262,7 @@ bool LocatedObject::createNewLocatedObject(KeyPoint first_p, KeyPoint second_p, 
     Mat gr;
     cvtColor(newObject.getBoxImage(), gr, COLOR_RGB2GRAY);
     newObject.setBoxGray(gr);
-    newObject.setHistogramCompare(compareHist(existingObject.getHistogram(), newObject.getHistogram(), CV_COMP_CORREL));
+    newObject.setHistogramCompare(compareHist(existingObject.getHistogram(), newObject.getHistogram(), cv::HISTCMP_CORREL));
     newObject.setMomentsCompare(matchShapes(existingObject.getBoxGray(), newObject.getBoxGray(), CONTOURS_MATCH_I3, 0));
 
     return true;
